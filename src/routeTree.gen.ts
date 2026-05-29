@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ToolboxRouteImport } from './routes/toolbox'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -55,6 +56,11 @@ import { Route as ApiPublicPaypalWebhookRouteImport } from './routes/api/public/
 import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
 
+const ToolboxRoute = ToolboxRouteImport.update({
+  id: '/toolbox',
+  path: '/toolbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -308,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
+  '/toolbox': typeof ToolboxRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/checkout/$pack': typeof CheckoutPackRoute
@@ -355,6 +362,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
+  '/toolbox': typeof ToolboxRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/checkout/$pack': typeof CheckoutPackRoute
@@ -403,6 +411,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
+  '/toolbox': typeof ToolboxRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/checkout/$pack': typeof CheckoutPackRoute
@@ -452,6 +461,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/templates'
     | '/terms'
+    | '/toolbox'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/checkout/$pack'
@@ -499,6 +509,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/templates'
     | '/terms'
+    | '/toolbox'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/checkout/$pack'
@@ -546,6 +557,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/templates'
     | '/terms'
+    | '/toolbox'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/checkout/$pack'
@@ -594,6 +606,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TemplatesRoute: typeof TemplatesRoute
   TermsRoute: typeof TermsRoute
+  ToolboxRoute: typeof ToolboxRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
   CheckoutPackRoute: typeof CheckoutPackRoute
@@ -618,6 +631,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/toolbox': {
+      id: '/toolbox'
+      path: '/toolbox'
+      fullPath: '/toolbox'
+      preLoaderRoute: typeof ToolboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -973,6 +993,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TemplatesRoute: TemplatesRoute,
   TermsRoute: TermsRoute,
+  ToolboxRoute: ToolboxRoute,
   DotwellKnownOauthAuthorizationServerRoute:
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
