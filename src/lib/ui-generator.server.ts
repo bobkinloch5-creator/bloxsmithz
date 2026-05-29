@@ -13,10 +13,10 @@ import {
 // has fewer ways to get it wrong than emitting Roblox UDim2 strings.
 
 const Udim2 = z.object({
-  xScale: z.number().min(-1).max(2).default(0),
-  xOffset: z.number().int().min(-2000).max(2000).default(0),
-  yScale: z.number().min(-1).max(2).default(0),
-  yOffset: z.number().int().min(-2000).max(2000).default(0),
+  xScale: z.number().min(-1).max(2),
+  xOffset: z.number().int().min(-2000).max(2000),
+  yScale: z.number().min(-1).max(2),
+  yOffset: z.number().int().min(-2000).max(2000),
 });
 
 const Color = z.object({
