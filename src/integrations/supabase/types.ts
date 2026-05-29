@@ -722,6 +722,13 @@ export type Database = {
           manual_sync_only: boolean
           referral_code: string | null
           referred_by: string | null
+          roblox_avatar_url: string | null
+          roblox_display_name: string | null
+          roblox_user_id: number | null
+          roblox_username: string | null
+          roblox_verification_code: string | null
+          roblox_verification_expires_at: string | null
+          roblox_verified_at: string | null
           specialization: string | null
           updated_at: string
         }
@@ -741,6 +748,13 @@ export type Database = {
           manual_sync_only?: boolean
           referral_code?: string | null
           referred_by?: string | null
+          roblox_avatar_url?: string | null
+          roblox_display_name?: string | null
+          roblox_user_id?: number | null
+          roblox_username?: string | null
+          roblox_verification_code?: string | null
+          roblox_verification_expires_at?: string | null
+          roblox_verified_at?: string | null
           specialization?: string | null
           updated_at?: string
         }
@@ -760,6 +774,13 @@ export type Database = {
           manual_sync_only?: boolean
           referral_code?: string | null
           referred_by?: string | null
+          roblox_avatar_url?: string | null
+          roblox_display_name?: string | null
+          roblox_user_id?: number | null
+          roblox_username?: string | null
+          roblox_verification_code?: string | null
+          roblox_verification_expires_at?: string | null
+          roblox_verified_at?: string | null
           specialization?: string | null
           updated_at?: string
         }

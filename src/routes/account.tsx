@@ -30,6 +30,7 @@ import { DiscordRewards } from "@/components/DiscordRewards";
 import { PromoteAndEarn } from "@/components/PromoteAndEarn";
 import { AccountSecurity } from "@/components/AccountSecurity";
 import { ProfileMediaSettings } from "@/components/ProfileMediaSettings";
+import { RobloxAccountLink } from "@/components/RobloxAccountLink";
 import { RoleBadges } from "@/components/RoleBadge";
 import { formatCreditBalance } from "@/lib/credit-display";
 import {
@@ -376,6 +377,7 @@ function Account() {
       <Header />
       <main className="flex-1 mx-auto w-full max-w-5xl px-4 sm:px-6 py-10 space-y-8">
         <ProfileMediaSettings />
+        <RobloxAccountLink />
         <ProfileRolesRow />
 
 
