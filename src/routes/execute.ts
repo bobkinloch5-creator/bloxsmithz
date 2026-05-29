@@ -2001,6 +2001,7 @@ export const Route = createFileRoute("/execute")({
             // path (which needs gpt-oss-120b). External-key sources don't get
             // the fallback — they use the user's chosen model directly.
             const apiKey = process.env.GROQ_API_KEY;
+          let docsCitations: import("@/lib/roblox-docs.server").DocsCitation[] = [];
             if (true) {
               try {
                 const gateway = apiKey ? createGroqProvider(apiKey) : null;
