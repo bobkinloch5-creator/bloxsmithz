@@ -187,7 +187,7 @@ export function HelpChat() {
           onClick={openChat}
           aria-label="Open BloxSmith AI Help"
           title="BloxSmith AI Help"
-          className="group fixed right-3 top-[42dvh] z-[9998] flex -translate-y-1/2 items-center gap-2 rounded-full border border-primary-foreground/15 bg-gradient-to-br from-primary to-primary/85 px-4 py-3 text-primary-foreground shadow-[0_10px_32px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-md transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_14px_42px_-10px_color-mix(in_oklab,var(--primary)_75%,transparent)] active:scale-95 animate-fade-in sm:right-6 md:top-1/2"
+          className="group fixed right-4 top-1/2 z-[9998] flex -translate-y-1/2 items-center gap-2 rounded-full border border-primary-foreground/15 bg-gradient-to-br from-primary to-primary/85 px-4 py-3 text-primary-foreground shadow-[0_10px_32px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-md transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_14px_42px_-10px_color-mix(in_oklab,var(--primary)_75%,transparent)] active:scale-95 animate-fade-in sm:right-6"
         >
           <span className="relative grid h-8 w-8 place-items-center rounded-full bg-primary-foreground/15 backdrop-blur-sm transition group-hover:bg-primary-foreground/25">
             <MessageCircle className="h-4 w-4" />
@@ -217,10 +217,10 @@ export function HelpChat() {
           aria-modal="false"
           aria-label="BloxSmith AI Help"
           className="fixed z-[9999] flex flex-col overflow-hidden border border-border/70 bg-surface-elevated/95 backdrop-blur-xl shadow-2xl animate-scale-in
-            inset-x-3 top-16 bottom-auto
+            inset-x-3 top-1/2 bottom-auto -translate-y-1/2
             h-[min(78dvh,640px)] max-h-[calc(100dvh-5rem)]
             rounded-2xl
-            md:inset-x-auto md:right-6 md:top-1/2 md:-translate-y-1/2
+            md:inset-x-auto md:right-6
             md:w-[400px] md:h-[min(640px,calc(100dvh-6rem))]
             md:rounded-2xl"
         >
