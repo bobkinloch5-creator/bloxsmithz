@@ -2076,7 +2076,7 @@ export const Route = createFileRoute("/execute")({
                 const keywords = extractKeywords(prompt);
 
                 // Retrieve relevant Roblox docs (best-effort; never block on failure)
-                let docsCitations: import("@/lib/roblox-docs.server").DocsCitation[] = [];
+                docsCitations = [];
                 let docsBlock = "";
                 try {
                   const { searchRobloxDocs, formatDocsForPrompt } = await import(
