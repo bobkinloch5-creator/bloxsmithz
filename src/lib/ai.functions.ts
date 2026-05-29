@@ -741,8 +741,24 @@ export const planBuild = createServerFn({ method: "POST" })
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
     let model;
+    let planTotalCost = PLAN_COST;
     try {
-      model = resolveBuiltInGateway({ kind: "fast", thinking }).model;
+      const builtIn = resolveBuiltInGateway({ kind: "fast", thinking });
+      model = builtIn.model;
+      const { applyModelCreditMultiplier } = await import("./ai-models");
+      planTotalCost = applyModelCreditMultiplier(PLAN_COST, builtIn.modelName);
+      const planSurcharge = planTotalCost - PLAN_COST;
+      if (!isOwner && planSurcharge > 0) {
+        const { error: surErr } = await supabase.rpc("spend_credits_atomic", {
+          _amount: planSurcharge,
+        });
+        if (surErr) {
+          await supabase.rpc("refund_credits", { _amount: PLAN_COST, _reason: "tier surcharge unaffordable" });
+          throw new Error(
+            `Not enough credits — planning with ${builtIn.modelName} costs ${planTotalCost} credits. Buy more on the Pricing page.`,
+          );
+        }
+      }
     } catch (e) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
