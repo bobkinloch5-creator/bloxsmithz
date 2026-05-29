@@ -84,6 +84,48 @@ export type Database = {
           },
         ]
       }
+      ai_provider_events: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_kind: string | null
+          feature: string
+          id: string
+          model: string
+          ok: boolean
+          project_id: string | null
+          provider: string
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_kind?: string | null
+          feature: string
+          id?: string
+          model: string
+          ok: boolean
+          project_id?: string | null
+          provider: string
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_kind?: string | null
+          feature?: string
+          id?: string
+          model?: string
+          ok?: boolean
+          project_id?: string | null
+          provider?: string
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_usage_events: {
         Row: {
           created_at: string
@@ -98,6 +140,57 @@ export type Database = {
         Update: {
           created_at?: string
           id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      blocked_email_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      build_plans: {
+        Row: {
+          created_at: string
+          id: string
+          plan: Json
+          project_id: string
+          prompt: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan: Json
+          project_id: string
+          prompt: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan?: Json
+          project_id?: string
+          prompt?: string
+          status?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -546,6 +639,7 @@ export type Database = {
           ban_reason: string | null
           banned: boolean
           banned_at: string | null
+          banner_url: string | null
           bio: string | null
           created_at: string
           credits: number
@@ -564,6 +658,7 @@ export type Database = {
           ban_reason?: string | null
           banned?: boolean
           banned_at?: string | null
+          banner_url?: string | null
           bio?: string | null
           created_at?: string
           credits?: number
@@ -582,6 +677,7 @@ export type Database = {
           ban_reason?: string | null
           banned?: boolean
           banned_at?: string | null
+          banner_url?: string | null
           bio?: string | null
           created_at?: string
           credits?: number
@@ -596,6 +692,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_ai_memories: {
+        Row: {
+          confidence: number
+          created_at: string
+          id: string
+          key: string
+          kind: string
+          last_seen_at: string
+          project_id: string
+          source_prompt: string | null
+          updated_at: string
+          user_id: string
+          value: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          key: string
+          kind?: string
+          last_seen_at?: string
+          project_id: string
+          source_prompt?: string | null
+          updated_at?: string
+          user_id: string
+          value: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          key?: string
+          kind?: string
+          last_seen_at?: string
+          project_id?: string
+          source_prompt?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_ai_memories_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_ai_settings: {
         Row: {
@@ -724,14 +870,95 @@ export type Database = {
           },
         ]
       }
+      project_scans: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          report: Json
+          score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          report: Json
+          score?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          report?: Json
+          score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_tasks: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json | null
+          plan_id: string | null
+          position: number
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json | null
+          plan_id?: string | null
+          position?: number
+          project_id: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json | null
+          plan_id?: string | null
+          position?: number
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           ai_rules: string | null
           created_at: string
           description: string | null
+          forked_from_project_id: string | null
           game_type: string
           id: string
           name: string
+          roblox_last_published_at: string | null
+          roblox_last_version: number | null
+          roblox_place_id: string | null
+          roblox_universe_id: string | null
+          showcase_description: string | null
+          showcase_likes_count: number
+          showcase_published: boolean
+          showcase_published_at: string | null
+          showcase_remix_count: number
+          showcase_thumbnail_url: string | null
+          showcase_title: string | null
           status: string
           updated_at: string
           user_id: string
@@ -740,9 +967,21 @@ export type Database = {
           ai_rules?: string | null
           created_at?: string
           description?: string | null
+          forked_from_project_id?: string | null
           game_type: string
           id?: string
           name: string
+          roblox_last_published_at?: string | null
+          roblox_last_version?: number | null
+          roblox_place_id?: string | null
+          roblox_universe_id?: string | null
+          showcase_description?: string | null
+          showcase_likes_count?: number
+          showcase_published?: boolean
+          showcase_published_at?: string | null
+          showcase_remix_count?: number
+          showcase_thumbnail_url?: string | null
+          showcase_title?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -751,9 +990,21 @@ export type Database = {
           ai_rules?: string | null
           created_at?: string
           description?: string | null
+          forked_from_project_id?: string | null
           game_type?: string
           id?: string
           name?: string
+          roblox_last_published_at?: string | null
+          roblox_last_version?: number | null
+          roblox_place_id?: string | null
+          roblox_universe_id?: string | null
+          showcase_description?: string | null
+          showcase_likes_count?: number
+          showcase_published?: boolean
+          showcase_published_at?: string | null
+          showcase_remix_count?: number
+          showcase_thumbnail_url?: string | null
+          showcase_title?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -870,6 +1121,27 @@ export type Database = {
         }
         Relationships: []
       }
+      showcase_likes: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       studio_errors: {
         Row: {
           created_at: string
@@ -904,6 +1176,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      template_installs: {
+        Row: {
+          created_at: string
+          credits_charged: number
+          id: string
+          project_id: string
+          template_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_charged?: number
+          id?: string
+          project_id: string
+          template_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_charged?: number
+          id?: string
+          project_id?: string
+          template_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          active: boolean
+          build_spec: Json
+          category: string
+          created_at: string
+          credits_cost: number
+          description: string
+          difficulty: string
+          features: Json
+          id: string
+          install_count: number
+          name: string
+          slug: string
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          build_spec: Json
+          category: string
+          created_at?: string
+          credits_cost?: number
+          description: string
+          difficulty?: string
+          features?: Json
+          id?: string
+          install_count?: number
+          name: string
+          slug: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          build_spec?: Json
+          category?: string
+          created_at?: string
+          credits_cost?: number
+          description?: string
+          difficulty?: string
+          features?: Json
+          id?: string
+          install_count?: number
+          name?: string
+          slug?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_mcp_servers: {
         Row: {
@@ -1067,6 +1417,10 @@ export type Database = {
       refund_credits: {
         Args: { _amount: number; _reason?: string }
         Returns: number
+      }
+      remix_showcase_project: {
+        Args: { _new_name: string; _source_id: string }
+        Returns: string
       }
       spend_credits_atomic: { Args: { _amount: number }; Returns: number }
     }
