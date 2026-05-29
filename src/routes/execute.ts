@@ -2073,6 +2073,23 @@ export const Route = createFileRoute("/execute")({
                 }
 
                 const keywords = extractKeywords(prompt);
+
+                // Retrieve relevant Roblox docs (best-effort; never block on failure)
+                let docsCitations: import("@/lib/roblox-docs.server").DocsCitation[] = [];
+                let docsBlock = "";
+                try {
+                  const { searchRobloxDocs, formatDocsForPrompt } = await import(
+                    "@/lib/roblox-docs.server"
+                  );
+                  docsCitations = await searchRobloxDocs(prompt, 4);
+                  docsBlock = formatDocsForPrompt(docsCitations);
+                } catch (e) {
+                  console.warn(
+                    "[ai-execute] docs lookup skipped:",
+                    e instanceof Error ? e.message : e,
+                  );
+                }
+
                 const ctxInputs: ContextInputs = {
                   prompt,
                   studioConnected: !!studioConnected,
@@ -2083,6 +2100,7 @@ export const Route = createFileRoute("/execute")({
                   history,
                   keywords,
                   memoryBlock,
+                  docsBlock,
                 };
 
                 // Build attempts. For external API-key sources we use a
