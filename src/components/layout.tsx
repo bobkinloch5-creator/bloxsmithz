@@ -45,6 +45,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/clothing", label: "Clothing" },
   { to: "/image-generator", label: "Images" },
   { to: "/toolbox", label: "Toolbox" },
+  { to: "/ui-generator", label: "UI Generator" },
   { to: "/showcase", label: "Showcase" },
   { to: "/ideas", label: "Ideas" },
   { to: "/pricing", label: "Pricing" },
