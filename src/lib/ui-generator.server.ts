@@ -91,22 +91,6 @@ const UIElementSchema: z.ZodType<UIElement> = z.lazy(() =>
     children: z.array(UIElementSchema).max(40).optional(),
   }),
 ) as unknown as z.ZodType<UIElement>;
-  z.object({
-    type: z.enum(["Frame", "TextLabel", "TextButton", "ImageButton", "ImageLabel", "ScrollingFrame"]),
-    ...ElementBase,
-    text: z.string().max(200).optional(),
-    textColor: Color.optional(),
-    textSize: z.number().int().min(8).max(64).optional(),
-    font: z.string().max(40).optional(),
-    textAlign: z.enum(["Left", "Center", "Right"]).optional(),
-    image: z.string().max(120).optional(),
-    layout: z.enum(["List", "Grid", "None"]).optional(),
-    layoutDirection: z.enum(["Vertical", "Horizontal"]).optional(),
-    layoutPadding: z.number().int().min(0).max(80).optional(),
-    cellSize: Udim2.optional(),
-    children: z.array(UIElementSchema).max(40).optional(),
-  }),
-);
 
 export const UISpecSchema = z.object({
   title: z.string().min(1).max(80),
