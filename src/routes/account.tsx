@@ -30,6 +30,7 @@ import { DiscordRewards } from "@/components/DiscordRewards";
 import { PromoteAndEarn } from "@/components/PromoteAndEarn";
 import { AccountSecurity } from "@/components/AccountSecurity";
 import { ProfileMediaSettings } from "@/components/ProfileMediaSettings";
+import { RoleBadges } from "@/components/RoleBadge";
 import { formatCreditBalance } from "@/lib/credit-display";
 import {
   ResponsiveContainer,
@@ -60,6 +61,23 @@ type PR = {
   paypal_transaction_id: string;
   created_at: string;
 };
+
+function ProfileRolesRow() {
+  const { roles, profile } = useAuth();
+  const list = (roles ?? []).filter((r) => r && r !== "user");
+  if (list.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-1">
+      <span className="text-xs uppercase tracking-wider text-muted-foreground">Roles</span>
+      <RoleBadges roles={list as string[]} size="md" />
+      {profile?.specialization ? (
+        <span className="rounded-full border border-border bg-surface-elevated px-2.5 py-1 text-xs text-muted-foreground">
+          {profile.specialization}
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 function Account() {
   const { user, profile, loading, refresh, isOwner } = useAuth();
