@@ -22,20 +22,67 @@ export const SITE_PROVIDER_DEFAULT_MODEL: Record<SiteProviderId, string> = {
 
 export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
   "claude-opus-4-7-thinking":
-    "Highest-depth Claude reasoning with adaptive thinking. Best for very large Roblox systems, deep debugging, architecture decisions, and hard multi-file builds.",
+    "Highest-depth Claude reasoning with adaptive thinking. Best for very large Roblox systems, deep debugging, architecture decisions, and hard multi-file builds. What it does for your game: plans entire game architectures, designs anti-exploit, ProfileService data, and complex combat systems end-to-end.",
   "claude-sonnet-4-6-thinking":
-    "Frontier reasoning with adaptive thinking. Best for full-game architecture, complex anti-exploit, and hard debugging where it should slow down and think first.",
+    "Frontier reasoning with adaptive thinking. Best for full-game architecture, complex anti-exploit, and hard debugging where it should slow down and think first. What it does for your game: builds full simulators/tycoons with leaderstats, gamepasses, and DataStore saves.",
   "gpt-5.5":
-    "OpenAI's newest flagship — strongest at agentic coding, multi-step Roblox builds, and complex Luau refactors. Use for full games and ambitious systems.",
+    "OpenAI's newest flagship — strongest at agentic coding, multi-step Roblox builds, and complex Luau refactors. Use for full games and ambitious systems. What it does for your game: drives multi-step generations — folders, RemoteEvents, server + client + UI in one shot.",
   "gpt-5.3-codex":
-    "Code specialist. Best for long Luau files, OOP classes, CFrame math, and raycast logic.",
+    "Code specialist. Best for long Luau files, OOP classes, CFrame math, and raycast logic. What it does for your game: writes clean ModuleScripts, weapon systems, hitbox raycasts, and pathfinding code.",
   "gpt-5.4":
-    "Strong reasoning for combat formulas, anti-exploit checks, ProfileService logic, and complex math.",
+    "Strong reasoning for combat formulas, anti-exploit checks, ProfileService logic, and complex math. What it does for your game: balances damage curves, validates server-side input, and fixes math-heavy gameplay loops.",
   "gemini-3-flash":
-    "Fast all-rounder for everyday Roblox scripting: GUIs, RemoteEvents, and small gameplay edits. Cheap and quick.",
+    "Fast all-rounder for everyday Roblox scripting: GUIs, RemoteEvents, and small gameplay edits. Cheap and quick. What it does for your game: edits ScreenGuis, adds buttons, wires RemoteEvents, and ships small tweaks in seconds.",
   "claude-haiku-4-5-20251001":
-    "Cheap and careful for cleaning messy Luau, refactoring scripts, and writing tidy ModuleScripts.",
+    "Cheap and careful for cleaning messy Luau, refactoring scripts, and writing tidy ModuleScripts. What it does for your game: tidies up existing scripts, renames variables, adds comments, and splits monolith scripts into ModuleScripts.",
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// Credit cost multipliers per model.
+//
+// Higher-tier models cost more credits per generation. Base credit cost
+// (chat=1, plan=1, fix=2, generate=3, autopilot=10) is multiplied by this
+// number and rounded up. Owners/admins always pay 0. UI shows this badge
+// next to each model so users can pick by budget.
+// ─────────────────────────────────────────────────────────────────────────
+export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
+  "claude-opus-4-7-thinking": 5,
+  "claude-sonnet-4-6-thinking": 3,
+  "gpt-5.5": 3,
+  "gpt-5.4": 2,
+  "gpt-5.3-codex": 2,
+  "gemini-3-flash": 1,
+  "claude-haiku-4-5-20251001": 1,
+};
+
+export const DEFAULT_MODEL_CREDIT_MULTIPLIER = 1;
+
+/**
+ * Look up the credit-cost multiplier for a UI model id. Falls back to 1x
+ * for unknown models so a new id never accidentally over-charges the user.
+ * Also handles the "-thinking" alias by stripping the suffix.
+ */
+export function getModelCreditMultiplier(modelName: string | null | undefined): number {
+  if (!modelName) return DEFAULT_MODEL_CREDIT_MULTIPLIER;
+  const direct = MODEL_CREDIT_MULTIPLIERS[modelName];
+  if (typeof direct === "number") return direct;
+  if (modelName.endsWith("-thinking")) {
+    const base = modelName.slice(0, -"-thinking".length);
+    const m = MODEL_CREDIT_MULTIPLIERS[base];
+    if (typeof m === "number") return m;
+  }
+  return DEFAULT_MODEL_CREDIT_MULTIPLIER;
+}
+
+/**
+ * Apply the multiplier to a base credit cost. Rounds up so partial credits
+ * always favor the platform (a 0.5x model still costs at least 1 credit).
+ */
+export function applyModelCreditMultiplier(baseCost: number, modelName: string | null | undefined) {
+  const mult = getModelCreditMultiplier(modelName);
+  return Math.max(baseCost, Math.ceil(baseCost * mult));
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // Neokens model mapping.
