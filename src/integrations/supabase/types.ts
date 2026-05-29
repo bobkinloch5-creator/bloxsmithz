@@ -718,6 +718,7 @@ export type Database = {
           discord_claimed: boolean
           display_name: string | null
           email: string
+          hide_email: boolean
           id: string
           manual_sync_only: boolean
           referral_code: string | null
@@ -744,6 +745,7 @@ export type Database = {
           discord_claimed?: boolean
           display_name?: string | null
           email: string
+          hide_email?: boolean
           id: string
           manual_sync_only?: boolean
           referral_code?: string | null
@@ -770,6 +772,7 @@ export type Database = {
           discord_claimed?: boolean
           display_name?: string | null
           email?: string
+          hide_email?: boolean
           id?: string
           manual_sync_only?: boolean
           referral_code?: string | null

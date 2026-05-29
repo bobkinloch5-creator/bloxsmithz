@@ -31,6 +31,63 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.0.0",
+    date: "May 29, 2026",
+    title: "Toolbox Overhaul, Stay-Signed-In & UI Generator",
+    description:
+      "A big release focused on the Roblox creator workflow: a rebuilt free-asset Toolbox that pulls real Studio models, a brand-new AI Roblox UI/GUI Generator, smarter session handling with a stay-signed-in option, and account privacy controls.",
+    updates: [
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Sparkles,
+        title: "Roblox UI / GUI Generator",
+        detail:
+          "A new /ui-generator page generates full ScreenGuis (gamepass shops, dev product shops, main menus, loading screens, inventories, trading, daily rewards, codes, leaderboards, HUDs and more) with a live desktop + mobile preview, editable Luau code, and one-click insert into Roblox Studio via the Bloxsmith plugin.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Wrench,
+        title: "Toolbox Rebuilt on Real Creator Store Data",
+        detail:
+          "Free Models now pull directly from the live Roblox Creator Store catalog (not avatar gear), so searches actually return Studio-usable assets. Decals, Audio, Plugins and Meshes use the modern catalog endpoint, every result shows a hi-res thumbnail, and pagination/sort/categories all work end-to-end. Each card links straight to create.roblox.com/store/asset/<id>.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Stay Signed In + 30-Minute Idle Auto-Logout",
+        detail:
+          "Login now has a Stay signed in toggle. When on, sessions persist across browser restarts. When off, you're automatically signed out after 30 minutes of real inactivity for safety on shared devices.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Hide My Email Privacy Toggle",
+        detail:
+          "A new account setting masks your email address in the profile UI (showing only the first letter and domain) so screenshots and screen-shares don't leak it.",
+      },
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "Credit-Aware Model Picker",
+        detail:
+          "The AI model picker now shows a per-message credit cost for every model and a short description of what it's best at in Roblox workflows, so you can pick cheaper models for routine tweaks and premium ones for hard scripts.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Menu,
+        title: "Draggable Help Chat",
+        detail:
+          "The floating AI help chat can now be dragged anywhere on screen and remembers its position.",
+      },
+    ],
+  },
+  {
     version: "v2.9.0",
     date: "May 28, 2026",
     title: "Image & Clothing Generator Overhaul",

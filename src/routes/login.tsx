@@ -33,6 +33,11 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [stay, setStay] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const v = localStorage.getItem("bs:stay_signed_in");
+    return v === null ? true : v === "1";
+  });
 
   const formatAuthError = (message: string) => {
     if (message.includes("email_not_confirmed")) {
@@ -60,6 +65,11 @@ function LoginPage() {
     setLoading(true);
     setErrorMessage(null);
     try {
+      try {
+        localStorage.setItem("bs:stay_signed_in", stay ? "1" : "0");
+      } catch {
+        /* noop */
+      }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         const message = formatAuthError(error.message);
@@ -177,6 +187,15 @@ function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg bg-input border border-border px-3 py-2.5 text-sm"
           />
+          <label className="flex items-center gap-2 text-xs text-muted-foreground select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={stay}
+              onChange={(e) => setStay(e.target.checked)}
+              className="rounded border-border"
+            />
+            Stay signed in (remember me) — auto sign-out after 30 min idle when off
+          </label>
           <button
             disabled={loading}
             className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
