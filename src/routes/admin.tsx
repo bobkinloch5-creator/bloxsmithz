@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/admin.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, XCircle, Loader2, PlayCircle, RefreshCw } from "lucide-react";
 import { testAllSiteModels, type ModelTestResult } from "@/lib/model-test.functions";
+import { RobloxDocsPanel } from "@/components/RobloxDocsPanel";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async () => {
