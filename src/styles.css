@@ -960,11 +960,17 @@ html.halloween::before  { background-image: url("./assets/theme-halloween.jpg");
 html.christmas::before  { background-image: url("./assets/theme-christmas.jpg"); opacity: 0.5; }
 html.winter::before     { background-image: url("./assets/theme-winter.jpg"); opacity: 0.45; }
 html.summer::before     { background-image: url("./assets/theme-summer.jpg"); opacity: 0.45; }
+html.dragon::before     { background-image: url("./assets/theme-dragon.jpg"); opacity: 0.55; }
+html.space::before      { background-image: url("./assets/theme-space.jpg"); opacity: 0.6; }
+html.cybercity::before  { background-image: url("./assets/theme-cybercity.jpg"); opacity: 0.5; }
+html.ocean::before      { background-image: url("./assets/theme-ocean.jpg"); opacity: 0.5; }
+html.volcano::before    { background-image: url("./assets/theme-volcano.jpg"); opacity: 0.5; }
 
 /* Keep page content above the fixed photo layers */
 .neon body > *, .obby body > *, .tycoon body > *, .rpg body > *,
 .doors body > *, .bedwars body > *, .bloxfruits body > *, .adoptme body > *,
-.halloween body > *, .christmas body > *, .winter body > *, .summer body > * {
+.halloween body > *, .christmas body > *, .winter body > *, .summer body > *,
+.dragon body > *, .space body > *, .cybercity body > *, .ocean body > *, .volcano body > * {
   position: relative;
   z-index: 1;
 }
