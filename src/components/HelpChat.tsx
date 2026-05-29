@@ -252,18 +252,37 @@ export function HelpChat() {
       {/* Floating launcher — premium pill, safe bottom-right placement across all pages. */}
       {!open && (
         <button
+          ref={launcherRef}
           type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Open BloxSmith AI help chat"
-          title="BloxSmith AI Help"
-          className="group fixed right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-[9998] flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-primary/80 pl-3.5 pr-4 text-primary-foreground shadow-[0_8px_28px_-6px_color-mix(in_oklab,var(--primary)_55%,transparent)] ring-1 ring-primary-foreground/10 transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_12px_36px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)] active:scale-95 sm:right-6 sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom))] sm:h-14 sm:pl-4 sm:pr-5 animate-fade-in"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onClick={(e) => {
+            if (suppressClickRef.current) { e.preventDefault(); return; }
+            setOpen(true);
+          }}
+          aria-label="Open BloxSmith AI help chat (drag to move)"
+          title="BloxSmith AI Help — drag to move"
+          style={
+            pos
+              ? { left: `${pos.x}px`, top: `${pos.y}px`, right: "auto", bottom: "auto", touchAction: "none" }
+              : { touchAction: "none" }
+          }
+          className={`group fixed z-[9998] flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-primary/80 pl-2.5 pr-4 text-primary-foreground shadow-[0_8px_28px_-6px_color-mix(in_oklab,var(--primary)_55%,transparent)] ring-1 ring-primary-foreground/10 transition-shadow duration-300 hover:shadow-[0_12px_36px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)] sm:h-14 sm:pl-3 sm:pr-5 animate-fade-in select-none ${
+            dragging ? "cursor-grabbing scale-[1.04]" : "cursor-grab hover:scale-[1.03] active:scale-95"
+          } ${pos ? "" : "right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] sm:right-6 sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom))]"}`}
         >
+          <span className="grid h-6 w-6 place-items-center rounded-full text-primary-foreground/60 sm:h-7 sm:w-7" aria-hidden>
+            <GripVertical className="h-3.5 w-3.5" />
+          </span>
           <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-foreground/15 backdrop-blur-sm transition group-hover:bg-primary-foreground/20 sm:h-8 sm:w-8">
-            <MessageCircle className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+            <MessageCircle className="h-4 w-4" />
           </span>
           <span className="text-sm font-semibold tracking-tight">AI Help</span>
         </button>
       )}
+
 
       {/* Mobile/tablet backdrop. Desktop stays light so the page is still visible. */}
       {open && (
