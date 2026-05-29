@@ -2,17 +2,21 @@ import { useState, useRef, useEffect, useCallback, type FormEvent, type PointerE
 import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2, GripVertical } from "lucide-react";
 
 const STORAGE_POS_KEY = "bloxsmith.helpchat.pos";
+const STORAGE_PANEL_POS_KEY = "bloxsmith.helpchat.panel-pos";
 type Pos = { x: number; y: number };
 
-function loadPos(): Pos | null {
+function loadPosFrom(key: string): Pos | null {
   if (typeof localStorage === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_POS_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const p = JSON.parse(raw);
     if (typeof p?.x === "number" && typeof p?.y === "number") return p;
   } catch {}
   return null;
+}
+function loadPos(): Pos | null {
+  return loadPosFrom(STORAGE_POS_KEY);
 }
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -163,6 +167,79 @@ export function HelpChat() {
     }
   }, []);
 
+  // ── Panel drag (desktop) — drag the open chat window by its header ──
+  const [panelPos, setPanelPos] = useState<Pos | null>(null);
+  const [panelDragging, setPanelDragging] = useState(false);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const panelDragInfo = useRef<{ offX: number; offY: number; pointerId: number } | null>(null);
+
+  useEffect(() => {
+    setPanelPos(loadPosFrom(STORAGE_PANEL_POS_KEY));
+  }, []);
+
+  useEffect(() => {
+    if (!panelPos) return;
+    function clamp() {
+      const el = panelRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setPanelPos((p) => {
+        if (!p) return p;
+        const maxX = window.innerWidth - r.width - 8;
+        const maxY = window.innerHeight - r.height - 8;
+        const nx = Math.min(Math.max(8, p.x), Math.max(8, maxX));
+        const ny = Math.min(Math.max(8, p.y), Math.max(8, maxY));
+        return nx === p.x && ny === p.y ? p : { x: nx, y: ny };
+      });
+    }
+    window.addEventListener("resize", clamp);
+    return () => window.removeEventListener("resize", clamp);
+  }, [panelPos]);
+
+  const onPanelHeaderPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    // Skip drag on small screens (panel is a bottom sheet there).
+    if (typeof window !== "undefined" && window.innerWidth < 768) return;
+    // Don't start a drag when clicking a button inside the header.
+    if ((e.target as HTMLElement).closest("button")) return;
+    const el = panelRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    panelDragInfo.current = {
+      offX: e.clientX - r.left,
+      offY: e.clientY - r.top,
+      pointerId: e.pointerId,
+    };
+    setPanelDragging(true);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPanelHeaderPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const info = panelDragInfo.current;
+    if (!info || info.pointerId !== e.pointerId) return;
+    const el = panelRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const nx = Math.min(Math.max(8, e.clientX - info.offX), window.innerWidth - r.width - 8);
+    const ny = Math.min(Math.max(8, e.clientY - info.offY), window.innerHeight - r.height - 8);
+    setPanelPos({ x: nx, y: ny });
+  }, []);
+
+  const onPanelHeaderPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const info = panelDragInfo.current;
+    if (!info) return;
+    panelDragInfo.current = null;
+    setPanelDragging(false);
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+    setPanelPos((p) => {
+      if (p && typeof localStorage !== "undefined") {
+        try { localStorage.setItem(STORAGE_PANEL_POS_KEY, JSON.stringify(p)); } catch {}
+      }
+      return p;
+    });
+  }, []);
+
+
+
 
   useEffect(() => {
     saveHistory(messages);
@@ -296,12 +373,33 @@ export function HelpChat() {
       {/* Responsive panel — bottom sheet on mobile, floating card on desktop. */}
       {open && (
         <aside
+          ref={panelRef}
           role="dialog"
           aria-modal="false"
           aria-label="BloxSmith AI help chat"
-          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(78dvh,640px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl animate-scale-in md:inset-x-auto md:right-6 md:bottom-[calc(1.75rem+env(safe-area-inset-bottom))] md:h-[min(620px,calc(100dvh-3rem))] md:w-[380px] lg:w-[400px]"
+          style={
+            panelPos
+              ? {
+                  // Desktop-only custom position; mobile keeps the bottom sheet via classes.
+                  ...(typeof window !== "undefined" && window.innerWidth >= 768
+                    ? { left: `${panelPos.x}px`, top: `${panelPos.y}px`, right: "auto", bottom: "auto" }
+                    : {}),
+                }
+              : undefined
+          }
+          className={`fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(78dvh,640px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl animate-scale-in md:inset-x-auto md:h-[min(620px,calc(100dvh-3rem))] md:w-[380px] lg:w-[400px] ${
+            panelPos ? "" : "md:right-6 md:bottom-[calc(1.75rem+env(safe-area-inset-bottom))]"
+          } ${panelDragging ? "select-none" : ""}`}
         >
-          <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+          <header
+            onPointerDown={onPanelHeaderPointerDown}
+            onPointerMove={onPanelHeaderPointerMove}
+            onPointerUp={onPanelHeaderPointerUp}
+            onPointerCancel={onPanelHeaderPointerUp}
+            className={`flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5 md:${panelDragging ? "cursor-grabbing" : "cursor-grab"}`}
+            title="Drag to move (desktop)"
+            style={{ touchAction: "none" }}
+          >
             <div className="flex min-w-0 items-center gap-2">
               <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/15 shadow-[0_0_24px_color-mix(in_oklab,var(--primary)_35%,transparent)]">
                 <MessageCircle className="h-4 w-4 text-primary" />
@@ -335,6 +433,7 @@ export function HelpChat() {
               </button>
             </div>
           </header>
+
 
           <div
             ref={scrollRef}
