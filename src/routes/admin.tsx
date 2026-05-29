@@ -413,6 +413,10 @@ function Admin() {
 
         <ModelDiagnosticsSection />
 
+        <RobloxDocsPanel />
+
+
+
         <section className="glass rounded-2xl p-6">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold">Pending payment verifications ({requests.length})</h2>
