@@ -731,6 +731,7 @@ export type Database = {
           roblox_verification_expires_at: string | null
           roblox_verified_at: string | null
           specialization: string | null
+          theme: string | null
           updated_at: string
         }
         Insert: {
@@ -758,6 +759,7 @@ export type Database = {
           roblox_verification_expires_at?: string | null
           roblox_verified_at?: string | null
           specialization?: string | null
+          theme?: string | null
           updated_at?: string
         }
         Update: {
@@ -785,6 +787,7 @@ export type Database = {
           roblox_verification_expires_at?: string | null
           roblox_verified_at?: string | null
           specialization?: string | null
+          theme?: string | null
           updated_at?: string
         }
         Relationships: []
