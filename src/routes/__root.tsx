@@ -15,6 +15,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { useUnlockAudio } from "@/hooks/useSounds";
 import { ClickRipple } from "@/components/ClickRipple";
 import { HelpChat } from "@/components/HelpChat";
+import { GlobalChat } from "@/components/GlobalChat";
 import { MfaSessionGuard } from "@/components/MfaSessionGuard";
 import { RobloxModelExplainer } from "@/components/RobloxModelExplainer";
 
@@ -277,6 +278,7 @@ function RootComponent() {
           <ImageGeneratorButtonInjector />
           <ClickRipple />
           <HelpChat />
+          <GlobalChat />
           <Toaster theme="dark" position="top-right" />
         </AuthProvider>
       </QueryClientProvider>
