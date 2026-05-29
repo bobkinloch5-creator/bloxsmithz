@@ -180,14 +180,14 @@ export function HelpChat() {
 
   return (
     <>
-      {/* Floating launcher — fixed bottom-right with safe-area padding */}
+      {/* Floating launcher — fixed high on the right side for visibility */}
       {!open && (
         <button
           type="button"
           onClick={openChat}
           aria-label="Open BloxSmith AI Help"
           title="BloxSmith AI Help"
-          className="group fixed z-[9998] flex items-center gap-2 rounded-full border border-primary-foreground/15 bg-gradient-to-br from-primary to-primary/85 px-4 py-3 text-primary-foreground shadow-[0_10px_32px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-md transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_14px_42px_-10px_color-mix(in_oklab,var(--primary)_75%,transparent)] active:scale-95 animate-fade-in right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:right-6 sm:bottom-[calc(6rem+env(safe-area-inset-bottom))]"
+          className="group fixed right-3 top-[42dvh] z-[9998] flex -translate-y-1/2 items-center gap-2 rounded-full border border-primary-foreground/15 bg-gradient-to-br from-primary to-primary/85 px-4 py-3 text-primary-foreground shadow-[0_10px_32px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-md transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_14px_42px_-10px_color-mix(in_oklab,var(--primary)_75%,transparent)] active:scale-95 animate-fade-in sm:right-6 md:top-1/2"
         >
           <span className="relative grid h-8 w-8 place-items-center rounded-full bg-primary-foreground/15 backdrop-blur-sm transition group-hover:bg-primary-foreground/25">
             <MessageCircle className="h-4 w-4" />
@@ -217,11 +217,11 @@ export function HelpChat() {
           aria-modal="false"
           aria-label="BloxSmith AI Help"
           className="fixed z-[9999] flex flex-col overflow-hidden border border-border/70 bg-surface-elevated/95 backdrop-blur-xl shadow-2xl animate-scale-in
-            inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] top-auto
-            h-[min(80dvh,640px)] max-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))]
+            inset-x-3 top-16 bottom-auto
+            h-[min(78dvh,640px)] max-h-[calc(100dvh-5rem)]
             rounded-2xl
-            md:inset-x-auto md:bottom-[calc(6rem+env(safe-area-inset-bottom))] md:right-6
-            md:w-[400px] md:h-[min(640px,calc(100dvh-7rem))]
+            md:inset-x-auto md:right-6 md:top-1/2 md:-translate-y-1/2
+            md:w-[400px] md:h-[min(640px,calc(100dvh-6rem))]
             md:rounded-2xl"
         >
           {/* Header */}
