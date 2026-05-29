@@ -16,6 +16,7 @@ type Profile = {
   discord_claimed?: boolean;
   referral_code?: string | null;
   referred_by?: string | null;
+  hide_email?: boolean;
 };
 
 type Role = "owner" | "admin" | "user";
@@ -102,7 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Idle auto-logout: only after a long period of real inactivity.
   useEffect(() => {
     if (!session?.user || !authReadyRef.current) return;
-    const IDLE_MS = 2 * 60 * 60 * 1000;
+    // Respect a "Stay signed in" preference: when the user opted in, keep the long 2h window.
+    // Otherwise apply the 30-minute idle auto-logout the user asked for.
+    const stay =
+      typeof window !== "undefined" && localStorage.getItem("bs:stay_signed_in") === "1";
+    const IDLE_MS = stay ? 2 * 60 * 60 * 1000 : 30 * 60 * 1000;
     let lastActivity = Date.now();
     let interval: ReturnType<typeof setInterval> | null = null;
 
