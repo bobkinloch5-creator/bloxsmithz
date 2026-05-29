@@ -65,6 +65,7 @@ const MOBILE_NAV_ITEMS: readonly NavItem[] = [
   { to: "/plugin", label: "Plugin", icon: Puzzle },
   { to: "/pricing", label: "Credits", icon: BadgeDollarSign },
   { to: "/templates", label: "Templates", icon: Sparkles },
+  { to: "/toolbox", label: "Toolbox", icon: Box },
   { to: "/docs", label: "Docs", icon: BookOpen },
   { to: "/ideas", label: "Ideas", icon: Sparkles },
   { to: "/mcp", label: "MCP", icon: Box },
