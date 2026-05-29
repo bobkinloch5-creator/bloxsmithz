@@ -1073,7 +1073,8 @@ html.theme-transition *::after {
 
 html.neon::before, html.obby::before, html.tycoon::before, html.rpg::before,
 html.doors::before, html.bedwars::before, html.bloxfruits::before, html.adoptme::before,
-html.halloween::before, html.christmas::before, html.winter::before, html.summer::before {
+html.halloween::before, html.christmas::before, html.winter::before, html.summer::before,
+html.dragon::before, html.space::before, html.cybercity::before, html.ocean::before, html.volcano::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -1086,7 +1087,8 @@ html.halloween::before, html.christmas::before, html.winter::before, html.summer
 }
 html.neon::after, html.obby::after, html.tycoon::after, html.rpg::after,
 html.doors::after, html.bedwars::after, html.bloxfruits::after, html.adoptme::after,
-html.halloween::after, html.christmas::after, html.winter::after, html.summer::after {
+html.halloween::after, html.christmas::after, html.winter::after, html.summer::after,
+html.dragon::after, html.space::after, html.cybercity::after, html.ocean::after, html.volcano::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -1101,12 +1103,15 @@ html.halloween::after, html.christmas::after, html.winter::after, html.summer::a
 html.neon .glass, html.obby .glass, html.tycoon .glass, html.rpg .glass,
 html.doors .glass, html.bedwars .glass, html.bloxfruits .glass,
 html.halloween .glass, html.christmas .glass,
+html.dragon .glass, html.space .glass, html.cybercity .glass, html.ocean .glass, html.volcano .glass,
 html.neon .glass-strong, html.obby .glass-strong, html.tycoon .glass-strong, html.rpg .glass-strong,
 html.doors .glass-strong, html.bedwars .glass-strong, html.bloxfruits .glass-strong,
-html.halloween .glass-strong, html.christmas .glass-strong {
+html.halloween .glass-strong, html.christmas .glass-strong,
+html.dragon .glass-strong, html.space .glass-strong, html.cybercity .glass-strong, html.ocean .glass-strong, html.volcano .glass-strong {
   background: linear-gradient(180deg, oklch(0.09 0.015 250 / 0.68), oklch(0.09 0.015 250 / 0.4));
   border-color: oklch(1 0 0 / 0.12);
 }
+
 
 /* Light-flavored themes use lighter glass */
 html.adoptme .glass, html.adoptme .glass-strong,
