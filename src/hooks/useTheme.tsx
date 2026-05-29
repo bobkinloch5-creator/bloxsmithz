@@ -16,7 +16,12 @@ export type Theme =
   | "halloween"
   | "christmas"
   | "winter"
-  | "summer";
+  | "summer"
+  | "dragon"
+  | "space"
+  | "cybercity"
+  | "ocean"
+  | "volcano";
 
 export type ThemeCategory = "Base" | "Roblox Games" | "Seasonal";
 
