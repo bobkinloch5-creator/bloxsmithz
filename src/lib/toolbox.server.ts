@@ -96,17 +96,11 @@ async function searchLegacy(opts: {
     headers: { Accept: "application/json", "User-Agent": "BloxSmith/1.0" },
   });
   if (!res.ok) throw new Error(`Toolbox search failed (${res.status})`);
-  const raw = (await res.json()) as Array<{
-    AssetId: number;
-    Name: string;
-    Creator: string;
-    AssetTypeID?: number;
-    ThumbnailUrl?: string;
-    BestPrice?: number;
-    PriceInRobux?: number | null;
-  }>;
-  const items = (raw ?? []).filter(
-    (a) => (a.PriceInRobux ?? a.BestPrice ?? 0) === 0,
+  const raw = (await res.json()) as unknown;
+  const arr = Array.isArray(raw) ? raw : [];
+  const items = arr.filter(
+    (a: { PriceInRobux?: number | null; BestPrice?: number }) =>
+      (a.PriceInRobux ?? a.BestPrice ?? 0) === 0,
   );
   // Legacy thumbnails are tiny — upgrade to 420x420 via the thumbnails service.
   const ids = items.map((a) => a.AssetId);
