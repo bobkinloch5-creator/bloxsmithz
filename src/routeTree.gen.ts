@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UiGeneratorRouteImport } from './routes/ui-generator'
 import { Route as ToolboxRouteImport } from './routes/toolbox'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TemplatesRouteImport } from './routes/templates'
@@ -57,6 +58,11 @@ import { Route as ApiPublicPaypalWebhookRouteImport } from './routes/api/public/
 import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
 
+const UiGeneratorRoute = UiGeneratorRouteImport.update({
+  id: '/ui-generator',
+  path: '/ui-generator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToolboxRoute = ToolboxRouteImport.update({
   id: '/toolbox',
   path: '/toolbox',
@@ -322,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
   '/toolbox': typeof ToolboxRoute
+  '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/checkout/$pack': typeof CheckoutPackRoute
@@ -371,6 +378,7 @@ export interface FileRoutesByTo {
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
   '/toolbox': typeof ToolboxRoute
+  '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/checkout/$pack': typeof CheckoutPackRoute
@@ -421,6 +429,7 @@ export interface FileRoutesById {
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
   '/toolbox': typeof ToolboxRoute
+  '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/checkout/$pack': typeof CheckoutPackRoute
@@ -472,6 +481,7 @@ export interface FileRouteTypes {
     | '/templates'
     | '/terms'
     | '/toolbox'
+    | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/checkout/$pack'
@@ -521,6 +531,7 @@ export interface FileRouteTypes {
     | '/templates'
     | '/terms'
     | '/toolbox'
+    | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/checkout/$pack'
@@ -570,6 +581,7 @@ export interface FileRouteTypes {
     | '/templates'
     | '/terms'
     | '/toolbox'
+    | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/checkout/$pack'
@@ -620,6 +632,7 @@ export interface RootRouteChildren {
   TemplatesRoute: typeof TemplatesRoute
   TermsRoute: typeof TermsRoute
   ToolboxRoute: typeof ToolboxRoute
+  UiGeneratorRoute: typeof UiGeneratorRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
   CheckoutPackRoute: typeof CheckoutPackRoute
@@ -644,6 +657,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/ui-generator': {
+      id: '/ui-generator'
+      path: '/ui-generator'
+      fullPath: '/ui-generator'
+      preLoaderRoute: typeof UiGeneratorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/toolbox': {
       id: '/toolbox'
       path: '/toolbox'
@@ -1015,6 +1035,7 @@ const rootRouteChildren: RootRouteChildren = {
   TemplatesRoute: TemplatesRoute,
   TermsRoute: TermsRoute,
   ToolboxRoute: ToolboxRoute,
+  UiGeneratorRoute: UiGeneratorRoute,
   DotwellKnownOauthAuthorizationServerRoute:
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
