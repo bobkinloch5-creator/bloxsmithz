@@ -942,6 +942,22 @@ export const chatWithAI = createServerFn({ method: "POST" })
       throw e;
     }
 
+    // Tier-based surcharge — pricier chat models charge more credits.
+    const { applyModelCreditMultiplier: applyChatMult } = await import("./ai-models");
+    const chatTotal = applyChatMult(CHAT_COST, resolved.modelName);
+    const chatSurcharge = chatTotal - CHAT_COST;
+    if (!isOwner && chatSurcharge > 0) {
+      const { error: surErr } = await supabase.rpc("spend_credits_atomic", {
+        _amount: chatSurcharge,
+      });
+      if (surErr) {
+        await supabase.rpc("refund_credits", { _amount: CHAT_COST, _reason: "tier surcharge unaffordable" });
+        throw new Error(
+          `Not enough credits — chat with ${resolved.modelName} costs ${chatTotal} credits. Pick a cheaper model or buy more on the Pricing page.`,
+        );
+      }
+    }
+
     const { generateText, stepCountIs } = await import("ai");
     const { buildBloxSmithTools } = await import("./ai-tools.server");
 
