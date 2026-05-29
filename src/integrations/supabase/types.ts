@@ -284,6 +284,78 @@ export type Database = {
           },
         ]
       }
+      global_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      global_chat_mutes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          muted_until: string | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          muted_until?: string | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          muted_until?: string | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      global_chat_settings: {
+        Row: {
+          id: number
+          slow_mode_seconds: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: number
+          slow_mode_seconds?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: number
+          slow_mode_seconds?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       mcp_anon_attempts: {
         Row: {
           last_attempt_at: string
@@ -1368,6 +1440,17 @@ export type Database = {
         Args: { _credits: number; _submission_id: string }
         Returns: undefined
       }
+      admin_chat_clear_all: { Args: never; Returns: number }
+      admin_chat_delete_message: {
+        Args: { _message_id: string }
+        Returns: undefined
+      }
+      admin_chat_mute: {
+        Args: { _minutes: number; _reason: string; _user_id: string }
+        Returns: string
+      }
+      admin_chat_set_slow_mode: { Args: { _seconds: number }; Returns: number }
+      admin_chat_unmute: { Args: { _user_id: string }; Returns: undefined }
       admin_reject_payment: {
         Args: { _reason: string; _request_id: string }
         Returns: undefined
@@ -1422,6 +1505,7 @@ export type Database = {
         Args: { _new_name: string; _source_id: string }
         Returns: string
       }
+      send_global_chat_message: { Args: { _content: string }; Returns: string }
       spend_credits_atomic: { Args: { _amount: number }; Returns: number }
     }
     Enums: {
