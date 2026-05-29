@@ -358,6 +358,8 @@ function Account() {
       <Header />
       <main className="flex-1 mx-auto w-full max-w-5xl px-4 sm:px-6 py-10 space-y-8">
         <ProfileMediaSettings />
+        <ProfileRolesRow />
+
 
         {/* Stats Showcase */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

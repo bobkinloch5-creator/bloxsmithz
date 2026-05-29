@@ -10,6 +10,7 @@
 // helper instead.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { tryComfyUI } from "@/lib/comfyui.server";
 
 export type GenImageResult = { imageUrl: string; markdown: string; modelUsed?: string } | { error: string };
 
@@ -86,6 +87,23 @@ export async function generateImageFromPrompt(opts: {
 }): Promise<GenImageResult> {
   const aspectRatio = opts.aspectRatio ?? "1:1";
   const fullPrompt = `${opts.prompt}\n\n${ASPECT_HINTS[aspectRatio] ?? ""}`.trim();
+
+  // 1. Try local ComfyUI first when configured. Fast-fails (returns
+  //    `not_configured`) when COMFYUI_URL is unset so the cloud path runs
+  //    immediately for users without a local server.
+  const comfy = await tryComfyUI({ prompt: fullPrompt, aspectRatio });
+  if (comfy.ok) {
+    return await saveImage(
+      opts.userId,
+      comfy.bytes,
+      comfy.mime,
+      opts.altText ?? opts.prompt,
+      comfy.modelUsed,
+    );
+  }
+  if (comfy.reason !== "not_configured") {
+    console.warn(`[image-gen] ComfyUI failed (${comfy.reason}) — falling back to cloud provider`);
+  }
 
   const neokensKey =
     process.env.NEOKENS_API_KEY ||
