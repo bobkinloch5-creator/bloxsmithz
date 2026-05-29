@@ -1220,7 +1220,7 @@ ${ROBLOX_KNOWLEDGE_PROMPT}${includeProject && memoryBlock ? `\n\n${memoryBlock}`
       throw new Error("Chat failed after retrying: " + msg);
     }
 
-    return { reply: text, cost: isOwner ? 0 : CHAT_COST };
+    return { reply: text, cost: isOwner ? 0 : chatTotal };
   });
 
 // -----------------------------------------------------------------------------
