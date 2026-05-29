@@ -1193,6 +1193,93 @@ export type Database = {
         }
         Relationships: []
       }
+      roblox_docs: {
+        Row: {
+          content: string
+          created_at: string
+          embedding: string
+          id: string
+          model: string
+          repo_path: string | null
+          section: string | null
+          sha: string | null
+          source: string
+          source_url: string
+          title: string
+          token_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          embedding: string
+          id?: string
+          model?: string
+          repo_path?: string | null
+          section?: string | null
+          sha?: string | null
+          source: string
+          source_url: string
+          title: string
+          token_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          embedding?: string
+          id?: string
+          model?: string
+          repo_path?: string | null
+          section?: string | null
+          sha?: string | null
+          source?: string
+          source_url?: string
+          title?: string
+          token_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      roblox_docs_sync: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          id: string
+          processed: number
+          skipped: number
+          source: string
+          started_at: string
+          started_by: string | null
+          status: string
+          total: number
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          processed?: number
+          skipped?: number
+          source: string
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          total?: number
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          processed?: number
+          skipped?: number
+          source?: string
+          started_at?: string
+          started_by?: string | null
+          status?: string
+          total?: number
+        }
+        Relationships: []
+      }
       showcase_likes: {
         Row: {
           created_at: string
@@ -1495,6 +1582,23 @@ export type Database = {
       is_project_owner: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
+      }
+      match_roblox_docs: {
+        Args: {
+          match_count?: number
+          min_similarity?: number
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          id: string
+          repo_path: string
+          section: string
+          similarity: number
+          source: string
+          source_url: string
+          title: string
+        }[]
       }
       redeem_promo_code: { Args: { _code: string }; Returns: number }
       refund_credits: {
