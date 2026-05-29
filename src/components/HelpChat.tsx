@@ -2,17 +2,21 @@ import { useState, useRef, useEffect, useCallback, type FormEvent, type PointerE
 import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2, GripVertical } from "lucide-react";
 
 const STORAGE_POS_KEY = "bloxsmith.helpchat.pos";
+const STORAGE_PANEL_POS_KEY = "bloxsmith.helpchat.panel-pos";
 type Pos = { x: number; y: number };
 
-function loadPos(): Pos | null {
+function loadPosFrom(key: string): Pos | null {
   if (typeof localStorage === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_POS_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const p = JSON.parse(raw);
     if (typeof p?.x === "number" && typeof p?.y === "number") return p;
   } catch {}
   return null;
+}
+function loadPos(): Pos | null {
+  return loadPosFrom(STORAGE_POS_KEY);
 }
 
 type Message = { role: "user" | "assistant"; content: string };
