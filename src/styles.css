@@ -1151,7 +1151,8 @@ html.volcano::before    { background-image: url("./assets/theme-volcano.jpg"); o
 /* Hide per-section hero photos on themed pages so the themed background isn't doubled */
 html.neon .hero-bg-img, html.obby .hero-bg-img, html.tycoon .hero-bg-img, html.rpg .hero-bg-img,
 html.doors .hero-bg-img, html.bedwars .hero-bg-img, html.bloxfruits .hero-bg-img, html.adoptme .hero-bg-img,
-html.halloween .hero-bg-img, html.christmas .hero-bg-img, html.winter .hero-bg-img, html.summer .hero-bg-img {
+html.halloween .hero-bg-img, html.christmas .hero-bg-img, html.winter .hero-bg-img, html.summer .hero-bg-img,
+html.dragon .hero-bg-img, html.space .hero-bg-img, html.cybercity .hero-bg-img, html.ocean .hero-bg-img, html.volcano .hero-bg-img {
   display: none;
 }
 
