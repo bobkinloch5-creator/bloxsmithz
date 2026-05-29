@@ -50,11 +50,11 @@ export const Route = createFileRoute("/")({
   component: Landing,
   head: () => ({
     meta: [
-      { title: "BloxSmith — Build Roblox Games with AI | Script & Map Generator" },
+      { title: "BloxSmith — Build Roblox Games with AI" },
       {
         name: "description",
         content:
-          "Describe your Roblox game idea and get ready-to-play Roblox builds. BloxSmith AI generates Luau scripts, UI, maps, systems, and syncs directly into Roblox Studio.",
+          "Describe your Roblox idea and BloxSmith AI generates Luau scripts, UI, maps, and game systems — synced into Roblox Studio.",
       },
       {
         name: "keywords",
@@ -63,12 +63,12 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "BloxSmith — Build Roblox Games with AI | Script & Map Generator",
+        content: "BloxSmith — Build Roblox Games with AI",
       },
       {
         property: "og:description",
         content:
-          "Describe your Roblox game idea and get ready-to-play Roblox builds. BloxSmith AI generates Luau scripts, UI, maps, systems, and syncs directly into Roblox Studio.",
+          "Describe your Roblox idea and BloxSmith AI generates Luau scripts, UI, maps, and game systems — synced into Roblox Studio.",
       },
       { property: "og:url", content: "https://bloxsmith.pro/" },
     ],
