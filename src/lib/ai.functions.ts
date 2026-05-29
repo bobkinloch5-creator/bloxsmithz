@@ -201,10 +201,11 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
 
-    const cost = mode === "generate" ? 3 : 1;
+    const baseCost = mode === "generate" ? 3 : 1;
+    let cost = baseCost;
 
     if (!isOwner) {
-      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: cost });
+      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: baseCost });
       if (spendErr) {
         throw new Error("Not enough credits. Buy more on the Pricing page.");
       }
@@ -215,7 +216,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const { getModelProfile, resolveAiGateway, createProvider } = await import(
       "./ai-providers.server"
     );
-    const { NEOKENS_SAFE_FALLBACK_MODEL } = await import("./ai-models");
+    const { NEOKENS_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
 
@@ -240,11 +241,25 @@ export const generateWithAI = createServerFn({ method: "POST" })
     } catch (e) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
-          _amount: cost,
+          _amount: baseCost,
           _reason: "ai gateway not configured",
         });
       throw e;
     }
+
+    // Tier-based surcharge — higher models charge more credits per generation.
+    const totalCost = applyModelCreditMultiplier(baseCost, resolved.modelName);
+    const surcharge = totalCost - baseCost;
+    if (!isOwner && surcharge > 0) {
+      const { error: surErr } = await supabase.rpc("spend_credits_atomic", { _amount: surcharge });
+      if (surErr) {
+        await supabase.rpc("refund_credits", { _amount: baseCost, _reason: "tier surcharge unaffordable" });
+        throw new Error(
+          `Not enough credits — model ${resolved.modelName} costs ${totalCost} credits. Pick a cheaper model or buy more on the Pricing page.`,
+        );
+      }
+    }
+    cost = totalCost;
 
     const model = resolved.model;
     const profile = getModelProfile(resolved.provider, resolved.modelName, {
@@ -726,8 +741,24 @@ export const planBuild = createServerFn({ method: "POST" })
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
     let model;
+    let planTotalCost = PLAN_COST;
     try {
-      model = resolveBuiltInGateway({ kind: "fast", thinking }).model;
+      const builtIn = resolveBuiltInGateway({ kind: "fast", thinking });
+      model = builtIn.model;
+      const { applyModelCreditMultiplier } = await import("./ai-models");
+      planTotalCost = applyModelCreditMultiplier(PLAN_COST, builtIn.modelName);
+      const planSurcharge = planTotalCost - PLAN_COST;
+      if (!isOwner && planSurcharge > 0) {
+        const { error: surErr } = await supabase.rpc("spend_credits_atomic", {
+          _amount: planSurcharge,
+        });
+        if (surErr) {
+          await supabase.rpc("refund_credits", { _amount: PLAN_COST, _reason: "tier surcharge unaffordable" });
+          throw new Error(
+            `Not enough credits — planning with ${builtIn.modelName} costs ${planTotalCost} credits. Buy more on the Pricing page.`,
+          );
+        }
+      }
     } catch (e) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
@@ -808,7 +839,7 @@ Keep it under ~400 words. Be specific to the user's request and existing project
     } catch (err: any) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
-          _amount: PLAN_COST,
+          _amount: planTotalCost,
           _reason: "plan generation failed",
         });
       const msg = String(err?.message ?? err);
@@ -818,7 +849,7 @@ Keep it under ~400 words. Be specific to the user's request and existing project
       throw new Error("Plan generation failed: " + msg);
     }
 
-    return { plan: text, originalPrompt: prompt, cost: isOwner ? 0 : PLAN_COST };
+    return { plan: text, originalPrompt: prompt, cost: isOwner ? 0 : planTotalCost };
   });
 
 // -----------------------------------------------------------------------------
@@ -925,6 +956,22 @@ export const chatWithAI = createServerFn({ method: "POST" })
           _reason: "ai gateway not configured",
         });
       throw e;
+    }
+
+    // Tier-based surcharge — pricier chat models charge more credits.
+    const { applyModelCreditMultiplier: applyChatMult } = await import("./ai-models");
+    const chatTotal = applyChatMult(CHAT_COST, resolved.modelName);
+    const chatSurcharge = chatTotal - CHAT_COST;
+    if (!isOwner && chatSurcharge > 0) {
+      const { error: surErr } = await supabase.rpc("spend_credits_atomic", {
+        _amount: chatSurcharge,
+      });
+      if (surErr) {
+        await supabase.rpc("refund_credits", { _amount: CHAT_COST, _reason: "tier surcharge unaffordable" });
+        throw new Error(
+          `Not enough credits — chat with ${resolved.modelName} costs ${chatTotal} credits. Pick a cheaper model or buy more on the Pricing page.`,
+        );
+      }
     }
 
     const { generateText, stepCountIs } = await import("ai");
@@ -1170,7 +1217,7 @@ ${ROBLOX_KNOWLEDGE_PROMPT}${includeProject && memoryBlock ? `\n\n${memoryBlock}`
     } catch (err: unknown) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
-          _amount: CHAT_COST,
+          _amount: chatTotal,
           _reason: "chat generation failed",
         });
       const msg = getAIErrorMessage(err);
@@ -1189,7 +1236,7 @@ ${ROBLOX_KNOWLEDGE_PROMPT}${includeProject && memoryBlock ? `\n\n${memoryBlock}`
       throw new Error("Chat failed after retrying: " + msg);
     }
 
-    return { reply: text, cost: isOwner ? 0 : CHAT_COST };
+    return { reply: text, cost: isOwner ? 0 : chatTotal };
   });
 
 // -----------------------------------------------------------------------------
@@ -1257,9 +1304,10 @@ export const fixErrorsWithAI = createServerFn({ method: "POST" })
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
 
-    const cost = 2;
+    const baseCost = 2;
+    let cost = baseCost;
     if (!isOwner) {
-      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: cost });
+      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: baseCost });
       if (spendErr) throw new Error("Not enough credits. Buy more on the Pricing page.");
     }
 
@@ -1271,7 +1319,21 @@ export const fixErrorsWithAI = createServerFn({ method: "POST" })
 
     let model;
     try {
-      model = resolveBuiltInGateway({ kind: "build" }).model;
+      const builtIn = resolveBuiltInGateway({ kind: "build" });
+      model = builtIn.model;
+      const { applyModelCreditMultiplier } = await import("./ai-models");
+      const totalCost = applyModelCreditMultiplier(baseCost, builtIn.modelName);
+      const surcharge = totalCost - baseCost;
+      if (!isOwner && surcharge > 0) {
+        const { error: surErr } = await supabase.rpc("spend_credits_atomic", { _amount: surcharge });
+        if (surErr) {
+          await supabase.rpc("refund_credits", { _amount: baseCost, _reason: "tier surcharge unaffordable" });
+          throw new Error(
+            `Not enough credits — fixing with ${builtIn.modelName} costs ${totalCost} credits. Buy more on the Pricing page.`,
+          );
+        }
+      }
+      cost = totalCost;
     } catch (e) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
@@ -1488,9 +1550,10 @@ export const autopilotBuild = createServerFn({ method: "POST" })
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
 
-    const cost = 10;
+    const baseCost = 10;
+    let cost = baseCost;
     if (!isOwner) {
-      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: cost });
+      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: baseCost });
       if (spendErr) throw new Error("Not enough credits. Autopilot needs 10 credits.");
     }
 
@@ -1508,6 +1571,21 @@ export const autopilotBuild = createServerFn({ method: "POST" })
           _reason: "ai gateway not configured",
         });
       throw e;
+    }
+    {
+      const { applyModelCreditMultiplier } = await import("./ai-models");
+      const totalCost = applyModelCreditMultiplier(baseCost, builtIn.modelName);
+      const surcharge = totalCost - baseCost;
+      if (!isOwner && surcharge > 0) {
+        const { error: surErr } = await supabase.rpc("spend_credits_atomic", { _amount: surcharge });
+        if (surErr) {
+          await supabase.rpc("refund_credits", { _amount: baseCost, _reason: "tier surcharge unaffordable" });
+          throw new Error(
+            `Not enough credits — autopilot with ${builtIn.modelName} costs ${totalCost} credits. Buy more on the Pricing page.`,
+          );
+        }
+      }
+      cost = totalCost;
     }
     const model = builtIn.model;
     const profile = getModelProfile(builtIn.provider, builtIn.modelName, { heavyBuild: true });
