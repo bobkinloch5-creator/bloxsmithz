@@ -167,6 +167,79 @@ export function HelpChat() {
     }
   }, []);
 
+  // ── Panel drag (desktop) — drag the open chat window by its header ──
+  const [panelPos, setPanelPos] = useState<Pos | null>(null);
+  const [panelDragging, setPanelDragging] = useState(false);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const panelDragInfo = useRef<{ offX: number; offY: number; pointerId: number } | null>(null);
+
+  useEffect(() => {
+    setPanelPos(loadPosFrom(STORAGE_PANEL_POS_KEY));
+  }, []);
+
+  useEffect(() => {
+    if (!panelPos) return;
+    function clamp() {
+      const el = panelRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setPanelPos((p) => {
+        if (!p) return p;
+        const maxX = window.innerWidth - r.width - 8;
+        const maxY = window.innerHeight - r.height - 8;
+        const nx = Math.min(Math.max(8, p.x), Math.max(8, maxX));
+        const ny = Math.min(Math.max(8, p.y), Math.max(8, maxY));
+        return nx === p.x && ny === p.y ? p : { x: nx, y: ny };
+      });
+    }
+    window.addEventListener("resize", clamp);
+    return () => window.removeEventListener("resize", clamp);
+  }, [panelPos]);
+
+  const onPanelHeaderPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    // Skip drag on small screens (panel is a bottom sheet there).
+    if (typeof window !== "undefined" && window.innerWidth < 768) return;
+    // Don't start a drag when clicking a button inside the header.
+    if ((e.target as HTMLElement).closest("button")) return;
+    const el = panelRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    panelDragInfo.current = {
+      offX: e.clientX - r.left,
+      offY: e.clientY - r.top,
+      pointerId: e.pointerId,
+    };
+    setPanelDragging(true);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPanelHeaderPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const info = panelDragInfo.current;
+    if (!info || info.pointerId !== e.pointerId) return;
+    const el = panelRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const nx = Math.min(Math.max(8, e.clientX - info.offX), window.innerWidth - r.width - 8);
+    const ny = Math.min(Math.max(8, e.clientY - info.offY), window.innerHeight - r.height - 8);
+    setPanelPos({ x: nx, y: ny });
+  }, []);
+
+  const onPanelHeaderPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const info = panelDragInfo.current;
+    if (!info) return;
+    panelDragInfo.current = null;
+    setPanelDragging(false);
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+    setPanelPos((p) => {
+      if (p && typeof localStorage !== "undefined") {
+        try { localStorage.setItem(STORAGE_PANEL_POS_KEY, JSON.stringify(p)); } catch {}
+      }
+      return p;
+    });
+  }, []);
+
+
+
 
   useEffect(() => {
     saveHistory(messages);
