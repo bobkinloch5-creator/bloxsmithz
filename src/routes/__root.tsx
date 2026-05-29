@@ -103,6 +103,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d40a0299-aad3-4400-9750-9e748359ad0c",
       },
       { name: "google-site-verification", content: "TT27YZIAvj3b076VGZ2HHVWMyaF_Szuqd0ZOjxdpSTE" },
+      { name: "description", content: "Bloxsmith Forge is an AI-powered Roblox game builder and asset generator." },
+      { property: "og:description", content: "Bloxsmith Forge is an AI-powered Roblox game builder and asset generator." },
+      { name: "twitter:description", content: "Bloxsmith Forge is an AI-powered Roblox game builder and asset generator." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7e28cb51-2ecd-4bfa-9fd9-f059b1e5ae98/id-preview-af0ea832--6046985f-f2cd-4c4b-8c10-ebc8e41361ca.lovable.app-1780097863705.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7e28cb51-2ecd-4bfa-9fd9-f059b1e5ae98/id-preview-af0ea832--6046985f-f2cd-4c4b-8c10-ebc8e41361ca.lovable.app-1780097863705.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
