@@ -160,6 +160,7 @@ type ContextInputs = {
   history: { role: "user" | "assistant"; content: string }[];
   keywords: string[];
   memoryBlock?: string;
+  docsBlock?: string;
 };
 
 function buildContextBlock(
