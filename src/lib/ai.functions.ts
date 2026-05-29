@@ -1550,9 +1550,10 @@ export const autopilotBuild = createServerFn({ method: "POST" })
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
 
-    const cost = 10;
+    const baseCost = 10;
+    let cost = baseCost;
     if (!isOwner) {
-      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: cost });
+      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: baseCost });
       if (spendErr) throw new Error("Not enough credits. Autopilot needs 10 credits.");
     }
 
@@ -1570,6 +1571,21 @@ export const autopilotBuild = createServerFn({ method: "POST" })
           _reason: "ai gateway not configured",
         });
       throw e;
+    }
+    {
+      const { applyModelCreditMultiplier } = await import("./ai-models");
+      const totalCost = applyModelCreditMultiplier(baseCost, builtIn.modelName);
+      const surcharge = totalCost - baseCost;
+      if (!isOwner && surcharge > 0) {
+        const { error: surErr } = await supabase.rpc("spend_credits_atomic", { _amount: surcharge });
+        if (surErr) {
+          await supabase.rpc("refund_credits", { _amount: baseCost, _reason: "tier surcharge unaffordable" });
+          throw new Error(
+            `Not enough credits — autopilot with ${builtIn.modelName} costs ${totalCost} credits. Buy more on the Pricing page.`,
+          );
+        }
+      }
+      cost = totalCost;
     }
     const model = builtIn.model;
     const profile = getModelProfile(builtIn.provider, builtIn.modelName, { heavyBuild: true });
