@@ -217,11 +217,11 @@ export function HelpChat() {
           aria-modal="false"
           aria-label="BloxSmith AI Help"
           className="fixed z-[9999] flex flex-col overflow-hidden border border-border/70 bg-surface-elevated/95 backdrop-blur-xl shadow-2xl animate-scale-in
-            inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] top-auto
-            h-[min(80dvh,640px)] max-h-[calc(100dvh-1rem-env(safe-area-inset-bottom))]
+            inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] top-auto
+            h-[min(80dvh,640px)] max-h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))]
             rounded-2xl
-            md:inset-x-auto md:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] md:right-6
-            md:w-[400px] md:h-[min(640px,calc(100dvh-3rem))]
+            md:inset-x-auto md:bottom-[calc(6rem+env(safe-area-inset-bottom))] md:right-6
+            md:w-[400px] md:h-[min(640px,calc(100dvh-7rem))]
             md:rounded-2xl"
         >
           {/* Header */}
