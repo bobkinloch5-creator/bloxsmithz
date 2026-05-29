@@ -187,7 +187,7 @@ export function HelpChat() {
           onClick={openChat}
           aria-label="Open BloxSmith AI Help"
           title="BloxSmith AI Help"
-          className="group fixed z-[9998] flex items-center gap-2 rounded-full border border-primary-foreground/15 bg-gradient-to-br from-primary to-primary/85 px-4 py-3 text-primary-foreground shadow-[0_10px_32px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-md transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_14px_42px_-10px_color-mix(in_oklab,var(--primary)_75%,transparent)] active:scale-95 animate-fade-in right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:right-6 sm:bottom-[calc(1.5rem+env(safe-area-inset-bottom))]"
+          className="group fixed z-[9998] flex items-center gap-2 rounded-full border border-primary-foreground/15 bg-gradient-to-br from-primary to-primary/85 px-4 py-3 text-primary-foreground shadow-[0_10px_32px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-md transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_14px_42px_-10px_color-mix(in_oklab,var(--primary)_75%,transparent)] active:scale-95 animate-fade-in right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] sm:right-6 sm:bottom-[calc(6rem+env(safe-area-inset-bottom))]"
         >
           <span className="relative grid h-8 w-8 place-items-center rounded-full bg-primary-foreground/15 backdrop-blur-sm transition group-hover:bg-primary-foreground/25">
             <MessageCircle className="h-4 w-4" />
