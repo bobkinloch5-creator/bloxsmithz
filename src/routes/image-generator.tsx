@@ -436,7 +436,7 @@ function ImageGeneratorPage() {
                 <div className="mt-2 relative inline-block">
                   <img
                     src={refImage}
-                    alt="Reference"
+                    alt="Reference image for AI generation"
                     className="h-24 w-24 rounded-lg object-cover border border-border"
                   />
                   <button
