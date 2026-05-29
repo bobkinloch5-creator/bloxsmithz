@@ -6,6 +6,7 @@ import {
   SITE_MODEL_DESCRIPTIONS,
   SITE_PROVIDER_LABELS,
   SITE_PROVIDER_MODELS,
+  getModelCreditMultiplier,
   type SiteProviderId,
 } from "@/lib/ai-models";
 
