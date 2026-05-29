@@ -33,6 +33,11 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [stay, setStay] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const v = localStorage.getItem("bs:stay_signed_in");
+    return v === null ? true : v === "1";
+  });
 
   const formatAuthError = (message: string) => {
     if (message.includes("email_not_confirmed")) {
@@ -60,6 +65,11 @@ function LoginPage() {
     setLoading(true);
     setErrorMessage(null);
     try {
+      try {
+        localStorage.setItem("bs:stay_signed_in", stay ? "1" : "0");
+      } catch {
+        /* noop */
+      }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         const message = formatAuthError(error.message);
