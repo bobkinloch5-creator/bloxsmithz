@@ -1,29 +1,12 @@
-import { useState, useRef, useEffect, useCallback, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2, GripVertical } from "lucide-react";
-
-const STORAGE_POS_KEY = "bloxsmith.helpchat.pos";
-const STORAGE_PANEL_POS_KEY = "bloxsmith.helpchat.panel-pos";
-type Pos = { x: number; y: number };
-
-function loadPosFrom(key: string): Pos | null {
-  if (typeof localStorage === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const p = JSON.parse(raw);
-    if (typeof p?.x === "number" && typeof p?.y === "number") return p;
-  } catch {}
-  return null;
-}
-function loadPos(): Pos | null {
-  return loadPosFrom(STORAGE_POS_KEY);
-}
+import { useState, useRef, useEffect, type FormEvent } from "react";
+import { MessageCircle, X, Send, Loader2, RotateCcw, Trash2, Minus, Sparkles } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string };
 
-const STORAGE_KEY = "bloxsmith.helpchat.history";
-const STORAGE_OPEN_KEY = "bloxsmith.helpchat.open";
-const MAX_STORED_TURNS = 12;
+const STORAGE_HISTORY = "bloxsmith.helpchat.history";
+const STORAGE_OPEN = "bloxsmith.helpchat.open";
+const STORAGE_MIN = "bloxsmith.helpchat.minimized";
+const MAX_STORED = 12;
 
 const SUGGESTED = [
   "How do I install the Studio plugin?",
@@ -35,7 +18,7 @@ const SUGGESTED = [
 function loadHistory(): Message[] {
   if (typeof localStorage === "undefined") return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_HISTORY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -48,7 +31,7 @@ function loadHistory(): Message[] {
           ((m as Message).role === "user" || (m as Message).role === "assistant") &&
           typeof (m as Message).content === "string",
       )
-      .slice(-MAX_STORED_TURNS);
+      .slice(-MAX_STORED);
   } catch {
     return [];
   }
@@ -57,14 +40,15 @@ function loadHistory(): Message[] {
 function saveHistory(history: Message[]) {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-MAX_STORED_TURNS)));
+    localStorage.setItem(STORAGE_HISTORY, JSON.stringify(history.slice(-MAX_STORED)));
   } catch {
-    // ignore quota
+    /* ignore */
   }
 }
 
 export function HelpChat() {
   const [open, setOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -73,188 +57,43 @@ export function HelpChat() {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Restore history + open state once on mount.
+  // Hydrate once.
   useEffect(() => {
     setMessages(loadHistory());
     if (typeof localStorage !== "undefined") {
-      setOpen(localStorage.getItem(STORAGE_OPEN_KEY) === "1");
+      const wasOpen = localStorage.getItem(STORAGE_OPEN) === "1";
+      const wasMin = localStorage.getItem(STORAGE_MIN) === "1";
+      setOpen(wasOpen && !wasMin);
+      setMinimized(wasMin);
     }
-  }, []);
-
-  const [pos, setPos] = useState<Pos | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const dragInfo = useRef<{ startX: number; startY: number; offX: number; offY: number; moved: boolean; pointerId: number } | null>(null);
-  const launcherRef = useRef<HTMLButtonElement | null>(null);
-  const suppressClickRef = useRef(false);
-
-  useEffect(() => {
-    setPos(loadPos());
   }, []);
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
-      localStorage.setItem(STORAGE_OPEN_KEY, open ? "1" : "0");
+      localStorage.setItem(STORAGE_OPEN, open ? "1" : "0");
     }
   }, [open]);
 
-  // Clamp position into viewport on resize.
   useEffect(() => {
-    if (!pos) return;
-    function clamp() {
-      const el = launcherRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      setPos((p) => {
-        if (!p) return p;
-        const maxX = window.innerWidth - r.width - 8;
-        const maxY = window.innerHeight - r.height - 8;
-        const nx = Math.min(Math.max(8, p.x), Math.max(8, maxX));
-        const ny = Math.min(Math.max(8, p.y), Math.max(8, maxY));
-        return nx === p.x && ny === p.y ? p : { x: nx, y: ny };
-      });
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(STORAGE_MIN, minimized ? "1" : "0");
     }
-    window.addEventListener("resize", clamp);
-    return () => window.removeEventListener("resize", clamp);
-  }, [pos]);
-
-  const onPointerDown = useCallback((e: ReactPointerEvent<HTMLButtonElement>) => {
-    const el = launcherRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    dragInfo.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      offX: e.clientX - r.left,
-      offY: e.clientY - r.top,
-      moved: false,
-      pointerId: e.pointerId,
-    };
-    el.setPointerCapture(e.pointerId);
-  }, []);
-
-  const onPointerMove = useCallback((e: ReactPointerEvent<HTMLButtonElement>) => {
-    const info = dragInfo.current;
-    if (!info || info.pointerId !== e.pointerId) return;
-    const dx = e.clientX - info.startX;
-    const dy = e.clientY - info.startY;
-    if (!info.moved && Math.hypot(dx, dy) < 5) return;
-    info.moved = true;
-    setDragging(true);
-    const el = launcherRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const nx = Math.min(Math.max(8, e.clientX - info.offX), window.innerWidth - r.width - 8);
-    const ny = Math.min(Math.max(8, e.clientY - info.offY), window.innerHeight - r.height - 8);
-    setPos({ x: nx, y: ny });
-  }, []);
-
-  const onPointerUp = useCallback((e: ReactPointerEvent<HTMLButtonElement>) => {
-    const info = dragInfo.current;
-    if (!info) return;
-    const wasMoved = info.moved;
-    dragInfo.current = null;
-    setDragging(false);
-    try { launcherRef.current?.releasePointerCapture(e.pointerId); } catch {}
-    if (wasMoved) {
-      suppressClickRef.current = true;
-      setTimeout(() => { suppressClickRef.current = false; }, 0);
-      setPos((p) => {
-        if (p && typeof localStorage !== "undefined") {
-          try { localStorage.setItem(STORAGE_POS_KEY, JSON.stringify(p)); } catch {}
-        }
-        return p;
-      });
-    }
-  }, []);
-
-  // ── Panel drag (desktop) — drag the open chat window by its header ──
-  const [panelPos, setPanelPos] = useState<Pos | null>(null);
-  const [panelDragging, setPanelDragging] = useState(false);
-  const panelRef = useRef<HTMLElement | null>(null);
-  const panelDragInfo = useRef<{ offX: number; offY: number; pointerId: number } | null>(null);
-
-  useEffect(() => {
-    setPanelPos(loadPosFrom(STORAGE_PANEL_POS_KEY));
-  }, []);
-
-  useEffect(() => {
-    if (!panelPos) return;
-    function clamp() {
-      const el = panelRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      setPanelPos((p) => {
-        if (!p) return p;
-        const maxX = window.innerWidth - r.width - 8;
-        const maxY = window.innerHeight - r.height - 8;
-        const nx = Math.min(Math.max(8, p.x), Math.max(8, maxX));
-        const ny = Math.min(Math.max(8, p.y), Math.max(8, maxY));
-        return nx === p.x && ny === p.y ? p : { x: nx, y: ny };
-      });
-    }
-    window.addEventListener("resize", clamp);
-    return () => window.removeEventListener("resize", clamp);
-  }, [panelPos]);
-
-  const onPanelHeaderPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    // Skip drag on small screens (panel is a bottom sheet there).
-    if (typeof window !== "undefined" && window.innerWidth < 768) return;
-    // Don't start a drag when clicking a button inside the header.
-    if ((e.target as HTMLElement).closest("button")) return;
-    const el = panelRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    panelDragInfo.current = {
-      offX: e.clientX - r.left,
-      offY: e.clientY - r.top,
-      pointerId: e.pointerId,
-    };
-    setPanelDragging(true);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
-
-  const onPanelHeaderPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    const info = panelDragInfo.current;
-    if (!info || info.pointerId !== e.pointerId) return;
-    const el = panelRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const nx = Math.min(Math.max(8, e.clientX - info.offX), window.innerWidth - r.width - 8);
-    const ny = Math.min(Math.max(8, e.clientY - info.offY), window.innerHeight - r.height - 8);
-    setPanelPos({ x: nx, y: ny });
-  }, []);
-
-  const onPanelHeaderPointerUp = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    const info = panelDragInfo.current;
-    if (!info) return;
-    panelDragInfo.current = null;
-    setPanelDragging(false);
-    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
-    setPanelPos((p) => {
-      if (p && typeof localStorage !== "undefined") {
-        try { localStorage.setItem(STORAGE_PANEL_POS_KEY, JSON.stringify(p)); } catch {}
-      }
-      return p;
-    });
-  }, []);
-
-
-
+  }, [minimized]);
 
   useEffect(() => {
     saveHistory(messages);
   }, [messages]);
 
-  // Keep the transcript pinned to the latest message.
+  // Pin transcript to bottom.
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, sending]);
+  }, [messages, sending, open]);
 
-  // Focus the input when the panel opens.
+  // Focus input on open.
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => inputRef.current?.focus(), 120);
+    const t = setTimeout(() => inputRef.current?.focus(), 160);
     return () => clearTimeout(t);
   }, [open]);
 
@@ -321,97 +160,89 @@ export function HelpChat() {
     setMessages([]);
     setError(null);
     setLastFailed(null);
-    if (typeof localStorage !== "undefined") localStorage.removeItem(STORAGE_KEY);
+    if (typeof localStorage !== "undefined") localStorage.removeItem(STORAGE_HISTORY);
+  }
+
+  function openChat() {
+    setMinimized(false);
+    setOpen(true);
+  }
+
+  function minimizeChat() {
+    setOpen(false);
+    setMinimized(true);
+  }
+
+  function closeChat() {
+    setOpen(false);
+    setMinimized(false);
   }
 
   return (
     <>
-      {/* Floating launcher — premium pill, safe bottom-right placement across all pages. */}
+      {/* Floating launcher — fixed bottom-right with safe-area padding */}
       {!open && (
         <button
-          ref={launcherRef}
           type="button"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          onClick={(e) => {
-            if (suppressClickRef.current) { e.preventDefault(); return; }
-            setOpen(true);
-          }}
-          aria-label="Open BloxSmith AI help chat (drag to move)"
-          title="BloxSmith AI Help — drag to move"
-          style={
-            pos
-              ? { left: `${pos.x}px`, top: `${pos.y}px`, right: "auto", bottom: "auto", touchAction: "none" }
-              : { touchAction: "none" }
-          }
-          className={`group fixed z-[9998] flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-primary/80 pl-2.5 pr-4 text-primary-foreground shadow-[0_8px_28px_-6px_color-mix(in_oklab,var(--primary)_55%,transparent)] ring-1 ring-primary-foreground/10 transition-shadow duration-300 hover:shadow-[0_12px_36px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)] sm:h-14 sm:pl-3 sm:pr-5 animate-fade-in select-none ${
-            dragging ? "cursor-grabbing scale-[1.04]" : "cursor-grab hover:scale-[1.03] active:scale-95"
-          } ${pos ? "" : "right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] sm:right-6 sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom))]"}`}
+          onClick={openChat}
+          aria-label="Open BloxSmith AI Help"
+          title="BloxSmith AI Help"
+          className="group fixed z-[9998] flex items-center gap-2 rounded-full border border-primary-foreground/15 bg-gradient-to-br from-primary to-primary/85 px-4 py-3 text-primary-foreground shadow-[0_10px_32px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] backdrop-blur-md transition-all duration-300 hover:scale-[1.04] hover:shadow-[0_14px_42px_-10px_color-mix(in_oklab,var(--primary)_75%,transparent)] active:scale-95 animate-fade-in right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:right-6 sm:bottom-[calc(1.5rem+env(safe-area-inset-bottom))]"
         >
-          <span className="grid h-6 w-6 place-items-center rounded-full text-primary-foreground/60 sm:h-7 sm:w-7" aria-hidden>
-            <GripVertical className="h-3.5 w-3.5" />
-          </span>
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-foreground/15 backdrop-blur-sm transition group-hover:bg-primary-foreground/20 sm:h-8 sm:w-8">
+          <span className="relative grid h-8 w-8 place-items-center rounded-full bg-primary-foreground/15 backdrop-blur-sm transition group-hover:bg-primary-foreground/25">
             <MessageCircle className="h-4 w-4" />
+            <span className="absolute -right-0.5 -top-0.5 grid h-3 w-3 place-items-center">
+              <span className="absolute inset-0 animate-ping rounded-full bg-accent/70" />
+              <span className="relative h-2 w-2 rounded-full bg-accent" />
+            </span>
           </span>
-          <span className="text-sm font-semibold tracking-tight">AI Help</span>
+          <span className="text-sm font-semibold tracking-tight">
+            {minimized ? "Resume chat" : "AI Help"}
+          </span>
         </button>
       )}
 
-
-      {/* Mobile/tablet backdrop. Desktop stays light so the page is still visible. */}
+      {/* Mobile backdrop only */}
       {open && (
         <div
-          className="fixed inset-0 z-[9997] bg-black/45 backdrop-blur-[2px] animate-fade-in md:bg-transparent md:backdrop-blur-0 md:pointer-events-none"
-          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-[9997] bg-black/45 backdrop-blur-[2px] animate-fade-in md:hidden"
+          onClick={minimizeChat}
           aria-hidden
         />
       )}
 
-      {/* Responsive panel — bottom sheet on mobile, floating card on desktop. */}
       {open && (
         <aside
-          ref={panelRef}
           role="dialog"
           aria-modal="false"
-          aria-label="BloxSmith AI help chat"
-          style={
-            panelPos
-              ? {
-                  // Desktop-only custom position; mobile keeps the bottom sheet via classes.
-                  ...(typeof window !== "undefined" && window.innerWidth >= 768
-                    ? { left: `${panelPos.x}px`, top: `${panelPos.y}px`, right: "auto", bottom: "auto" }
-                    : {}),
-                }
-              : undefined
-          }
-          className={`fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(78dvh,640px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl animate-scale-in md:inset-x-auto md:h-[min(620px,calc(100dvh-3rem))] md:w-[380px] lg:w-[400px] ${
-            panelPos ? "" : "md:right-6 md:bottom-[calc(1.75rem+env(safe-area-inset-bottom))]"
-          } ${panelDragging ? "select-none" : ""}`}
+          aria-label="BloxSmith AI Help"
+          className="fixed z-[9999] flex flex-col overflow-hidden border border-border/70 bg-surface-elevated/95 backdrop-blur-xl shadow-2xl animate-scale-in
+            inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] top-auto
+            h-[min(80dvh,640px)] max-h-[calc(100dvh-1rem-env(safe-area-inset-bottom))]
+            rounded-2xl
+            md:inset-x-auto md:bottom-[calc(1.5rem+env(safe-area-inset-bottom))] md:right-6
+            md:w-[400px] md:h-[min(640px,calc(100dvh-3rem))]
+            md:rounded-2xl"
         >
-          <header
-            onPointerDown={onPanelHeaderPointerDown}
-            onPointerMove={onPanelHeaderPointerMove}
-            onPointerUp={onPanelHeaderPointerUp}
-            onPointerCancel={onPanelHeaderPointerUp}
-            className={`flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5 md:${panelDragging ? "cursor-grabbing" : "cursor-grab"}`}
-            title="Drag to move (desktop)"
-            style={{ touchAction: "none" }}
-          >
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/15 shadow-[0_0_24px_color-mix(in_oklab,var(--primary)_35%,transparent)]">
-                <MessageCircle className="h-4 w-4 text-primary" />
+          {/* Header */}
+          <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 bg-gradient-to-br from-primary/15 via-surface-elevated to-surface-elevated px-3.5 py-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-[0_0_24px_color-mix(in_oklab,var(--primary)_45%,transparent)]">
+                <Sparkles className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-bold leading-tight">BloxSmith AI Help</div>
-                <div className="truncate text-[10.5px] leading-tight text-muted-foreground">
-                  Plugin, credits, building, clothing &amp; more
+                <div className="flex items-center gap-1.5 text-sm font-bold leading-tight">
+                  BloxSmith AI
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-success">
+                    <span className="h-1.5 w-1.5 rounded-full bg-success" /> Live
+                  </span>
+                </div>
+                <div className="truncate text-[11px] leading-tight text-muted-foreground">
+                  Plugin, credits, building & more
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-0.5">
               {messages.length > 0 && (
                 <button
                   type="button"
@@ -425,25 +256,35 @@ export function HelpChat() {
               )}
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close help chat"
+                onClick={minimizeChat}
+                aria-label="Minimize"
+                title="Minimize"
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={closeChat}
+                aria-label="Close"
+                title="Close"
+                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/15 hover:text-destructive"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
           </header>
 
-
+          {/* Transcript */}
           <div
             ref={scrollRef}
-            className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-3 py-3"
+            className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3.5 py-3.5"
           >
             {messages.length === 0 && (
               <div className="space-y-3">
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Hi! I'm the BloxSmith help bot. Ask about the Studio plugin, credits, building
-                  games, clothing &amp; accessories, assets, or how anything on the site works.
+                  Hi! I'm the BloxSmith help assistant. Ask about the Studio plugin, credits,
+                  building games, clothing, accessories, assets, or anything on the site.
                 </p>
                 <div className="space-y-1.5">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -454,7 +295,7 @@ export function HelpChat() {
                       key={s}
                       type="button"
                       onClick={() => send(s)}
-                      className="w-full rounded-lg border border-border/60 bg-background/40 px-2.5 py-2 text-left text-xs transition hover:border-primary/50 hover:bg-surface"
+                      className="w-full rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-left text-xs transition hover:border-primary/60 hover:bg-surface hover:text-foreground"
                     >
                       {s}
                     </button>
@@ -464,12 +305,15 @@ export function HelpChat() {
             )}
 
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                key={i}
+                className={`flex animate-fade-in ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
                 <div
-                  className={`max-w-[88%] break-words rounded-xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                  className={`max-w-[86%] break-words rounded-2xl px-3.5 py-2 text-xs leading-relaxed whitespace-pre-wrap shadow-sm ${
                     m.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "border border-border bg-background/60 text-foreground"
+                      ? "rounded-br-md bg-gradient-to-br from-primary to-primary/85 text-primary-foreground"
+                      : "rounded-bl-md border border-border/60 bg-background/70 text-foreground"
                   }`}
                 >
                   {m.content}
@@ -478,8 +322,8 @@ export function HelpChat() {
             ))}
 
             {sending && (
-              <div className="flex justify-start">
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+              <div className="flex justify-start animate-fade-in">
+                <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-border/60 bg-background/70 px-3.5 py-2 text-xs text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   Thinking…
                 </div>
@@ -487,7 +331,7 @@ export function HelpChat() {
             )}
 
             {error && (
-              <div className="space-y-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-2.5 py-2 text-[11px] text-destructive">
+              <div className="space-y-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
                 <div>{error}</div>
                 {lastFailed && !sending && (
                   <button
@@ -503,7 +347,11 @@ export function HelpChat() {
             )}
           </div>
 
-          <form onSubmit={onSubmit} className="flex shrink-0 items-end gap-2 border-t border-border p-2">
+          {/* Composer */}
+          <form
+            onSubmit={onSubmit}
+            className="flex shrink-0 items-end gap-2 border-t border-border/70 bg-background/40 p-2.5"
+          >
             <textarea
               ref={inputRef}
               value={input}
@@ -514,17 +362,17 @@ export function HelpChat() {
                   send(input);
                 }
               }}
-              placeholder="Ask a question…"
+              placeholder="Ask anything…"
               disabled={sending}
               maxLength={1500}
               rows={1}
-              className="max-h-24 min-w-0 flex-1 resize-none rounded-lg border border-border bg-background/60 px-2.5 py-2 text-xs leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50"
+              className="max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-border/60 bg-background/60 px-3 py-2 text-xs leading-relaxed transition focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/25 disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={sending || !input.trim()}
               aria-label="Send message"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-[0_6px_20px_-6px_color-mix(in_oklab,var(--primary)_60%,transparent)] transition hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
