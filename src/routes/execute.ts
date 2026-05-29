@@ -214,6 +214,7 @@ function buildContextBlock(
     `${liveBlock}\n\n` +
     `Studio plugin status: ${inp.studioConnected ? "connected" : "not connected"}.\n\n` +
     (inp.memoryBlock ? `${inp.memoryBlock}\n\n` : "") +
+    (inp.docsBlock ? `${inp.docsBlock}\n\n` : "") +
     `Relevant project files:\n${filesBlock}\n\n` +
     `User request:\n${inp.prompt}\n\n` +
     `Return ONLY the strict JSON object from the output contract.`;
