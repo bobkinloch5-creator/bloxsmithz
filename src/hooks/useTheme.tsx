@@ -119,6 +119,41 @@ export const THEMES: {
     hint: "Tropical beach sunset",
     category: "Seasonal",
   },
+  {
+    id: "dragon",
+    label: "Dragon Realm",
+    emoji: "🐉",
+    hint: "Epic voxel dragon at sunset",
+    category: "Roblox Games",
+  },
+  {
+    id: "space",
+    label: "Deep Space",
+    emoji: "🚀",
+    hint: "Blocky starship nebula",
+    category: "Roblox Games",
+  },
+  {
+    id: "cybercity",
+    label: "Cyber City",
+    emoji: "🌃",
+    hint: "Neon rain skyline",
+    category: "Roblox Games",
+  },
+  {
+    id: "ocean",
+    label: "Lost Ocean",
+    emoji: "🌊",
+    hint: "Sunken temple treasure",
+    category: "Roblox Games",
+  },
+  {
+    id: "volcano",
+    label: "Volcano War",
+    emoji: "🌋",
+    hint: "Lava battlefield siege",
+    category: "Roblox Games",
+  },
 ];
 
 const ALL_CLASSES = THEMES.map((t) => t.id);
