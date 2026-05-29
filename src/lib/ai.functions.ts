@@ -839,7 +839,7 @@ Keep it under ~400 words. Be specific to the user's request and existing project
     } catch (err: any) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
-          _amount: PLAN_COST,
+          _amount: planTotalCost,
           _reason: "plan generation failed",
         });
       const msg = String(err?.message ?? err);
@@ -849,7 +849,7 @@ Keep it under ~400 words. Be specific to the user's request and existing project
       throw new Error("Plan generation failed: " + msg);
     }
 
-    return { plan: text, originalPrompt: prompt, cost: isOwner ? 0 : PLAN_COST };
+    return { plan: text, originalPrompt: prompt, cost: isOwner ? 0 : planTotalCost };
   });
 
 // -----------------------------------------------------------------------------
