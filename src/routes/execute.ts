@@ -160,6 +160,7 @@ type ContextInputs = {
   history: { role: "user" | "assistant"; content: string }[];
   keywords: string[];
   memoryBlock?: string;
+  docsBlock?: string;
 };
 
 function buildContextBlock(
@@ -213,6 +214,7 @@ function buildContextBlock(
     `${liveBlock}\n\n` +
     `Studio plugin status: ${inp.studioConnected ? "connected" : "not connected"}.\n\n` +
     (inp.memoryBlock ? `${inp.memoryBlock}\n\n` : "") +
+    (inp.docsBlock ? `${inp.docsBlock}\n\n` : "") +
     `Relevant project files:\n${filesBlock}\n\n` +
     `User request:\n${inp.prompt}\n\n` +
     `Return ONLY the strict JSON object from the output contract.`;
@@ -1999,6 +2001,7 @@ export const Route = createFileRoute("/execute")({
             // path (which needs gpt-oss-120b). External-key sources don't get
             // the fallback — they use the user's chosen model directly.
             const apiKey = process.env.GROQ_API_KEY;
+          let docsCitations: import("@/lib/roblox-docs.server").DocsCitation[] = [];
             if (true) {
               try {
                 const gateway = apiKey ? createGroqProvider(apiKey) : null;
@@ -2071,6 +2074,23 @@ export const Route = createFileRoute("/execute")({
                 }
 
                 const keywords = extractKeywords(prompt);
+
+                // Retrieve relevant Roblox docs (best-effort; never block on failure)
+                docsCitations = [];
+                let docsBlock = "";
+                try {
+                  const { searchRobloxDocs, formatDocsForPrompt } = await import(
+                    "@/lib/roblox-docs.server"
+                  );
+                  docsCitations = await searchRobloxDocs(prompt, 4);
+                  docsBlock = formatDocsForPrompt(docsCitations);
+                } catch (e) {
+                  console.warn(
+                    "[ai-execute] docs lookup skipped:",
+                    e instanceof Error ? e.message : e,
+                  );
+                }
+
                 const ctxInputs: ContextInputs = {
                   prompt,
                   studioConnected: !!studioConnected,
@@ -2081,6 +2101,7 @@ export const Route = createFileRoute("/execute")({
                   history,
                   keywords,
                   memoryBlock,
+                  docsBlock,
                 };
 
                 // Build attempts. For external API-key sources we use a
@@ -2692,14 +2713,36 @@ export const Route = createFileRoute("/execute")({
           const { scoreGeneration } = await import("@/lib/ai-quality");
           const quality = scoreGeneration(result.files as any, queued as any);
 
+          // Append Roblox Docs citations to the user-facing message (best-effort)
+          let finalMessage = studioSafeMessage(result.message, queued.length, shouldAuto);
+          let docsUsedOut: Array<{ title: string; section: string | null; url: string; similarity: number }> = [];
+          try {
+            const { searchRobloxDocs, formatDocsForCitation } = await import(
+              "@/lib/roblox-docs.server"
+            );
+            const cites = await searchRobloxDocs(prompt, 4);
+            if (cites.length) {
+              finalMessage = finalMessage + formatDocsForCitation(cites);
+              docsUsedOut = cites.map((c) => ({
+                title: c.title,
+                section: c.section,
+                url: c.source_url,
+                similarity: c.similarity,
+              }));
+            }
+          } catch {
+            /* ignore — docs are optional */
+          }
+
           return new Response(
             JSON.stringify({
               generationId,
-              message: studioSafeMessage(result.message, queued.length, shouldAuto),
+              message: finalMessage,
               files: result.files,
               actions: queued,
               status: shouldAuto ? "executing" : "preview",
               dangers: dangers,
+              docsUsed: docsUsedOut,
               validation: {
                 summary: validation.summary,
                 errors: validation.errors,
