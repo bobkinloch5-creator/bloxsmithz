@@ -99,32 +99,8 @@ export const startRobloxLink = createServerFn({ method: "POST" })
     };
   });
 
-/** Verify the code is present on the Roblox profile's "About" description. */
-export const verifyRobloxLink = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { userId } = context;
-    const { data: profile, error: pErr } = await supabaseAdmin
-      .from("profiles")
-      .select("roblox_verification_code, roblox_verification_expires_at")
-      .eq("id", userId)
-      .maybeSingle();
-    if (pErr) throw new Error(pErr.message);
-    if (!profile?.roblox_verification_code) throw new Error("No pending verification. Start linking first.");
-    if (
-      profile.roblox_verification_expires_at &&
-      new Date(profile.roblox_verification_expires_at).getTime() < Date.now()
-    ) {
-      throw new Error("Verification code expired. Please start again.");
-    }
-
-    // We need to know which Roblox user to check. Re-derive from any cached username,
-    // but the safest is to keep the lookup tied to startRobloxLink's username — so we
-    // require client to pass username again to avoid a stale link.
-    throw new Error("internal: verifyRobloxLink requires username input");
-  });
-
 /** Verify the code on a specific Roblox username's profile. */
+
 export const confirmRobloxLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
