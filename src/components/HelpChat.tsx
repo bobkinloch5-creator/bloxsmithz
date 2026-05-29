@@ -161,10 +161,10 @@ export function HelpChat() {
           onClick={() => setOpen(true)}
           aria-label="Open BloxSmith help chat"
           title="BloxSmith help chat"
-          className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[9998] flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/40 bg-primary text-primary-foreground shadow-[var(--shadow-glow)] ring-1 ring-primary/20 transition hover:-translate-y-0.5 hover:scale-105 hover:opacity-95 active:scale-95 sm:right-5 sm:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3"
+          className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[9998] flex h-14 items-center justify-center gap-2 rounded-full border-2 border-primary-foreground/20 bg-primary px-4 text-primary-foreground shadow-lg ring-2 ring-primary/30 ring-offset-2 ring-offset-background transition hover:-translate-y-0.5 hover:shadow-xl active:scale-95 sm:right-5 sm:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]"
         >
           <MessageCircle className="h-5 w-5" />
-          <span className="hidden text-xs font-bold sm:inline">AI Help</span>
+          <span className="text-sm font-bold">AI Help</span>
         </button>
       )}
 
