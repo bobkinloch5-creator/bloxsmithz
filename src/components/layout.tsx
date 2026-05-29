@@ -371,6 +371,11 @@ export function Footer() {
     <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p>© {new Date().getFullYear()} BloxSmith. Build real Roblox games with AI.</p>
+        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <Link to="/terms" className="hover:text-foreground transition">Terms</Link>
+          <Link to="/privacy" className="hover:text-foreground transition">Privacy</Link>
+          <Link to="/legal" className="hover:text-foreground transition">Legal</Link>
+        </nav>
         <p className="text-[11px] text-muted-foreground/80">
           Created & maintained by{" "}
           <a
@@ -384,5 +389,6 @@ export function Footer() {
         </p>
       </div>
     </footer>
+
   );
 }
