@@ -1,166 +1,352 @@
-type RobloxDocResult = {
-  title: string;
-  url: string;
-  summary: string;
-  source: "direct" | "search" | "curated";
-};
+// Server-only helpers for the Roblox Docs knowledge base.
+// Indexes Roblox/creator-docs markdown into pgvector and provides semantic search.
 
-const DOC_BASE = "https://create.roblox.com/docs";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const CURATED_DOCS: Array<{ keys: RegExp; title: string; url: string; summary: string }> = [
-  {
-    keys: /\b(datastore|data store|save|saving|profile)\b/i,
-    title: "Data Stores",
-    url: `${DOC_BASE}/cloud-services/data-stores`,
-    summary:
-      "Use DataStoreService from the server, wrap calls in pcall, prefer UpdateAsync for merges, and avoid high-frequency writes.",
-  },
-  {
-    keys: /\b(remoteevent|remote event|remotefunction|remote function|client server|server validation)\b/i,
-    title: "Remote Events and Callbacks",
-    url: `${DOC_BASE}/scripting/events/remote`,
-    summary:
-      "Use ReplicatedStorage remotes for client/server messages. Treat every client payload as untrusted and validate on the server.",
-  },
-  {
-    keys: /\b(animation|animator|loadanimation|humanoid)\b/i,
-    title: "Character Animation",
-    url: `${DOC_BASE}/animation`,
-    summary:
-      "Load animations through Animator objects on Humanoids or AnimationControllers; avoid deprecated Humanoid:LoadAnimation patterns.",
-  },
-  {
-    keys: /\b(pathfinding|npc|enemy ai|waypoint)\b/i,
-    title: "Pathfinding",
-    url: `${DOC_BASE}/characters/pathfinding`,
-    summary:
-      "Use PathfindingService to compute paths, handle blocked paths, and move NPCs by waypoint with server-owned logic.",
-  },
-  {
-    keys: /\b(ui|gui|screengui|button|mobile|hud|menu)\b/i,
-    title: "UI",
-    url: `${DOC_BASE}/ui`,
-    summary:
-      "Place ScreenGui under StarterGui, run UI logic in LocalScripts, and design with scale constraints for mobile screens.",
-  },
-  {
-    keys: /\b(monetization|gamepass|game pass|developer product|dev product|purchase)\b/i,
-    title: "Monetization",
-    url: `${DOC_BASE}/production/monetization`,
-    summary:
-      "Use MarketplaceService. Award purchases from server callbacks and verify ownership/receipts server-side.",
-  },
-  {
-    keys: /\b(memory store|memorystore|queue|sorted map|matchmaking)\b/i,
-    title: "Memory Stores",
-    url: `${DOC_BASE}/cloud-services/memory-stores`,
-    summary:
-      "Use MemoryStoreService for short-lived cross-server state such as queues, matchmaking, and cooldown coordination.",
-  },
-  {
-    keys: /\b(terrain|biome|map|world|environment)\b/i,
-    title: "Terrain",
-    url: `${DOC_BASE}/parts/terrain`,
-    summary:
-      "Use Studio/plugin edit-mode terrain actions for persistent terrain. Runtime FillBlock scripts only affect play sessions.",
-  },
-  {
-    keys: /\b(luau|lua|types|strict|module)\b/i,
-    title: "Luau",
-    url: "https://luau.org",
-    summary:
-      "Luau is Roblox's scripting language. Prefer typed modules, clear services, and explicit server/client boundaries.",
-  },
+const EMBED_MODEL = "openai/text-embedding-3-small"; // 1536 dims
+const EMBED_DIMS = 1536;
+const CHUNK_CHARS = 1400;
+const CHUNK_OVERLAP = 200;
+const GH_REPO = "Roblox/creator-docs";
+const GH_BRANCH = "main";
+
+// Curated prefixes — covers Luau scripting, engine reference, services,
+// DataStore, RemoteEvents, UI, MarketplaceService, plugins. Keeps total
+// chunk count manageable (a few thousand) instead of the whole ~50k tree.
+const DEFAULT_INCLUDE_PREFIXES = [
+  "content/en-us/scripting",
+  "content/en-us/reference/engine/classes",
+  "content/en-us/reference/engine/datatypes",
+  "content/en-us/reference/engine/enums",
+  "content/en-us/reference/engine/globals",
+  "content/en-us/reference/engine/libraries",
+  "content/en-us/luau",
+  "content/en-us/cloud-services",
+  "content/en-us/projects/data-model",
+  "content/en-us/projects/assets",
+  "content/en-us/studio",
+  "content/en-us/ui",
+  "content/en-us/input",
+  "content/en-us/players",
+  "content/en-us/production/monetization",
 ];
 
-const ENGINE_CLASS_RE =
-  /\b(Players|ReplicatedStorage|ServerScriptService|ServerStorage|StarterGui|StarterPlayer|DataStoreService|MarketplaceService|RunService|TweenService|SoundService|Lighting|Teams|CollectionService|PhysicsService|PathfindingService|TeleportService|MessagingService|MemoryStoreService|RemoteEvent|RemoteFunction|ScreenGui|TextButton|Frame|Humanoid|Animator|AnimationController|Part|Model|Folder|Tool|ProximityPrompt|ClickDetector|TextChatService)\b/g;
+export type DocsCitation = {
+  id: string;
+  title: string;
+  section: string | null;
+  source: "github" | "web";
+  source_url: string;
+  repo_path: string | null;
+  similarity: number;
+  snippet: string;
+};
 
-function unique<T>(items: T[]): T[] {
-  return Array.from(new Set(items));
-}
+// ---------------- Embeddings ----------------
 
-function cleanText(text: string, maxChars: number): string {
-  return text
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxChars);
-}
-
-async function fetchDocSummary(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "BloxSmith/1.0", Accept: "text/html,*/*" },
-    });
-    if (!res.ok) return null;
-    return cleanText(await res.text(), 1200);
-  } catch {
-    return null;
+async function embed(text: string): Promise<number[]> {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not set");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model: EMBED_MODEL, input: text, dimensions: EMBED_DIMS }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`embed ${res.status}: ${body.slice(0, 200)}`);
   }
+  const json = (await res.json()) as { data: { embedding: number[] }[] };
+  const vec = json?.data?.[0]?.embedding;
+  if (!Array.isArray(vec) || vec.length !== EMBED_DIMS) {
+    throw new Error("invalid embedding response");
+  }
+  return vec;
 }
 
-async function searchOfficialDocs(query: string, limit: number): Promise<RobloxDocResult[]> {
+// Batched embedding (OpenAI accepts arrays via input)
+async function embedBatch(texts: string[]): Promise<number[][]> {
+  if (!texts.length) return [];
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not set");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ model: EMBED_MODEL, input: texts, dimensions: EMBED_DIMS }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`embedBatch ${res.status}: ${body.slice(0, 200)}`);
+  }
+  const json = (await res.json()) as { data: { embedding: number[]; index: number }[] };
+  const out: number[][] = Array(texts.length);
+  for (const d of json.data) out[d.index] = d.embedding;
+  return out;
+}
+
+// ---------------- Markdown chunking ----------------
+
+function stripFrontMatter(md: string): { title?: string; body: string } {
+  const m = md.match(/^---\s*\n([\s\S]*?)\n---\s*\n?/);
+  if (!m) return { body: md };
+  const fm = m[1];
+  const titleMatch = fm.match(/^title:\s*"?([^"\n]+)"?/m);
+  return { title: titleMatch?.[1]?.trim(), body: md.slice(m[0].length) };
+}
+
+function chunkMarkdown(
+  body: string,
+): { section: string | null; content: string }[] {
+  // Split on h1/h2/h3 headings
+  const parts = body.split(/\n(?=#{1,3}\s)/);
+  const chunks: { section: string | null; content: string }[] = [];
+  for (const part of parts) {
+    const headingMatch = part.match(/^(#{1,3})\s+(.+?)\s*$/m);
+    const section = headingMatch ? headingMatch[2].trim() : null;
+    const text = part.trim();
+    if (!text) continue;
+    if (text.length <= CHUNK_CHARS) {
+      chunks.push({ section, content: text });
+      continue;
+    }
+    let i = 0;
+    while (i < text.length) {
+      const slice = text.slice(i, i + CHUNK_CHARS);
+      chunks.push({ section, content: slice });
+      i += CHUNK_CHARS - CHUNK_OVERLAP;
+    }
+  }
+  return chunks.filter((c) => c.content.length >= 80);
+}
+
+// ---------------- GitHub fetch ----------------
+
+type TreeEntry = { path: string; type: string; sha: string };
+
+async function listRepoTree(): Promise<TreeEntry[]> {
+  const url = `https://api.github.com/repos/${GH_REPO}/git/trees/${GH_BRANCH}?recursive=1`;
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "BloxSmith-Docs-Sync",
+      Accept: "application/vnd.github+json",
+    },
+  });
+  if (!res.ok) throw new Error(`github tree ${res.status}`);
+  const json = (await res.json()) as { tree: TreeEntry[]; truncated?: boolean };
+  return json.tree.filter((e) => e.type === "blob" && e.path.endsWith(".md"));
+}
+
+async function fetchFileRaw(path: string): Promise<string> {
+  const url = `https://raw.githubusercontent.com/${GH_REPO}/${GH_BRANCH}/${path}`;
+  const res = await fetch(url, { headers: { "User-Agent": "BloxSmith-Docs-Sync" } });
+  if (!res.ok) throw new Error(`raw ${res.status} ${path}`);
+  return res.text();
+}
+
+function docUrlFor(path: string): string {
+  // Convert "content/en-us/scripting/foo.md" -> https://create.roblox.com/docs/en-us/scripting/foo
+  const cleaned = path.replace(/^content\//, "").replace(/\.md$/, "");
+  return `https://create.roblox.com/docs/${cleaned}`;
+}
+
+// ---------------- Public API ----------------
+
+export async function searchRobloxDocs(query: string, limit = 6): Promise<DocsCitation[]> {
+  const q = query.trim();
+  if (!q) return [];
+  let vec: number[];
   try {
-    const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(
-      `site:create.roblox.com/docs ${query}`,
-    )}&format=json&no_html=1&no_redirect=1&t=bloxsmith`;
-    const res = await fetch(url, { headers: { "User-Agent": "BloxSmith/1.0" } });
-    if (!res.ok) return [];
-    const json: any = await res.json();
-    const topics = (json.RelatedTopics ?? [])
-      .flatMap((topic: any) => (topic.Topics ? topic.Topics : [topic]))
-      .filter(
-        (topic: any) =>
-          typeof topic?.FirstURL === "string" && topic.FirstURL.includes("create.roblox.com/docs"),
-      )
-      .slice(0, limit);
-    return topics.map((topic: any) => ({
-      title: String(topic.Text ?? "Roblox Creator Hub")
-        .split(" - ")[0]
-        .slice(0, 100),
-      url: topic.FirstURL,
-      summary: String(topic.Text ?? "").slice(0, 500),
-      source: "search" as const,
-    }));
-  } catch {
+    vec = await embed(q);
+  } catch (e) {
+    console.warn("[roblox-docs] embed failed:", e instanceof Error ? e.message : e);
     return [];
   }
+  const { data, error } = await (supabaseAdmin as any).rpc("match_roblox_docs", {
+    query_embedding: vec,
+    match_count: limit,
+    min_similarity: 0.5,
+  });
+  if (error) {
+    console.warn("[roblox-docs] match rpc failed:", error.message);
+    return [];
+  }
+  return ((data ?? []) as any[]).map((r) => ({
+    id: r.id,
+    title: r.title,
+    section: r.section,
+    source: r.source,
+    source_url: r.source_url,
+    repo_path: r.repo_path,
+    similarity: Number(r.similarity ?? 0),
+    snippet: String(r.content ?? "").slice(0, 280),
+  }));
 }
 
-export async function searchRobloxDocs(query: string, limit = 5): Promise<RobloxDocResult[]> {
-  const out: RobloxDocResult[] = [];
+export function formatDocsForPrompt(cites: DocsCitation[]): string {
+  if (!cites.length) return "";
+  return [
+    "ROBLOX DOCS REFERENCE (official creator-docs — cite by title when used):",
+    ...cites.map(
+      (c, i) =>
+        `[${i + 1}] ${c.title}${c.section ? ` — ${c.section}` : ""} (${c.source_url})\n${c.snippet}`,
+    ),
+  ].join("\n\n");
+}
 
-  for (const doc of CURATED_DOCS) {
-    if (doc.keys.test(query)) {
-      out.push({ title: doc.title, url: doc.url, summary: doc.summary, source: "curated" });
+export function formatDocsForCitation(cites: DocsCitation[]): string {
+  if (!cites.length) return "";
+  const seen = new Set<string>();
+  const lines: string[] = [];
+  for (const c of cites) {
+    const key = c.title + (c.section ?? "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    lines.push(`- [${c.title}${c.section ? ` — ${c.section}` : ""}](${c.source_url})`);
+    if (lines.length >= 5) break;
+  }
+  return lines.length ? `\n\n**Roblox Docs Used:**\n${lines.join("\n")}` : "";
+}
+
+// ---------------- Sync ----------------
+
+export type SyncProgress = {
+  syncId: string;
+  processed: number;
+  total: number;
+  skipped: number;
+  done: boolean;
+};
+
+/**
+ * Incremental sync from Roblox/creator-docs.
+ * Processes up to `batchSize` new/changed files per call so the worker
+ * doesn't time out. Returns progress; caller can re-invoke until done.
+ */
+export async function syncRobloxCreatorDocs(
+  startedBy: string,
+  opts: { batchSize?: number; resumeSyncId?: string } = {},
+): Promise<SyncProgress> {
+  const batchSize = Math.max(1, Math.min(opts.batchSize ?? 20, 40));
+
+  // 1) Get the (or create) running sync row
+  let syncId = opts.resumeSyncId ?? null;
+  if (!syncId) {
+    const { data: row, error } = await (supabaseAdmin as any)
+      .from("roblox_docs_sync")
+      .insert({ source: "github", status: "running", started_by: startedBy })
+      .select("id")
+      .single();
+    if (error || !row) throw new Error(`sync create failed: ${error?.message ?? "unknown"}`);
+    syncId = row.id as string;
+  }
+
+  // 2) List relevant files and figure out which need work
+  const tree = await listRepoTree();
+  const candidates = tree.filter((e) =>
+    DEFAULT_INCLUDE_PREFIXES.some((p) => e.path.startsWith(p)),
+  );
+
+  // existing SHAs to skip unchanged files
+  const { data: existing } = await (supabaseAdmin as any)
+    .from("roblox_docs")
+    .select("repo_path,sha")
+    .eq("source", "github");
+  const existingMap = new Map<string, string>();
+  for (const r of (existing ?? []) as any[]) {
+    if (r.repo_path && r.sha) existingMap.set(r.repo_path, r.sha);
+  }
+  const todo = candidates.filter((c) => existingMap.get(c.path) !== c.sha);
+
+  // 3) Process this batch
+  const batch = todo.slice(0, batchSize);
+  let processedNow = 0;
+  for (const entry of batch) {
+    try {
+      const md = await fetchFileRaw(entry.path);
+      const { title: fmTitle, body } = stripFrontMatter(md);
+      const title = fmTitle || entry.path.split("/").pop()!.replace(/\.md$/, "");
+      const chunks = chunkMarkdown(body);
+      if (!chunks.length) continue;
+
+      // Embed in sub-batches of up to 16 chunks per API call
+      const rowsToInsert: any[] = [];
+      for (let i = 0; i < chunks.length; i += 16) {
+        const slice = chunks.slice(i, i + 16);
+        const vecs = await embedBatch(slice.map((c) => c.content));
+        slice.forEach((c, j) => {
+          rowsToInsert.push({
+            source: "github",
+            source_url: docUrlFor(entry.path),
+            repo_path: entry.path,
+            title,
+            section: c.section,
+            content: c.content,
+            sha: entry.sha,
+            model: EMBED_MODEL,
+            embedding: vecs[j],
+            token_count: Math.ceil(c.content.length / 4),
+          });
+        });
+      }
+
+      // Replace existing rows for this path
+      await (supabaseAdmin as any).from("roblox_docs").delete().eq("repo_path", entry.path);
+      const { error: insErr } = await (supabaseAdmin as any)
+        .from("roblox_docs")
+        .insert(rowsToInsert);
+      if (insErr) throw new Error(insErr.message);
+      processedNow += 1;
+    } catch (e) {
+      console.warn(`[roblox-docs] skip ${entry.path}:`, e instanceof Error ? e.message : e);
     }
   }
 
-  const classes = unique(Array.from(query.matchAll(ENGINE_CLASS_RE)).map((match) => match[1]));
-  for (const className of classes.slice(0, 4)) {
-    const url = `${DOC_BASE}/reference/engine/classes/${encodeURIComponent(className)}`;
-    const summary = await fetchDocSummary(url);
-    out.push({
-      title: `${className} API Reference`,
-      url,
-      summary: summary || `Official Roblox Engine API page for ${className}.`,
-      source: "direct",
-    });
-  }
+  const remaining = todo.length - batch.length;
+  const done = remaining <= 0;
 
-  if (out.length < limit) {
-    out.push(...(await searchOfficialDocs(query, limit - out.length)));
-  }
-
-  const seen = new Set<string>();
-  return out
-    .filter((item) => {
-      if (seen.has(item.url)) return false;
-      seen.add(item.url);
-      return true;
+  // 4) Update sync row
+  const { data: cur } = await (supabaseAdmin as any)
+    .from("roblox_docs_sync")
+    .select("processed,total,skipped")
+    .eq("id", syncId)
+    .single();
+  const processedTotal = (cur?.processed ?? 0) + processedNow;
+  const skippedTotal = (cur?.skipped ?? 0) + (batch.length - processedNow);
+  await (supabaseAdmin as any)
+    .from("roblox_docs_sync")
+    .update({
+      processed: processedTotal,
+      total: candidates.length,
+      skipped: skippedTotal,
+      status: done ? "completed" : "running",
+      finished_at: done ? new Date().toISOString() : null,
     })
-    .slice(0, limit);
+    .eq("id", syncId);
+
+  return {
+    syncId: syncId!,
+    processed: processedTotal,
+    total: candidates.length,
+    skipped: skippedTotal,
+    done,
+  };
+}
+
+export async function getLatestSync() {
+  const { data } = await (supabaseAdmin as any)
+    .from("roblox_docs_sync")
+    .select("id,source,status,processed,total,skipped,error,started_at,finished_at")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const { count } = await (supabaseAdmin as any)
+    .from("roblox_docs")
+    .select("id", { count: "exact", head: true });
+  return { latest: data ?? null, indexedChunks: count ?? 0 };
 }
