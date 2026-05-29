@@ -2713,11 +2713,25 @@ export const Route = createFileRoute("/execute")({
           const { scoreGeneration } = await import("@/lib/ai-quality");
           const quality = scoreGeneration(result.files as any, queued as any);
 
-          // Append Roblox Docs citations to the user-facing message
+          // Append Roblox Docs citations to the user-facing message (best-effort)
           let finalMessage = studioSafeMessage(result.message, queued.length, shouldAuto);
-          if (docsCitations.length) {
-            const { formatDocsForCitation } = await import("@/lib/roblox-docs.server");
-            finalMessage = finalMessage + formatDocsForCitation(docsCitations);
+          let docsUsedOut: Array<{ title: string; section: string | null; url: string; similarity: number }> = [];
+          try {
+            const { searchRobloxDocs, formatDocsForCitation } = await import(
+              "@/lib/roblox-docs.server"
+            );
+            const cites = await searchRobloxDocs(prompt, 4);
+            if (cites.length) {
+              finalMessage = finalMessage + formatDocsForCitation(cites);
+              docsUsedOut = cites.map((c) => ({
+                title: c.title,
+                section: c.section,
+                url: c.source_url,
+                similarity: c.similarity,
+              }));
+            }
+          } catch {
+            /* ignore — docs are optional */
           }
 
           return new Response(
@@ -2728,12 +2742,7 @@ export const Route = createFileRoute("/execute")({
               actions: queued,
               status: shouldAuto ? "executing" : "preview",
               dangers: dangers,
-              docsUsed: docsCitations.map((c) => ({
-                title: c.title,
-                section: c.section,
-                url: c.source_url,
-                similarity: c.similarity,
-              })),
+              docsUsed: docsUsedOut,
               validation: {
                 summary: validation.summary,
                 errors: validation.errors,
