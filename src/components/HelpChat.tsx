@@ -373,12 +373,33 @@ export function HelpChat() {
       {/* Responsive panel — bottom sheet on mobile, floating card on desktop. */}
       {open && (
         <aside
+          ref={panelRef}
           role="dialog"
           aria-modal="false"
           aria-label="BloxSmith AI help chat"
-          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(78dvh,640px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl animate-scale-in md:inset-x-auto md:right-6 md:bottom-[calc(1.75rem+env(safe-area-inset-bottom))] md:h-[min(620px,calc(100dvh-3rem))] md:w-[380px] lg:w-[400px]"
+          style={
+            panelPos
+              ? {
+                  // Desktop-only custom position; mobile keeps the bottom sheet via classes.
+                  ...(typeof window !== "undefined" && window.innerWidth >= 768
+                    ? { left: `${panelPos.x}px`, top: `${panelPos.y}px`, right: "auto", bottom: "auto" }
+                    : {}),
+                }
+              : undefined
+          }
+          className={`fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(78dvh,640px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl animate-scale-in md:inset-x-auto md:h-[min(620px,calc(100dvh-3rem))] md:w-[380px] lg:w-[400px] ${
+            panelPos ? "" : "md:right-6 md:bottom-[calc(1.75rem+env(safe-area-inset-bottom))]"
+          } ${panelDragging ? "select-none" : ""}`}
         >
-          <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+          <header
+            onPointerDown={onPanelHeaderPointerDown}
+            onPointerMove={onPanelHeaderPointerMove}
+            onPointerUp={onPanelHeaderPointerUp}
+            onPointerCancel={onPanelHeaderPointerUp}
+            className={`flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5 md:${panelDragging ? "cursor-grabbing" : "cursor-grab"}`}
+            title="Drag to move (desktop)"
+            style={{ touchAction: "none" }}
+          >
             <div className="flex min-w-0 items-center gap-2">
               <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/15 shadow-[0_0_24px_color-mix(in_oklab,var(--primary)_35%,transparent)]">
                 <MessageCircle className="h-4 w-4 text-primary" />
@@ -412,6 +433,7 @@ export function HelpChat() {
               </button>
             </div>
           </header>
+
 
           <div
             ref={scrollRef}
