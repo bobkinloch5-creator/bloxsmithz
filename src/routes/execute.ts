@@ -2712,14 +2712,27 @@ export const Route = createFileRoute("/execute")({
           const { scoreGeneration } = await import("@/lib/ai-quality");
           const quality = scoreGeneration(result.files as any, queued as any);
 
+          // Append Roblox Docs citations to the user-facing message
+          let finalMessage = studioSafeMessage(result.message, queued.length, shouldAuto);
+          if (docsCitations.length) {
+            const { formatDocsForCitation } = await import("@/lib/roblox-docs.server");
+            finalMessage = finalMessage + formatDocsForCitation(docsCitations);
+          }
+
           return new Response(
             JSON.stringify({
               generationId,
-              message: studioSafeMessage(result.message, queued.length, shouldAuto),
+              message: finalMessage,
               files: result.files,
               actions: queued,
               status: shouldAuto ? "executing" : "preview",
               dangers: dangers,
+              docsUsed: docsCitations.map((c) => ({
+                title: c.title,
+                section: c.section,
+                url: c.source_url,
+                similarity: c.similarity,
+              })),
               validation: {
                 summary: validation.summary,
                 errors: validation.errors,
