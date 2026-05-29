@@ -138,34 +138,44 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center gap-4 overflow-x-auto text-sm text-muted-foreground xl:flex [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {visibleNavItems
-            .filter(
-              (item) =>
-                item.to !== "/dashboard" && item.to !== "/mcp-servers" && item.to !== "/faq",
-            )
-            .map((item) => (
-              <Link
-                key={item.to}
-                to={item.to as any}
-                className="shrink-0 hover:text-foreground transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          <a
-            href="https://kingdavez.click"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 hover:text-foreground transition-colors"
-          >
-            3D Models
-          </a>
-          {user && (
-            <Link to="/dashboard" className="shrink-0 hover:text-foreground transition-colors">
-              Dashboard
-            </Link>
-          )}
+        <nav className="hidden min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground lg:flex">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/40 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              Browse
+              <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {visibleNavItems
+                .filter(
+                  (item) =>
+                    item.to !== "/dashboard" && item.to !== "/mcp-servers" && item.to !== "/faq",
+                )
+                .map((item) => (
+                  <DropdownMenuItem key={item.to} asChild>
+                    <Link to={item.to as any} className="w-full cursor-pointer">
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              <DropdownMenuItem asChild>
+                <a
+                  href="https://kingdavez.click"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full cursor-pointer"
+                >
+                  3D Models
+                </a>
+              </DropdownMenuItem>
+              {user && (
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="w-full cursor-pointer">
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 lg:gap-2.5">
