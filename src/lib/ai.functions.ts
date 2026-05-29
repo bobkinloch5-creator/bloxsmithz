@@ -201,10 +201,11 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
 
-    const cost = mode === "generate" ? 3 : 1;
+    const baseCost = mode === "generate" ? 3 : 1;
+    let cost = baseCost;
 
     if (!isOwner) {
-      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: cost });
+      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: baseCost });
       if (spendErr) {
         throw new Error("Not enough credits. Buy more on the Pricing page.");
       }
@@ -215,7 +216,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const { getModelProfile, resolveAiGateway, createProvider } = await import(
       "./ai-providers.server"
     );
-    const { NEOKENS_SAFE_FALLBACK_MODEL } = await import("./ai-models");
+    const { NEOKENS_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
 
@@ -240,11 +241,25 @@ export const generateWithAI = createServerFn({ method: "POST" })
     } catch (e) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
-          _amount: cost,
+          _amount: baseCost,
           _reason: "ai gateway not configured",
         });
       throw e;
     }
+
+    // Tier-based surcharge — higher models charge more credits per generation.
+    const totalCost = applyModelCreditMultiplier(baseCost, resolved.modelName);
+    const surcharge = totalCost - baseCost;
+    if (!isOwner && surcharge > 0) {
+      const { error: surErr } = await supabase.rpc("spend_credits_atomic", { _amount: surcharge });
+      if (surErr) {
+        await supabase.rpc("refund_credits", { _amount: baseCost, _reason: "tier surcharge unaffordable" });
+        throw new Error(
+          `Not enough credits — model ${resolved.modelName} costs ${totalCost} credits. Pick a cheaper model or buy more on the Pricing page.`,
+        );
+      }
+    }
+    cost = totalCost;
 
     const model = resolved.model;
     const profile = getModelProfile(resolved.provider, resolved.modelName, {
