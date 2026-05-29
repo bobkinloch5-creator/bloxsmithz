@@ -706,13 +706,35 @@ function Account() {
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-2 gap-3 flex-wrap">
                 <div className="space-y-0.5">
                   <label className="text-xs font-semibold text-muted-foreground block">
                     Email Address
                   </label>
-                  <span className="text-xs text-muted-foreground/80">{profile?.email}</span>
+                  <span className="text-xs text-muted-foreground/80">
+                    {profile?.hide_email
+                      ? profile?.email?.replace(/(.).+(@.+)/, "$1•••••$2")
+                      : profile?.email}
+                  </span>
                 </div>
+                <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!profile?.hide_email}
+                    onChange={async (e) => {
+                      const next = e.target.checked;
+                      const { error } = await supabase
+                        .from("profiles")
+                        .update({ hide_email: next })
+                        .eq("id", user!.id);
+                      if (error) return toast.error("Couldn't update preference");
+                      await refresh();
+                      toast.success(next ? "Email hidden" : "Email visible");
+                    }}
+                    className="rounded border-border"
+                  />
+                  Hide my email
+                </label>
                 <button
                   onClick={saveProfile}
                   className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-sm font-semibold transition shadow-sm"
