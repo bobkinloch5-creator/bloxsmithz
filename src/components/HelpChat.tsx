@@ -154,24 +154,26 @@ export function HelpChat() {
 
   return (
     <>
-      {/* Floating launcher — safe bottom-right placement across all pages. */}
+      {/* Floating launcher — premium pill, safe bottom-right placement across all pages. */}
       {!open && (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Open BloxSmith help chat"
-          title="BloxSmith help chat"
-          className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[9998] flex h-14 items-center justify-center gap-2 rounded-full border-2 border-primary-foreground/20 bg-primary px-4 text-primary-foreground shadow-lg ring-2 ring-primary/30 ring-offset-2 ring-offset-background transition hover:-translate-y-0.5 hover:shadow-xl active:scale-95 sm:right-5 sm:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]"
+          aria-label="Open BloxSmith AI help chat"
+          title="BloxSmith AI Help"
+          className="group fixed right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-[9998] flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-primary/80 pl-3.5 pr-4 text-primary-foreground shadow-[0_8px_28px_-6px_color-mix(in_oklab,var(--primary)_55%,transparent)] ring-1 ring-primary-foreground/10 transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_12px_36px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)] active:scale-95 sm:right-6 sm:bottom-[calc(1.75rem+env(safe-area-inset-bottom))] sm:h-14 sm:pl-4 sm:pr-5 animate-fade-in"
         >
-          <MessageCircle className="h-5 w-5" />
-          <span className="text-sm font-bold">AI Help</span>
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-foreground/15 backdrop-blur-sm transition group-hover:bg-primary-foreground/20 sm:h-8 sm:w-8">
+            <MessageCircle className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+          </span>
+          <span className="text-sm font-semibold tracking-tight">AI Help</span>
         </button>
       )}
 
       {/* Mobile/tablet backdrop. Desktop stays light so the page is still visible. */}
       {open && (
         <div
-          className="fixed inset-0 z-[9997] bg-black/45 backdrop-blur-[1px] md:bg-transparent md:backdrop-blur-0 md:pointer-events-none"
+          className="fixed inset-0 z-[9997] bg-black/45 backdrop-blur-[2px] animate-fade-in md:bg-transparent md:backdrop-blur-0 md:pointer-events-none"
           onClick={() => setOpen(false)}
           aria-hidden
         />
@@ -182,8 +184,8 @@ export function HelpChat() {
         <aside
           role="dialog"
           aria-modal="false"
-          aria-label="BloxSmith help chat"
-          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(78dvh,640px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl md:inset-x-auto md:right-5 md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(620px,calc(100dvh-2.5rem))] md:w-[380px] lg:w-[400px]"
+          aria-label="BloxSmith AI help chat"
+          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(78dvh,640px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl animate-scale-in md:inset-x-auto md:right-6 md:bottom-[calc(1.75rem+env(safe-area-inset-bottom))] md:h-[min(620px,calc(100dvh-3rem))] md:w-[380px] lg:w-[400px]"
         >
           <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
