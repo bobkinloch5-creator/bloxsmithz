@@ -1201,7 +1201,7 @@ ${ROBLOX_KNOWLEDGE_PROMPT}${includeProject && memoryBlock ? `\n\n${memoryBlock}`
     } catch (err: unknown) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
-          _amount: CHAT_COST,
+          _amount: chatTotal,
           _reason: "chat generation failed",
         });
       const msg = getAIErrorMessage(err);
