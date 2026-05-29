@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import bloxsmithThemeBg from "@/assets/theme-bloxsmith.svg";
 
 export type Theme =
@@ -267,11 +268,13 @@ const ThemeContext = createContext<{
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
+  const hydratedFromServer = useRef(false);
 
   useEffect(() => {
     installBloxsmithThemeCss();
   }, []);
 
+  // Restore from localStorage on mount.
   useEffect(() => {
     const saved = window.localStorage.getItem("bs_theme") as Theme | null;
     if (saved && ALL_CLASSES.includes(saved)) {
@@ -279,15 +282,70 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Pull the user's saved theme from their profile when they sign in.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadFromProfile(userId: string) {
+      try {
+        const { data } = await (supabase as any)
+          .from("profiles")
+          .select("theme")
+          .eq("id", userId)
+          .maybeSingle();
+        if (cancelled) return;
+        const remote = data?.theme as Theme | null | undefined;
+        if (remote && ALL_CLASSES.includes(remote)) {
+          hydratedFromServer.current = true;
+          setThemeState(remote);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id;
+      if (uid) loadFromProfile(uid);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      const uid = session?.user?.id;
+      if (uid) loadFromProfile(uid);
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Apply theme to <html>, persist locally + remotely, with smooth transition.
   useEffect(() => {
     const root = document.documentElement;
+
+    root.classList.add("theme-transition");
     ALL_CLASSES.forEach((c) => root.classList.remove(c));
     root.classList.add(theme);
     root.style.colorScheme =
       theme === "light" || theme === "summer" || theme === "winter" || theme === "adoptme"
         ? "light"
         : "dark";
+
+    const t = window.setTimeout(() => {
+      root.classList.remove("theme-transition");
+    }, 420);
+
     window.localStorage.setItem("bs_theme", theme);
+
+    // Persist to user profile (debounced via the effect tick).
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data.user?.id;
+      if (!uid) return;
+      (supabase as any)
+        .from("profiles")
+        .update({ theme })
+        .eq("id", uid)
+        .then(() => {});
+    });
+
+    return () => window.clearTimeout(t);
   }, [theme]);
 
   const toggle = () =>
@@ -304,3 +362,4 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 }
 
 export const useTheme = () => useContext(ThemeContext);
+

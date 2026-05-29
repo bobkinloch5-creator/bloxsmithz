@@ -892,20 +892,189 @@ html[dir="rtl"] input {
   --shadow-glow: 0 0 70px -12px oklch(0.72 0.20 45 / 0.45);
 }
 
+/* DRAGON REALM — molten ember + dusk violet */
+.dragon {
+  --background: oklch(0.10 0.025 25);
+  --foreground: oklch(0.97 0.015 60);
+  --surface: oklch(0.16 0.04 25);
+  --surface-elevated: oklch(0.22 0.06 22);
+  --card: oklch(0.16 0.04 25 / 0.82);
+  --card-foreground: oklch(0.97 0.015 60);
+  --popover: oklch(0.18 0.05 25);
+  --popover-foreground: oklch(0.97 0.015 60);
+  --primary: oklch(0.70 0.22 35);
+  --primary-foreground: oklch(0.10 0.02 35);
+  --primary-glow: oklch(0.80 0.18 60);
+  --secondary: oklch(0.28 0.05 25);
+  --secondary-foreground: oklch(0.97 0.015 60);
+  --muted: oklch(0.24 0.04 25);
+  --muted-foreground: oklch(0.78 0.05 55);
+  --accent: oklch(0.65 0.22 300);
+  --accent-foreground: oklch(0.99 0.005 300);
+  --destructive: oklch(0.62 0.27 18);
+  --destructive-foreground: oklch(0.99 0.005 250);
+  --success: oklch(0.74 0.20 145);
+  --success-foreground: oklch(0.10 0.02 145);
+  --border: oklch(0.70 0.22 35 / 0.18);
+  --input: oklch(1 0 0 / 0.07);
+  --ring: oklch(0.70 0.22 35);
+  --gradient-hero: linear-gradient(135deg, oklch(0.12 0.025 25), oklch(0.18 0.06 25) 55%, oklch(0.28 0.16 35));
+  --gradient-brand: linear-gradient(135deg, var(--primary), var(--primary-glow) 56%, var(--accent));
+  --shadow-glow: 0 0 80px -12px oklch(0.70 0.22 35 / 0.55);
+}
+
+/* DEEP SPACE — cosmic indigo + nebula magenta */
+.space {
+  --background: oklch(0.07 0.03 270);
+  --foreground: oklch(0.97 0.015 250);
+  --surface: oklch(0.13 0.05 268);
+  --surface-elevated: oklch(0.19 0.07 265);
+  --card: oklch(0.13 0.05 268 / 0.82);
+  --card-foreground: oklch(0.97 0.015 250);
+  --popover: oklch(0.15 0.06 268);
+  --popover-foreground: oklch(0.97 0.015 250);
+  --primary: oklch(0.72 0.20 280);
+  --primary-foreground: oklch(0.99 0.008 280);
+  --primary-glow: oklch(0.78 0.20 320);
+  --secondary: oklch(0.26 0.07 270);
+  --secondary-foreground: oklch(0.97 0.015 250);
+  --muted: oklch(0.22 0.05 270);
+  --muted-foreground: oklch(0.80 0.05 260);
+  --accent: oklch(0.75 0.22 320);
+  --accent-foreground: oklch(0.10 0.02 320);
+  --destructive: oklch(0.62 0.27 18);
+  --destructive-foreground: oklch(0.99 0.005 250);
+  --success: oklch(0.74 0.20 145);
+  --success-foreground: oklch(0.10 0.02 145);
+  --border: oklch(0.72 0.20 280 / 0.20);
+  --input: oklch(1 0 0 / 0.07);
+  --ring: oklch(0.72 0.20 280);
+  --gradient-hero: linear-gradient(135deg, oklch(0.08 0.03 270), oklch(0.16 0.08 280) 55%, oklch(0.24 0.16 320));
+  --gradient-brand: linear-gradient(135deg, var(--primary), var(--primary-glow) 56%, var(--accent));
+  --shadow-glow: 0 0 90px -14px oklch(0.75 0.22 320 / 0.55);
+}
+
+/* CYBER CITY — neon cyan + hot pink */
+.cybercity {
+  --background: oklch(0.08 0.03 260);
+  --foreground: oklch(0.98 0.015 200);
+  --surface: oklch(0.14 0.05 255);
+  --surface-elevated: oklch(0.20 0.07 250);
+  --card: oklch(0.14 0.05 255 / 0.82);
+  --card-foreground: oklch(0.98 0.015 200);
+  --popover: oklch(0.16 0.06 255);
+  --popover-foreground: oklch(0.98 0.015 200);
+  --primary: oklch(0.82 0.20 195);
+  --primary-foreground: oklch(0.10 0.02 200);
+  --primary-glow: oklch(0.75 0.24 350);
+  --secondary: oklch(0.26 0.07 255);
+  --secondary-foreground: oklch(0.98 0.015 200);
+  --muted: oklch(0.22 0.05 255);
+  --muted-foreground: oklch(0.80 0.05 220);
+  --accent: oklch(0.75 0.24 350);
+  --accent-foreground: oklch(0.99 0.008 350);
+  --destructive: oklch(0.62 0.27 18);
+  --destructive-foreground: oklch(0.99 0.005 250);
+  --success: oklch(0.78 0.20 145);
+  --success-foreground: oklch(0.10 0.02 145);
+  --border: oklch(0.82 0.20 195 / 0.20);
+  --input: oklch(1 0 0 / 0.08);
+  --ring: oklch(0.82 0.20 195);
+  --gradient-hero: linear-gradient(135deg, oklch(0.09 0.03 260), oklch(0.18 0.08 255) 50%, oklch(0.24 0.18 350));
+  --gradient-brand: linear-gradient(135deg, var(--primary), var(--accent));
+  --shadow-glow: 0 0 90px -12px oklch(0.82 0.20 195 / 0.55);
+}
+
+/* LOST OCEAN — deep teal + treasure gold */
+.ocean {
+  --background: oklch(0.10 0.04 220);
+  --foreground: oklch(0.97 0.015 200);
+  --surface: oklch(0.16 0.05 215);
+  --surface-elevated: oklch(0.22 0.07 210);
+  --card: oklch(0.16 0.05 215 / 0.82);
+  --card-foreground: oklch(0.97 0.015 200);
+  --popover: oklch(0.18 0.06 215);
+  --popover-foreground: oklch(0.97 0.015 200);
+  --primary: oklch(0.72 0.16 200);
+  --primary-foreground: oklch(0.10 0.02 200);
+  --primary-glow: oklch(0.82 0.16 90);
+  --secondary: oklch(0.28 0.06 215);
+  --secondary-foreground: oklch(0.97 0.015 200);
+  --muted: oklch(0.24 0.05 215);
+  --muted-foreground: oklch(0.80 0.05 200);
+  --accent: oklch(0.82 0.16 90);
+  --accent-foreground: oklch(0.14 0.02 90);
+  --destructive: oklch(0.62 0.27 18);
+  --destructive-foreground: oklch(0.99 0.005 250);
+  --success: oklch(0.78 0.20 145);
+  --success-foreground: oklch(0.10 0.02 145);
+  --border: oklch(0.72 0.16 200 / 0.20);
+  --input: oklch(1 0 0 / 0.08);
+  --ring: oklch(0.72 0.16 200);
+  --gradient-hero: linear-gradient(135deg, oklch(0.11 0.04 220), oklch(0.18 0.08 210) 55%, oklch(0.28 0.14 90));
+  --gradient-brand: linear-gradient(135deg, var(--primary), var(--accent));
+  --shadow-glow: 0 0 80px -12px oklch(0.72 0.16 200 / 0.50);
+}
+
+/* VOLCANO WAR — lava red + obsidian */
+.volcano {
+  --background: oklch(0.08 0.02 25);
+  --foreground: oklch(0.97 0.015 60);
+  --surface: oklch(0.14 0.03 25);
+  --surface-elevated: oklch(0.20 0.05 22);
+  --card: oklch(0.14 0.03 25 / 0.84);
+  --card-foreground: oklch(0.97 0.015 60);
+  --popover: oklch(0.16 0.04 25);
+  --popover-foreground: oklch(0.97 0.015 60);
+  --primary: oklch(0.62 0.26 22);
+  --primary-foreground: oklch(0.99 0.005 25);
+  --primary-glow: oklch(0.76 0.22 55);
+  --secondary: oklch(0.24 0.04 25);
+  --secondary-foreground: oklch(0.97 0.015 60);
+  --muted: oklch(0.20 0.03 25);
+  --muted-foreground: oklch(0.78 0.05 50);
+  --accent: oklch(0.76 0.22 55);
+  --accent-foreground: oklch(0.10 0.02 55);
+  --destructive: oklch(0.62 0.27 18);
+  --destructive-foreground: oklch(0.99 0.005 250);
+  --success: oklch(0.74 0.20 145);
+  --success-foreground: oklch(0.10 0.02 145);
+  --border: oklch(0.62 0.26 22 / 0.20);
+  --input: oklch(1 0 0 / 0.07);
+  --ring: oklch(0.62 0.26 22);
+  --gradient-hero: linear-gradient(135deg, oklch(0.09 0.02 25), oklch(0.18 0.05 25) 50%, oklch(0.32 0.20 35));
+  --gradient-brand: linear-gradient(135deg, var(--primary), var(--primary-glow));
+  --shadow-glow: 0 0 90px -10px oklch(0.62 0.26 22 / 0.60);
+}
+
+/* Smooth fade when switching themes */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 360ms ease, color 360ms ease,
+    border-color 360ms ease, fill 360ms ease, stroke 360ms ease,
+    box-shadow 360ms ease, opacity 360ms ease !important;
+}
+
 /* ============================================================
    Theme photo backgrounds
    ============================================================ */
 .neon, .obby, .tycoon, .rpg,
 .doors, .bedwars, .bloxfruits, .adoptme,
-.halloween, .christmas, .winter, .summer { background-color: var(--background); }
+.halloween, .christmas, .winter, .summer,
+.dragon, .space, .cybercity, .ocean, .volcano { background-color: var(--background); }
 
 .neon body, .obby body, .tycoon body, .rpg body,
 .doors body, .bedwars body, .bloxfruits body, .adoptme body,
-.halloween body, .christmas body, .winter body, .summer body { background-color: transparent; }
+.halloween body, .christmas body, .winter body, .summer body,
+.dragon body, .space body, .cybercity body, .ocean body, .volcano body { background-color: transparent; }
+
 
 html.neon::before, html.obby::before, html.tycoon::before, html.rpg::before,
 html.doors::before, html.bedwars::before, html.bloxfruits::before, html.adoptme::before,
-html.halloween::before, html.christmas::before, html.winter::before, html.summer::before {
+html.halloween::before, html.christmas::before, html.winter::before, html.summer::before,
+html.dragon::before, html.space::before, html.cybercity::before, html.ocean::before, html.volcano::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -918,7 +1087,8 @@ html.halloween::before, html.christmas::before, html.winter::before, html.summer
 }
 html.neon::after, html.obby::after, html.tycoon::after, html.rpg::after,
 html.doors::after, html.bedwars::after, html.bloxfruits::after, html.adoptme::after,
-html.halloween::after, html.christmas::after, html.winter::after, html.summer::after {
+html.halloween::after, html.christmas::after, html.winter::after, html.summer::after,
+html.dragon::after, html.space::after, html.cybercity::after, html.ocean::after, html.volcano::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -933,12 +1103,15 @@ html.halloween::after, html.christmas::after, html.winter::after, html.summer::a
 html.neon .glass, html.obby .glass, html.tycoon .glass, html.rpg .glass,
 html.doors .glass, html.bedwars .glass, html.bloxfruits .glass,
 html.halloween .glass, html.christmas .glass,
+html.dragon .glass, html.space .glass, html.cybercity .glass, html.ocean .glass, html.volcano .glass,
 html.neon .glass-strong, html.obby .glass-strong, html.tycoon .glass-strong, html.rpg .glass-strong,
 html.doors .glass-strong, html.bedwars .glass-strong, html.bloxfruits .glass-strong,
-html.halloween .glass-strong, html.christmas .glass-strong {
+html.halloween .glass-strong, html.christmas .glass-strong,
+html.dragon .glass-strong, html.space .glass-strong, html.cybercity .glass-strong, html.ocean .glass-strong, html.volcano .glass-strong {
   background: linear-gradient(180deg, oklch(0.09 0.015 250 / 0.68), oklch(0.09 0.015 250 / 0.4));
   border-color: oklch(1 0 0 / 0.12);
 }
+
 
 /* Light-flavored themes use lighter glass */
 html.adoptme .glass, html.adoptme .glass-strong,
@@ -978,7 +1151,8 @@ html.volcano::before    { background-image: url("./assets/theme-volcano.jpg"); o
 /* Hide per-section hero photos on themed pages so the themed background isn't doubled */
 html.neon .hero-bg-img, html.obby .hero-bg-img, html.tycoon .hero-bg-img, html.rpg .hero-bg-img,
 html.doors .hero-bg-img, html.bedwars .hero-bg-img, html.bloxfruits .hero-bg-img, html.adoptme .hero-bg-img,
-html.halloween .hero-bg-img, html.christmas .hero-bg-img, html.winter .hero-bg-img, html.summer .hero-bg-img {
+html.halloween .hero-bg-img, html.christmas .hero-bg-img, html.winter .hero-bg-img, html.summer .hero-bg-img,
+html.dragon .hero-bg-img, html.space .hero-bg-img, html.cybercity .hero-bg-img, html.ocean .hero-bg-img, html.volcano .hero-bg-img {
   display: none;
 }
 
