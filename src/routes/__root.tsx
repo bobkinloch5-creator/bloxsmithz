@@ -278,6 +278,7 @@ function RootComponent() {
           <ImageGeneratorButtonInjector />
           <ClickRipple />
           <HelpChat />
+          <GlobalChat />
           <Toaster theme="dark" position="top-right" />
         </AuthProvider>
       </QueryClientProvider>
