@@ -1435,6 +1435,62 @@ export type Database = {
         }
         Relationships: []
       }
+      ui_generations: {
+        Row: {
+          actions: Json
+          category: string
+          created_at: string
+          files: Json
+          id: string
+          project_id: string | null
+          prompt: string | null
+          spec: Json
+          style: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actions?: Json
+          category: string
+          created_at?: string
+          files?: Json
+          id?: string
+          project_id?: string | null
+          prompt?: string | null
+          spec: Json
+          style?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actions?: Json
+          category?: string
+          created_at?: string
+          files?: Json
+          id?: string
+          project_id?: string | null
+          prompt?: string | null
+          spec?: Json
+          style?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ui_generations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_mcp_servers: {
         Row: {
           auth_header: string | null

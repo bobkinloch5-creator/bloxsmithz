@@ -1,0 +1,411 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { Header, Footer } from "@/components/layout";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  generateRobloxUIFn,
+  listUIGenerationsFn,
+  getUIGenerationFn,
+  deleteUIGenerationFn,
+  insertUIIntoStudioFn,
+  UI_GEN_CREDIT_COST,
+} from "@/lib/ui-generator.functions";
+import { UI_STYLES, type UIStyle, type UICategory } from "@/lib/ui-generator.server";
+import { TemplateGrid } from "@/components/ui-generator/TemplateGrid";
+import { UIPreview } from "@/components/ui-generator/UIPreview";
+import { DevicePreviewFrame, type DeviceMode } from "@/components/ui-generator/DevicePreviewFrame";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Loader2, Sparkles, Send, Smartphone, Monitor, Trash2, Library, Wand2 } from "lucide-react";
+
+export const Route = createFileRoute("/ui-generator")({
+  component: UIGeneratorPage,
+  head: () => ({
+    meta: [
+      { title: "UI Generator — Roblox GUI Builder | BloxSmith" },
+      {
+        name: "description",
+        content:
+          "Generate beautiful Roblox UIs: shops, menus, HUDs, inventories. Preview on desktop & mobile, then insert into Studio with one click.",
+      },
+    ],
+  }),
+});
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const m = hex.replace("#", "").match(/.{1,2}/g) ?? ["ff", "ff", "ff"];
+  return { r: parseInt(m[0], 16), g: parseInt(m[1], 16), b: parseInt(m[2], 16) };
+}
+
+type LibraryItem = {
+  id: string;
+  title: string;
+  category: string;
+  style: string | null;
+  created_at: string;
+};
+
+function UIGeneratorPage() {
+  const { user } = useAuth();
+  const generateFn = useServerFn(generateRobloxUIFn);
+  const listFn = useServerFn(listUIGenerationsFn);
+  const getFn = useServerFn(getUIGenerationFn);
+  const deleteFn = useServerFn(deleteUIGenerationFn);
+  const insertFn = useServerFn(insertUIIntoStudioFn);
+
+  const [category, setCategory] = useState<UICategory>("Gamepass Shop");
+  const [style, setStyle] = useState<UIStyle>("Modern");
+  const [prompt, setPrompt] = useState("");
+  const [title, setTitle] = useState("");
+  const [primary, setPrimary] = useState("#f59e0b");
+  const [accent, setAccent] = useState("#8b5cf6");
+  const [bg, setBg] = useState("#0f172a");
+
+  const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<"preview" | "luau" | "spec">("preview");
+  const [device, setDevice] = useState<DeviceMode>("desktop");
+  const [result, setResult] = useState<{
+    id: string | null;
+    spec: any;
+    actions: any[];
+    files: any[];
+  } | null>(null);
+
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [projectId, setProjectId] = useState<string>("");
+  const [inserting, setInserting] = useState(false);
+  const [library, setLibrary] = useState<LibraryItem[]>([]);
+  const [showLib, setShowLib] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("projects")
+        .select("id,name")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(20);
+      const items = data ?? [];
+      setProjects(items);
+      if (items[0]) setProjectId(items[0].id);
+    })();
+    refreshLibrary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const refreshLibrary = async () => {
+    if (!user) return;
+    try {
+      const res: any = await listFn({ data: { limit: 30 } });
+      setLibrary(res?.items ?? []);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const run = async () => {
+    if (!user) {
+      toast.error("Sign in to generate UIs.");
+      return;
+    }
+    const effectivePrompt =
+      prompt.trim() ||
+      `A polished ${style.toLowerCase()} ${category} for a Roblox game. Include all expected sections, buttons, and labels.`;
+    setBusy(true);
+    try {
+      const res: any = await generateFn({
+        data: {
+          category,
+          style,
+          prompt: effectivePrompt,
+          title: title.trim() || undefined,
+          primaryColor: hexToRgb(primary),
+          accentColor: hexToRgb(accent),
+          bgColor: hexToRgb(bg),
+          projectId: projectId || undefined,
+        },
+      });
+      setResult({ id: res.id, spec: res.spec, actions: res.actions, files: res.files });
+      setTab("preview");
+      toast.success(`UI generated — charged ${res.creditsCharged} credits.`);
+      refreshLibrary();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Generation failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openSaved = async (id: string) => {
+    try {
+      const row: any = await getFn({ data: { id } });
+      setResult({ id: row.id, spec: row.spec, actions: row.actions ?? [], files: row.files ?? [] });
+      setCategory(row.category);
+      if (row.style) setStyle(row.style as UIStyle);
+      setTab("preview");
+      setShowLib(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't open.");
+    }
+  };
+
+  const removeSaved = async (id: string) => {
+    if (!confirm("Delete this saved UI?")) return;
+    try {
+      await deleteFn({ data: { id } });
+      setLibrary((l) => l.filter((i) => i.id !== id));
+    } catch (e: any) {
+      toast.error(e?.message ?? "Delete failed.");
+    }
+  };
+
+  const insert = async () => {
+    if (!result) return;
+    if (!projectId) {
+      toast.error("Pick a project first.");
+      return;
+    }
+    setInserting(true);
+    try {
+      const res: any = await insertFn({
+        data: { projectId, actions: result.actions, generationId: result.id ?? undefined },
+      });
+      toast.success(
+        `Queued ${res.queued} actions for "${res.projectName}". Open Studio and Sync to apply.`,
+      );
+    } catch (e: any) {
+      toast.error(e?.message ?? "Insertion failed.");
+    } finally {
+      setInserting(false);
+    }
+  };
+
+  const luauPreview = result
+    ? [
+        `-- ${result.spec.title}`,
+        `-- ScreenGui: ${result.spec.screenGuiName}`,
+        result.spec.remoteEvents?.length
+          ? `\n-- RemoteEvents:\n${result.spec.remoteEvents.map((r: string) => `--   ${r}`).join("\n")}`
+          : "",
+        result.spec.localScript ? `\n-- LocalScript:\n${result.spec.localScript}` : "",
+        result.spec.serverScript ? `\n-- ServerScript:\n${result.spec.serverScript}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : "";
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-6 space-y-5">
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <Wand2 className="w-7 h-7 text-primary" />
+              UI Generator
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              AI-generated Roblox GUIs with live preview and one-click Studio insert. Costs {UI_GEN_CREDIT_COST} credits per generation.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowLib((s) => !s)}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm hover:bg-surface-elevated"
+          >
+            <Library className="w-4 h-4" /> My UI Library ({library.length})
+          </button>
+        </header>
+
+        {showLib && (
+          <section className="glass rounded-2xl p-4 space-y-2">
+            <h2 className="text-sm font-semibold mb-2">Saved UIs</h2>
+            {library.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Your saved generations will appear here.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {library.map((it) => (
+                  <div key={it.id} className="rounded-lg border border-border bg-surface p-3 flex flex-col gap-1">
+                    <div className="text-sm font-medium line-clamp-1">{it.title}</div>
+                    <div className="text-[11px] text-muted-foreground">{it.category} · {it.style ?? "—"}</div>
+                    <div className="flex gap-2 mt-1">
+                      <button onClick={() => openSaved(it.id)} className="flex-1 text-xs rounded-md bg-secondary px-2 py-1 hover:bg-secondary/80">Open</button>
+                      <button onClick={() => removeSaved(it.id)} className="text-xs rounded-md border border-border px-2 py-1 hover:bg-surface-elevated" title="Delete">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+          {/* Customizer */}
+          <aside className="space-y-4">
+            <section className="glass rounded-2xl p-4 space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Template</h2>
+              <TemplateGrid active={category} onPick={setCategory} />
+            </section>
+
+            <section className="glass rounded-2xl p-4 space-y-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Style</h2>
+              <div className="flex flex-wrap gap-1.5">
+                {UI_STYLES.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setStyle(s)}
+                    className={`text-xs rounded-full px-2.5 py-1 border ${
+                      style === s ? "bg-primary text-primary-foreground border-primary" : "border-border bg-surface hover:bg-surface-elevated"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <ColorField label="Primary" value={primary} onChange={setPrimary} />
+                <ColorField label="Accent" value={accent} onChange={setAccent} />
+                <ColorField label="Background" value={bg} onChange={setBg} />
+              </div>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Title text (optional)"
+                className="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm"
+              />
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={4}
+                placeholder={`Describe extras for this ${category}… (optional)`}
+                className="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm"
+              />
+              <button
+                onClick={run}
+                disabled={busy}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              >
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {busy ? "Generating…" : `Generate — ${UI_GEN_CREDIT_COST} credits`}
+              </button>
+            </section>
+
+            {result && (
+              <section className="glass rounded-2xl p-4 space-y-3">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Insert into Studio</h2>
+                <select
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  className="w-full rounded-lg bg-surface border border-border px-2 py-2 text-sm"
+                >
+                  {projects.length === 0 && <option value="">No projects — create one first</option>}
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={insert}
+                  disabled={inserting || !projectId}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-medium hover:bg-secondary/80 disabled:opacity-60"
+                >
+                  {inserting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {inserting ? "Queueing…" : "Insert into Roblox Studio"}
+                </button>
+                <p className="text-[11px] text-muted-foreground">
+                  Queues {result.actions.length} Studio actions. Open Studio with the plugin connected and run Sync.
+                </p>
+              </section>
+            )}
+          </aside>
+
+          {/* Preview */}
+          <section className="glass rounded-2xl p-4 min-h-[640px] flex flex-col">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="inline-flex rounded-lg bg-surface border border-border p-0.5">
+                {(["preview", "luau", "spec"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`px-3 py-1 text-xs font-medium rounded-md ${
+                      tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t === "preview" ? "Preview" : t === "luau" ? "Luau Code" : "JSON Spec"}
+                  </button>
+                ))}
+              </div>
+              {tab === "preview" && (
+                <div className="inline-flex rounded-lg bg-surface border border-border p-0.5">
+                  <button
+                    onClick={() => setDevice("desktop")}
+                    className={`px-2.5 py-1 text-xs rounded-md inline-flex items-center gap-1 ${
+                      device === "desktop" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    <Monitor className="w-3.5 h-3.5" /> Desktop
+                  </button>
+                  <button
+                    onClick={() => setDevice("mobile")}
+                    className={`px-2.5 py-1 text-xs rounded-md inline-flex items-center gap-1 ${
+                      device === "mobile" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" /> Mobile
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-h-[560px]">
+              {!result ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-6">
+                  Pick a template and style, then Generate to see a live Roblox-style preview here.
+                </div>
+              ) : tab === "preview" ? (
+                <div className="h-[560px]">
+                  <DevicePreviewFrame mode={device}>
+                    <UIPreview spec={result.spec} bg={bg} />
+                  </DevicePreviewFrame>
+                </div>
+              ) : tab === "luau" ? (
+                <pre className="text-[11px] leading-relaxed bg-surface rounded-lg p-3 overflow-auto max-h-[560px] whitespace-pre-wrap">
+                  {luauPreview || "(no scripts in this UI)"}
+                </pre>
+              ) : (
+                <pre className="text-[11px] leading-relaxed bg-surface rounded-lg p-3 overflow-auto max-h-[560px]">
+                  {JSON.stringify(result.spec, null, 2)}
+                </pre>
+              )}
+            </div>
+          </section>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1.5 rounded-lg bg-surface border border-border px-1.5 py-1">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-6 w-6 rounded cursor-pointer border-0 bg-transparent"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 bg-transparent text-xs outline-none"
+        />
+      </div>
+    </label>
+  );
+}
