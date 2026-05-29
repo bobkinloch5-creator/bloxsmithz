@@ -11,7 +11,7 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "Simple, credit-based pricing for Roblox creators. Start building for free with daily free credits, or buy credit packs to unlock complex scripts and templates.",
+          "Credit-based pricing for Roblox creators. Start free with daily credits, or buy packs to unlock complex scripts and templates.",
       },
       {
         name: "keywords",
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/pricing")({
       {
         property: "og:description",
         content:
-          "Simple, credit-based pricing for Roblox creators. Start building for free with daily free credits, or buy credit packs to unlock complex scripts and templates.",
+          "Credit-based pricing for Roblox creators. Start free with daily credits, or buy packs to unlock complex scripts and templates.",
       },
       { property: "og:url", content: "https://bloxsmith.pro/pricing" },
     ],

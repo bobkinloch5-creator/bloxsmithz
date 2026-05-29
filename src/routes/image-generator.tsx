@@ -11,11 +11,11 @@ export const Route = createFileRoute("/image-generator")({
   component: ImageGeneratorPage,
   head: () => ({
     meta: [
-      { title: "AI Roblox Image Generator — Icons, Thumbnails & Badges | BloxSmith" },
+      { title: "AI Roblox Image Generator | BloxSmith" },
       {
         name: "description",
         content:
-          "Generate premium Roblox-ready 16:9 thumbnails, badges, gamepass icons, and decals with AI. Pick custom styles, Gemini or OpenAI models, and reference images.",
+          "Generate Roblox-ready thumbnails, badges, gamepass icons, and decals with AI. Pick styles, models, and reference images.",
       },
       {
         name: "keywords",
@@ -24,19 +24,19 @@ export const Route = createFileRoute("/image-generator")({
       },
       {
         property: "og:title",
-        content: "AI Roblox Image Generator — Icons, Thumbnails & Badges | BloxSmith",
+        content: "AI Roblox Image Generator | BloxSmith",
       },
       {
         property: "og:description",
         content:
-          "Generate premium Roblox-ready 16:9 thumbnails, badges, gamepass icons, and decals with AI. Pick custom styles, Gemini or OpenAI models, and reference images.",
+          "Generate Roblox-ready thumbnails, badges, gamepass icons, and decals with AI. Pick styles, models, and reference images.",
       },
       { property: "og:url", content: "https://bloxsmith.pro/image-generator" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       {
         name: "twitter:title",
-        content: "AI Roblox Image Generator — Icons, Thumbnails & Badges | BloxSmith",
+        content: "AI Roblox Image Generator | BloxSmith",
       },
     ],
     links: [{ rel: "canonical", href: "https://bloxsmith.pro/image-generator" }],
@@ -436,7 +436,7 @@ function ImageGeneratorPage() {
                 <div className="mt-2 relative inline-block">
                   <img
                     src={refImage}
-                    alt="Reference"
+                    alt="Reference image for AI generation"
                     className="h-24 w-24 rounded-lg object-cover border border-border"
                   />
                   <button
