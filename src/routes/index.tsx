@@ -947,7 +947,7 @@ function Landing() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
             <div key={s.title} className="glass rounded-2xl p-6 relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-5xl font-extrabold text-primary/10 select-none leading-none pointer-events-none">
+              <div className="absolute top-4 right-4 text-5xl font-extrabold text-primary/60 select-none leading-none pointer-events-none drop-shadow-[0_0_12px_hsl(var(--primary)/0.4)]">
                 {i + 1}
               </div>
               <s.icon className="h-5 w-5 text-primary-glow" />
