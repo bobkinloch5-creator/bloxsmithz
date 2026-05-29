@@ -77,11 +77,92 @@ export function HelpChat() {
     }
   }, []);
 
+  const [pos, setPos] = useState<Pos | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragInfo = useRef<{ startX: number; startY: number; offX: number; offY: number; moved: boolean; pointerId: number } | null>(null);
+  const launcherRef = useRef<HTMLButtonElement | null>(null);
+  const suppressClickRef = useRef(false);
+
+  useEffect(() => {
+    setPos(loadPos());
+  }, []);
+
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(STORAGE_OPEN_KEY, open ? "1" : "0");
     }
   }, [open]);
+
+  // Clamp position into viewport on resize.
+  useEffect(() => {
+    if (!pos) return;
+    function clamp() {
+      const el = launcherRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setPos((p) => {
+        if (!p) return p;
+        const maxX = window.innerWidth - r.width - 8;
+        const maxY = window.innerHeight - r.height - 8;
+        const nx = Math.min(Math.max(8, p.x), Math.max(8, maxX));
+        const ny = Math.min(Math.max(8, p.y), Math.max(8, maxY));
+        return nx === p.x && ny === p.y ? p : { x: nx, y: ny };
+      });
+    }
+    window.addEventListener("resize", clamp);
+    return () => window.removeEventListener("resize", clamp);
+  }, [pos]);
+
+  const onPointerDown = useCallback((e: ReactPointerEvent<HTMLButtonElement>) => {
+    const el = launcherRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    dragInfo.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      offX: e.clientX - r.left,
+      offY: e.clientY - r.top,
+      moved: false,
+      pointerId: e.pointerId,
+    };
+    el.setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((e: ReactPointerEvent<HTMLButtonElement>) => {
+    const info = dragInfo.current;
+    if (!info || info.pointerId !== e.pointerId) return;
+    const dx = e.clientX - info.startX;
+    const dy = e.clientY - info.startY;
+    if (!info.moved && Math.hypot(dx, dy) < 5) return;
+    info.moved = true;
+    setDragging(true);
+    const el = launcherRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const nx = Math.min(Math.max(8, e.clientX - info.offX), window.innerWidth - r.width - 8);
+    const ny = Math.min(Math.max(8, e.clientY - info.offY), window.innerHeight - r.height - 8);
+    setPos({ x: nx, y: ny });
+  }, []);
+
+  const onPointerUp = useCallback((e: ReactPointerEvent<HTMLButtonElement>) => {
+    const info = dragInfo.current;
+    if (!info) return;
+    const wasMoved = info.moved;
+    dragInfo.current = null;
+    setDragging(false);
+    try { launcherRef.current?.releasePointerCapture(e.pointerId); } catch {}
+    if (wasMoved) {
+      suppressClickRef.current = true;
+      setTimeout(() => { suppressClickRef.current = false; }, 0);
+      setPos((p) => {
+        if (p && typeof localStorage !== "undefined") {
+          try { localStorage.setItem(STORAGE_POS_KEY, JSON.stringify(p)); } catch {}
+        }
+        return p;
+      });
+    }
+  }, []);
+
 
   useEffect(() => {
     saveHistory(messages);
