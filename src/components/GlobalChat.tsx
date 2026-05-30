@@ -24,6 +24,7 @@ import { moderateChatMessage } from "@/lib/chat-moderation.functions";
 import { ChannelSidebar, type Channel } from "@/components/chat/ChannelSidebar";
 import { FriendsPanel } from "@/components/chat/FriendsPanel";
 import { UserProfilePopover } from "@/components/chat/UserProfilePopover";
+import bloxbotAvatar from "@/assets/bloxbot-avatar.png";
 
 type DbMessage = {
   id: string;
