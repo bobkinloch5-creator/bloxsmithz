@@ -165,6 +165,13 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const presenceChanRef = useRef<any>(null);
   const lastTypingSentRef = useRef(0);
+  // Refs to keep realtime handler stable (avoid re-subscribing on every state change)
+  const authorsRef = useRef(authors);
+  const openRef = useRef(open);
+  const prefsRef = useRef(prefs);
+  useEffect(() => { authorsRef.current = authors; }, [authors]);
+  useEffect(() => { openRef.current = open; }, [open]);
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
   // Open state
   useEffect(() => {
