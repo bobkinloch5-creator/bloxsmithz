@@ -352,7 +352,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     });
     presenceChanRef.current = channel;
     return () => { supabase.removeChannel(channel); presenceChanRef.current = null; };
-  }, [user?.id, open, prefs.sound_enabled, prefs.notify_mode, loadAuthors, authors]);
+  }, [user?.id, loadAuthors]);
 
   // Prune stale typing entries
   useEffect(() => {
