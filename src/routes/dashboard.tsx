@@ -19,6 +19,7 @@ import {
   Sparkles,
   Gift,
   Ticket,
+  Award,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Onboarding } from "@/components/Onboarding";
