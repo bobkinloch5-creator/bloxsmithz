@@ -104,7 +104,10 @@ export function ChatStyleCard() {
     setIcon(null);
     setNickname("");
     setFont("default");
+    setAccent("");
+    setEffect("none");
   };
+
 
   return (
     <div className="glass rounded-2xl p-5 space-y-5">
