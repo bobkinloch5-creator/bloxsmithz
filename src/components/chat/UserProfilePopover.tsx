@@ -33,6 +33,11 @@ export function UserProfilePopover({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [friend, setFriend] = useState<{ status: FriendStatus; requestId: string | null }>({ status: "none", requestId: null });
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reportReason, setReportReason] = useState("");
   const [presence, setPresence] = useState<Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getRobloxPresence>>>> | null>(null);
   const [presenceLoading, setPresenceLoading] = useState(false);
   const isSelf = user?.id === userId;
