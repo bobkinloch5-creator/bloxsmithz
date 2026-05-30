@@ -928,6 +928,24 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   return (
     <>
+      {!inline && !open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Open chat"
+          className="fixed z-[9998] bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 md:left-5 flex items-center gap-2 rounded-full border border-border bg-surface-elevated/95 backdrop-blur-xl px-4 py-2.5 shadow-2xl hover:bg-surface-elevated transition"
+        >
+          <MessagesSquare className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">Chat</span>
+          {unread > 0 && (
+            <span className="ml-1 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
+      )}
+
+
 
       {open && (
         <aside
