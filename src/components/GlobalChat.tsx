@@ -1582,6 +1582,59 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
 function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
+function ChatAvatar({
+  isBot,
+  author,
+  name,
+  onClick,
+}: {
+  isBot: boolean;
+  author: Author | null;
+  name: string;
+  onClick: () => void;
+}) {
+  if (isBot) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="grid h-9 w-9 shrink-0 cursor-default place-items-center rounded-full bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40"
+      >
+        <img src={bloxbotAvatar} alt="BloxBot" className="h-9 w-9 rounded-full object-cover" />
+      </button>
+    );
+  }
+
+  const pr = presenceFromProfile({
+    presence_enabled: author?.presence_enabled,
+    presence_status: author?.presence_status,
+    last_seen_at: author?.last_seen_at,
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative h-10 w-10 shrink-0 overflow-visible text-[11px] font-bold text-muted-foreground transition hover:scale-105"
+      title={name}
+    >
+      <span className="absolute inset-0 overflow-hidden rounded-full opacity-80">
+        <ProfileEffect effect={author?.profile_effect} accent={author?.profile_accent} />
+      </span>
+      <AvatarDecoration id={author?.profile_decoration} size={40}>
+        <PfpRing effect={author?.pfp_effect ?? "none"} size={34} className="relative z-10">
+          {author?.avatar_url ? (
+            <img src={author.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+          ) : (
+            <span>{name.slice(0, 1).toUpperCase()}</span>
+          )}
+        </PfpRing>
+      </AvatarDecoration>
+      <span className={`absolute bottom-0 right-0 z-20 h-3 w-3 rounded-full border-2 border-surface-elevated ${pr.dot}`} title={pr.label} />
+    </button>
+  );
+}
+
 function MsgActions({
   isAdmin, isSelf, pinned,
   onReply, onReact, onReport, onDelete, onMute, onUnmute, onPin, onWarn,
