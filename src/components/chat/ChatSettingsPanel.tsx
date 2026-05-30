@@ -224,6 +224,88 @@ export function ChatSettingsPanel({
   );
 }
 
+function ChatBgImageUploader({
+  url,
+  onChange,
+}: {
+  url: string | null;
+  onChange: (url: string | null) => void;
+}) {
+  const { user } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    if (!user) {
+      toast.error("Sign in to upload");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Image must be under 8MB");
+      return;
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${user.id}/chat-bg-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("profile-media")
+      .upload(path, file, { contentType: file.type, upsert: true });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+    onChange(data.publicUrl);
+    toast.success("Background updated");
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = "";
+        }}
+      />
+      {url ? (
+        <div
+          className="h-12 w-20 rounded border border-border bg-cover bg-center"
+          style={{ backgroundImage: `url("${url}")` }}
+        />
+      ) : (
+        <div className="grid h-12 w-20 place-items-center rounded border border-dashed border-border text-[10px] text-muted-foreground">
+          No image
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface"
+      >
+        <Upload className="h-3 w-3" />
+        Upload
+      </button>
+      {url && (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-destructive hover:bg-surface"
+        >
+          <Trash2 className="h-3 w-3" />
+          Remove
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
