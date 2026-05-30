@@ -5,12 +5,17 @@ import { Loader2, RefreshCw, CheckCircle2, AlertCircle, BookOpen } from "lucide-
 import { syncRobloxDocsFn, getRobloxDocsStatusFn, searchRobloxDocsFn } from "@/lib/roblox-docs.functions";
 
 type SyncStatus = {
-  id?: string;
-  status?: string;
-  total_docs?: number;
-  embedded_docs?: number;
-  last_synced_at?: string | null;
-  error?: string | null;
+  latest: {
+    id?: string;
+    status?: string;
+    processed?: number;
+    total?: number;
+    skipped?: number;
+    error?: string | null;
+    started_at?: string | null;
+    finished_at?: string | null;
+  } | null;
+  indexedChunks?: number;
 } | null;
 
 export function RobloxDocsPanel() {
@@ -20,6 +25,7 @@ export function RobloxDocsPanel() {
 
   const [info, setInfo] = useState<SyncStatus>(null);
   const [busy, setBusy] = useState(false);
+  const [progressMsg, setProgressMsg] = useState<string>("");
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Array<{ title: string; section?: string; source_url: string; similarity: number }>>([]);
   const [searching, setSearching] = useState(false);
@@ -37,14 +43,25 @@ export function RobloxDocsPanel() {
 
   const runSync = async () => {
     setBusy(true);
+    setProgressMsg("Starting sync…");
     try {
-      const res: any = await sync({ data: { batchSize: 20 } });
-      toast.success(`Sync ${res?.status ?? "ok"}: ${res?.embedded_docs ?? 0}/${res?.total_docs ?? 0} chunks`);
-      await refresh();
+      let resumeSyncId: string | undefined = (info?.latest?.status === "running" && info?.latest?.id) || undefined;
+      let safety = 80;
+      while (safety-- > 0) {
+        const res: any = await sync({ data: { batchSize: 15, resumeSyncId } });
+        resumeSyncId = res?.syncId;
+        setProgressMsg(`Processed ${res?.processed ?? 0}/${res?.total ?? 0} files…`);
+        await refresh();
+        if (res?.done) {
+          toast.success(`Sync complete: ${res.processed}/${res.total} files`);
+          break;
+        }
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Sync failed");
     } finally {
       setBusy(false);
+      setProgressMsg("");
     }
   };
 
