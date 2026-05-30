@@ -219,8 +219,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   // Open state
   useEffect(() => {
+    if (inline) { setOpen(true); return; }
     if (typeof localStorage !== "undefined") setOpen(localStorage.getItem(OPEN_KEY) === "1");
-  }, []);
+  }, [inline]);
+
   useEffect(() => {
     if (typeof localStorage !== "undefined") localStorage.setItem(OPEN_KEY, open ? "1" : "0");
     if (open) setUnread(0);
