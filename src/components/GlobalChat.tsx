@@ -1273,6 +1273,31 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                         {renderRich(m.content, myName, accent)}
                       </div>
                     )}
+                    {!isBot && m.content && (() => {
+                      const tr = translations.get(m.id);
+                      const isLoading = tr === "loading";
+                      const shown = tr && tr !== "loading" ? tr : null;
+                      return (
+                        <div className="mt-1 flex flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleTranslate(m.id, m.content!)}
+                            className="inline-flex w-fit items-center gap-1 rounded-full border border-border bg-surface/60 px-2 py-0.5 text-[10px] text-muted-foreground opacity-0 transition hover:bg-surface hover:text-foreground group-hover:opacity-100 focus:opacity-100"
+                          >
+                            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                            {shown ? "Hide translation" : isLoading ? "Translating…" : "Translate"}
+                          </button>
+                          {shown && (
+                            <div className={cn("rounded-md border-l-2 border-primary/60 bg-surface/40 px-2 py-1 text-foreground", fontSizeClass(prefs.font_size))}>
+                              <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary/80">
+                                Translated{shown.detected && shown.detected !== "unknown" ? ` from ${shown.detected}` : ""}
+                              </div>
+                              <div className="break-words whitespace-pre-wrap">{shown.text}</div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {m.attachment_url && m.attachment_type === "image" && (
                       <a href={m.attachment_url} target="_blank" rel="noreferrer noopener" className="mt-1 block">
                         <img src={m.attachment_url} alt="attachment" className="max-h-60 rounded-lg border border-border object-cover" />
