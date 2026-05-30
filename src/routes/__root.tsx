@@ -273,7 +273,7 @@ function RootComponent() {
           <BetaBanner />
           <Outlet />
           <RobloxModelExplainer />
-          <ImageGeneratorButtonInjector />
+          
           <ClickRipple />
           {!hideFloatingChat && <GlobalChat />}
           <Toaster theme="dark" position="top-right" />
