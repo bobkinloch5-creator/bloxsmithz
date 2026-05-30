@@ -977,8 +977,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(draft); }
                   else if (e.key === "Escape") { setReplyTo(null); setMentionQuery(null); }
                 }}
-                placeholder={muted ? "You're muted" : "Message everyone… (@ to mention, / for commands)"}
-                disabled={!!muted || sending} maxLength={500} rows={2}
+                placeholder={muted ? "You're muted" : !canPostHere ? `Only staff can post in #${activeChannel?.name ?? ""}` : `Message #${activeChannel?.name ?? "general"}… (@ to mention, / for commands)`}
+                disabled={!!muted || sending || !canPostHere} maxLength={500} rows={2}
                 className={cn("max-h-32 min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border", fontSizeClass(prefs.font_size), chatFontStyle(profile?.chat_font) && "")}
                 style={chatFontStyle(profile?.chat_font)}
               />
