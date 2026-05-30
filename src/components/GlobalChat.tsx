@@ -13,6 +13,8 @@ import {
   CHAT_ICON_MAP, gradientTextStyle, sanitizeGradient, sanitizeIcon, sanitizeFont, chatFontStyle,
 } from "@/lib/chat-customization";
 import { EmojiPicker, QUICK_REACTIONS } from "@/components/chat/EmojiPicker";
+import { EmotePicker } from "@/components/chat/EmotePicker";
+import { EMOTE_MAP } from "@/lib/emotes";
 import { ChatSettingsPanel } from "@/components/chat/ChatSettingsPanel";
 import { ChatModerationPanel } from "@/components/chat/ChatModerationPanel";
 import { useChatPrefs, fontSizeClass, densityClass, chatBackgroundStyle } from "@/lib/chat-prefs";
