@@ -283,6 +283,15 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           if (p.sound_enabled && (p.notify_mode === "all" || (p.notify_mode === "mentions" && mentioned))) {
             playPing();
           }
+          if (mentioned && p.notify_mode !== "off") {
+            const a = authorsRef.current.get(row.user_id);
+            const who = a?.display_name ?? "Someone";
+            toast.info(`${who} mentioned you`, {
+              description: row.content.slice(0, 140),
+              action: { label: "Open chat", onClick: () => setOpen(true) },
+            });
+            if (p.sound_enabled) { playPing(); setTimeout(() => playPing(), 180); }
+          }
           if (p.notify_mode !== "off" && document.hidden && typeof Notification !== "undefined" && Notification.permission === "granted") {
             if (p.notify_mode === "all" || mentioned) {
               const a = authorsRef.current.get(row.user_id);
