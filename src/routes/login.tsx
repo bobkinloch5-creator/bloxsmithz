@@ -50,15 +50,20 @@ function LoginPage() {
   };
 
   const redirectAfterLogin = async () => {
-    const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (data?.nextLevel === "aal2" && data?.currentLevel !== "aal2") {
-      toast.info("Enter your 2FA code to finish signing in.");
-      nav({ to: "/mfa" });
-      return;
+    try {
+      const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (data?.nextLevel === "aal2" && data?.currentLevel !== "aal2") {
+        toast.info("Enter your 2FA code to finish signing in.");
+        nav({ to: "/mfa" });
+        return;
+      }
+    } catch {
+      /* ignore MFA check failure and continue to dashboard */
     }
     toast.success("Welcome back!");
     nav({ to: "/dashboard" });
   };
+
 
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
