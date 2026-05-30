@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import {
   MessagesSquare, Send, X, Loader2, Trash2, Volume2, VolumeX,
   ShieldAlert, Bot, MoreVertical, Reply, Pin, PinOff, Flag,
-  Image as ImageIcon, Settings2, Shield, AtSign, Users,
+  Image as ImageIcon, Settings2, Shield, AtSign, Users, Hash, Megaphone, LifeBuoy,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -216,16 +216,17 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes] = await Promise.all([
+      const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes, chanRes] = await Promise.all([
         supabase.from("global_chat_messages")
-          .select("id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged")
-          .is("deleted_at", null).order("created_at", { ascending: true }).limit(100),
+          .select("id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id")
+          .is("deleted_at", null).order("created_at", { ascending: true }).limit(200),
         supabase.from("global_chat_settings").select("slow_mode_seconds").eq("id", 1).maybeSingle(),
         (supabase as any).from("global_chat_mutes").select("muted_until").eq("user_id", user.id).maybeSingle(),
         (supabase as any).from("global_chat_reactions").select("id,message_id,user_id,emoji").limit(500),
         (supabase as any).from("global_chat_blocked_words").select("word"),
         (supabase as any).from("global_chat_warnings").select("id,reason").eq("user_id", user.id).is("acknowledged_at", null),
         (supabase as any).from("user_chat_local_mutes").select("muted_user_id").eq("user_id", user.id),
+        (supabase as any).from("chat_channels").select("slug,name,description,view_role,post_role,icon,position").order("position"),
       ]);
       if (cancelled) return;
       const rows = (msgRes.data ?? []) as DbMessage[];
@@ -237,6 +238,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       setBlockedWords(((wordsRes.data ?? []) as any[]).map((w) => String(w.word).toLowerCase()));
       setWarnings((warnRes.data ?? []) as any);
       setLocalMuted(new Set(((localMuteRes.data ?? []) as any[]).map((r) => String(r.muted_user_id))));
+      setChannels(((chanRes as any)?.data ?? []) as Channel[]);
       await loadAuthors(Array.from(new Set(rows.map((r) => r.user_id))));
     })();
     return () => { cancelled = true; };
@@ -433,6 +435,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         _reply_to_id: replyTo?.id ?? null,
         _attachment_url: attachment_url,
         _attachment_type: attachment_type,
+        _channel_id: currentChannel,
       });
       if (error) {
         const m = String(error.message || "Failed to send");
@@ -631,8 +634,21 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   const myRoles = useMemo(() => roles as Role[], [roles]);
   const myName = user ? authors.get(user.id)?.display_name ?? null : null;
-  const messagesById = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages]);
-  const pinned = useMemo(() => messages.filter((m) => m.pinned_at).slice(-3), [messages]);
+  const visibleChannels = useMemo(
+    () => channels.filter((c) => c.view_role !== "admin" || isAdmin),
+    [channels, isAdmin],
+  );
+  const activeChannel = useMemo(
+    () => visibleChannels.find((c) => c.slug === currentChannel) ?? visibleChannels[0] ?? null,
+    [visibleChannels, currentChannel],
+  );
+  const canPostHere = !activeChannel || activeChannel.post_role !== "admin" || isAdmin;
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => m.ephemeralBot || (m.channel_id ?? "general") === (activeChannel?.slug ?? "general")),
+    [messages, activeChannel?.slug],
+  );
+  const messagesById = useMemo(() => new Map(visibleMessages.map((m) => [m.id, m])), [visibleMessages]);
+  const pinned = useMemo(() => visibleMessages.filter((m) => m.pinned_at).slice(-3), [visibleMessages]);
   const accent = prefs.theme_accent;
 
   // Mention suggestions
@@ -781,11 +797,37 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             </div>
           )}
 
+          {visibleChannels.length > 0 && (
+            <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-background/40 px-2 py-1.5">
+              {visibleChannels.map((c) => {
+                const Ico = c.icon === "megaphone" ? Megaphone : c.icon === "life-buoy" ? LifeBuoy : c.icon === "shield" ? Shield : Hash;
+                const active = (activeChannel?.slug ?? "general") === c.slug;
+                return (
+                  <button
+                    key={c.slug}
+                    type="button"
+                    onClick={() => setCurrentChannel(c.slug)}
+                    title={c.description ?? c.name}
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition",
+                      active
+                        ? "border-primary/60 bg-primary/15 text-primary"
+                        : "border-border bg-surface/40 text-muted-foreground hover:bg-surface hover:text-foreground",
+                    )}
+                  >
+                    <Ico className="h-3 w-3" />
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <div ref={scrollRef} className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain px-3", densityClass(prefs.density))}>
-            {messages.length === 0 && (
-              <p className="text-xs text-muted-foreground">No messages yet — say hi!</p>
+            {visibleMessages.length === 0 && (
+              <p className="text-xs text-muted-foreground">No messages in #{activeChannel?.name ?? "general"} yet — say hi!</p>
             )}
-            {messages.map((m) => {
+            {visibleMessages.map((m) => {
               const isMe = m.user_id === user.id;
               const isBot = m.ephemeralBot;
               const author = !isBot ? authors.get(m.user_id) : null;
@@ -935,12 +977,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(draft); }
                   else if (e.key === "Escape") { setReplyTo(null); setMentionQuery(null); }
                 }}
-                placeholder={muted ? "You're muted" : "Message everyone… (@ to mention, / for commands)"}
-                disabled={!!muted || sending} maxLength={500} rows={2}
+                placeholder={muted ? "You're muted" : !canPostHere ? `Only staff can post in #${activeChannel?.name ?? ""}` : `Message #${activeChannel?.name ?? "general"}… (@ to mention, / for commands)`}
+                disabled={!!muted || sending || !canPostHere} maxLength={500} rows={2}
                 className={cn("max-h-32 min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border", fontSizeClass(prefs.font_size), chatFontStyle(profile?.chat_font) && "")}
                 style={chatFontStyle(profile?.chat_font)}
               />
-              <button type="submit" disabled={sending || (!draft.trim() && !pendingFile) || !!muted} aria-label="Send"
+              <button type="submit" disabled={sending || (!draft.trim() && !pendingFile) || !!muted || !canPostHere} aria-label="Send"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
                 style={accent ? { background: accent } : undefined}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
