@@ -259,6 +259,39 @@ export function UserProfilePopover({
                       </button>
                     </>
                   )}
+                  <button
+                    onClick={toggleFollow}
+                    disabled={followBusy}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${isFollowing ? "border border-border bg-surface hover:bg-surface-elevated" : "bg-pink-600 text-white hover:opacity-90"}`}
+                  >
+                    {isFollowing ? <><HeartOff className="h-3.5 w-3.5" /> Unfollow</> : <><Heart className="h-3.5 w-3.5" /> Follow</>}
+                  </button>
+                  <button
+                    onClick={() => setReporting(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Flag className="h-3.5 w-3.5" /> Report
+                  </button>
+                </div>
+              )}
+
+              {reporting && !isSelf && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+                  <div className="text-xs font-semibold text-destructive flex items-center gap-1.5">
+                    <Flag className="h-3.5 w-3.5" /> Report {displayName}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Tell us what's wrong. Moderators will review.</p>
+                  <textarea
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value.slice(0, 200))}
+                    placeholder="Spam, harassment, inappropriate content…"
+                    rows={3}
+                    className="w-full resize-none rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                  />
+                  <div className="flex justify-end gap-1.5">
+                    <button onClick={() => { setReporting(false); setReportReason(""); }} className="rounded-md border border-border bg-surface px-2.5 py-1 text-[11px] hover:bg-surface-elevated">Cancel</button>
+                    <button onClick={submitReport} className="rounded-md bg-destructive px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90">Send report</button>
+                  </div>
                 </div>
               )}
 
