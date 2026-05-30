@@ -176,10 +176,10 @@ export function UsageRemaining({ defaultOpen = true }: { defaultOpen?: boolean }
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-background/40 px-2 py-1.5">
+    <div className="min-w-0 rounded-lg border border-border/60 bg-background/40 px-2 py-1.5">
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="text-base font-semibold leading-tight">{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground">{sub}</div>}
+      <div className="truncate text-sm font-semibold leading-tight sm:text-base">{value}</div>
+      {sub && <div className="truncate text-[10px] text-muted-foreground">{sub}</div>}
     </div>
   );
 }
