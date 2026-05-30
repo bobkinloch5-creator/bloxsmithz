@@ -21,6 +21,7 @@ const Schema = z
     profile_background: z
       .enum([
         "none",
+        "custom",
         "studio",
         "neon-city",
         "obby",
@@ -36,6 +37,7 @@ const Schema = z
       ])
       .optional()
       .nullable(),
+    custom_background_url: z.string().url().max(1024).optional().nullable(),
     profile_layout: z.enum(["classic", "card", "cinematic", "compact"]).optional(),
     pfp_effect: z
       .enum(["none", "gold", "rainbow", "flame", "electric", "ice", "galaxy", "rose"])
