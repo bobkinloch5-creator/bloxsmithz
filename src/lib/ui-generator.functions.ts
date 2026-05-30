@@ -6,6 +6,7 @@ import {
   specToPluginPayload,
   UI_CATEGORIES,
   UI_STYLES,
+  UISpecSchema,
   type UISpec,
 } from "@/lib/ui-generator.server";
 
@@ -107,6 +108,53 @@ export const generateRobloxUIFn = createServerFn({ method: "POST" })
   });
 
 const ListInput = z.object({ limit: z.number().int().min(1).max(50).default(30) }).default({ limit: 30 });
+
+const SaveGenerationInput = z.object({
+  category: z.enum(UI_CATEGORIES),
+  style: z.enum(UI_STYLES),
+  prompt: z.string().max(2000).optional(),
+  title: z.string().max(80).optional(),
+  projectId: z.string().uuid().optional(),
+  spec: UISpecSchema,
+  actions: z.array(z.any()).min(1),
+  files: z.array(z.any()).default([]),
+});
+
+export const saveUIGenerationFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => SaveGenerationInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    if (data.projectId) {
+      const { data: project, error } = await supabase
+        .from("projects")
+        .select("id,user_id")
+        .eq("id", data.projectId)
+        .maybeSingle();
+      if (error || !project) throw new Error("Project not found.");
+      if (project.user_id !== userId) throw new Error("You don't own this project.");
+    }
+
+    const { data: saved, error } = await supabase
+      .from("ui_generations")
+      .insert({
+        user_id: userId,
+        project_id: data.projectId ?? null,
+        title: data.title?.trim() || data.spec.title,
+        category: data.category,
+        style: data.style,
+        prompt: data.prompt ?? "",
+        spec: data.spec,
+        actions: data.actions,
+        files: data.files,
+      })
+      .select("id,title,category,style,created_at")
+      .single();
+
+    if (error) throw new Error(`Could not save UI generation: ${error.message}`);
+    return { item: saved };
+  });
 
 export const listUIGenerationsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

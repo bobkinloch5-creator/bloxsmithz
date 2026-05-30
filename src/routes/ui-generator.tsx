@@ -9,6 +9,7 @@ import {
   getUIGenerationFn,
   deleteUIGenerationFn,
   insertUIIntoStudioFn,
+  saveUIGenerationFn,
   UI_GEN_CREDIT_COST,
 } from "@/lib/ui-generator.functions";
 import { UI_STYLES, type UIStyle, type UICategory } from "@/lib/ui-generator.shared";
@@ -29,6 +30,7 @@ import {
   Monitor,
   Palette,
   RefreshCw,
+  Save,
   Send,
   Smartphone,
   Sparkles,
@@ -77,6 +79,7 @@ function UIGeneratorPage() {
   const getFn = useServerFn(getUIGenerationFn);
   const deleteFn = useServerFn(deleteUIGenerationFn);
   const insertFn = useServerFn(insertUIIntoStudioFn);
+  const saveFn = useServerFn(saveUIGenerationFn);
 
   const [category, setCategory] = useState<UICategory>("Gamepass Shop");
   const [style, setStyle] = useState<UIStyle>("Modern");
@@ -108,6 +111,7 @@ function UIGeneratorPage() {
   const [inserting, setInserting] = useState(false);
   const [library, setLibrary] = useState<LibraryItem[]>([]);
   const [showLib, setShowLib] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -166,7 +170,11 @@ function UIGeneratorPage() {
       setImgFinal(false);
       setImgError(null);
       setTab("preview");
-      toast.success(`UI generated — charged ${res.creditsCharged} credits.`);
+      toast.success(
+        res.id
+          ? `UI generated and saved — charged ${res.creditsCharged} credits.`
+          : `UI generated — charged ${res.creditsCharged} credits. Use Save to Library to keep it.`,
+      );
       refreshLibrary();
     } catch (e: any) {
       toast.error(e?.message ?? "Generation failed.");
@@ -250,6 +258,39 @@ function UIGeneratorPage() {
     }
   };
 
+  const saveCurrent = async () => {
+    if (!result) return;
+    setSaving(true);
+    try {
+      const res: any = await saveFn({
+        data: {
+          category,
+          style,
+          prompt:
+            prompt.trim() ||
+            `A polished ${style.toLowerCase()} ${category} for a Roblox game.`,
+          title: result.spec?.title || title.trim() || category,
+          projectId: projectId || undefined,
+          spec: result.spec,
+          actions: result.actions,
+          files: result.files ?? [],
+        },
+      });
+      const item = res?.item;
+      if (!item?.id) throw new Error("Save completed without a generation id.");
+      setResult((current) => (current ? { ...current, id: item.id } : current));
+      setLibrary((items) => {
+        const next = items.filter((it) => it.id !== item.id);
+        return [item, ...next].slice(0, 30);
+      });
+      toast.success("Saved to your UI Library.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Save failed.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const insert = async () => {
     if (!result) return;
     if (!projectId) {
@@ -292,6 +333,7 @@ function UIGeneratorPage() {
         { label: "Actions", value: String(result.actions.length) },
         { label: "Scripts", value: String(result.files.length) },
         { label: "Remotes", value: String(result.spec.remoteEvents?.length ?? 0) },
+        { label: "Library", value: result.id ? "Saved" : "Unsaved" },
       ]
     : [
         { label: "Template", value: category },
@@ -427,7 +469,24 @@ function UIGeneratorPage() {
 
             {result && (
               <section className="glass rounded-lg p-3 space-y-3">
-                <SectionTitle icon={Send} label="Insert into Studio" />
+                <SectionTitle icon={Save} label="Save & Insert" />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <button
+                    onClick={saveCurrent}
+                    disabled={saving || !!result.id}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background/35 px-3 py-2.5 text-sm font-medium hover:bg-surface disabled:opacity-60"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {result.id ? "Saved to Library" : saving ? "Saving..." : "Save to Library"}
+                  </button>
+                  <button
+                    onClick={() => setShowLib(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background/35 px-3 py-2.5 text-sm font-medium hover:bg-surface"
+                  >
+                    <Library className="h-4 w-4" />
+                    Open Library
+                  </button>
+                </div>
                 <select
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}

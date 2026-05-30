@@ -7,6 +7,7 @@
 - Added a complete deterministic ScreenGui fallback so slow or empty AI responses still return usable Roblox UI.
 - Shortened the visible generation wait so the page feels faster.
 - Polished the `/ui-generator` page with a cleaner builder header, compact stats, better template tiles, stronger style controls, and an upgraded preview frame.
+- Added a visible Save to Library action so generated previews can be saved even if automatic saving did not return a generation id.
 - Made generated UI templates fancier with layered panels, gradients, header glow, badges, thicker strokes, stronger buttons, and clearer Roblox-style hierarchy.
 - Upgraded Spin Wheel output into a more circular premium wheel with glow, reward badges, pointer marker, prize panel, spin button, RemoteEvent, LocalScript, and ServerScript.
 

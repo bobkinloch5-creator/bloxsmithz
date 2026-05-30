@@ -11,6 +11,7 @@ import {
   Globe2,
   Image as ImageIcon,
   Languages,
+  Library,
   LayoutDashboard,
   Link2Off,
   Menu,
@@ -76,6 +77,14 @@ const changelogItems = [
         title: "Fancier Generated Roblox UIs",
         detail:
           "Generated fallback templates now look more premium with layered panels, header glow, status badges, gradients, stronger action buttons, thicker strokes, and clearer hierarchy.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Library,
+        title: "Manual Save to UI Library",
+        detail:
+          "Generated previews now have a visible Save to Library action, so users can keep a generated UI even if the automatic save path did not return a saved generation id.",
       },
       {
         category: "Tools",
