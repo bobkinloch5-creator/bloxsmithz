@@ -58,7 +58,7 @@ export function TemplateGrid({
   onPick: (c: UICategory) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-1.5">
       {TEMPLATES.map(({ category, icon: Icon, tagline }) => {
         const isActive = active === category;
         return (
@@ -66,27 +66,27 @@ export function TemplateGrid({
             key={category}
             onClick={() => onPick(category)}
             title={`${category} — ${tagline}`}
-            className={`text-left rounded-xl border p-2.5 transition group ${
+            className={`text-left rounded-lg border p-2 transition group ${
               isActive
-                ? "border-primary bg-primary/10 ring-1 ring-primary shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_10%,transparent)]"
-                : "border-border bg-surface hover:bg-surface-elevated hover:border-primary/40"
+                ? "border-primary/70 bg-primary/12 shadow-[inset_3px_0_0_var(--primary)]"
+                : "border-border/80 bg-background/35 hover:bg-surface hover:border-primary/35"
             }`}
           >
-            <div className="flex items-start gap-2">
+            <div className="flex items-center gap-2">
               <span
-                className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${
+                className={`grid h-7 w-7 shrink-0 place-items-center rounded-md ${
                   isActive
-                    ? "bg-primary/20 text-primary"
-                    : "bg-background/60 text-muted-foreground group-hover:text-primary"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-surface-elevated/70 text-muted-foreground group-hover:text-primary"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold leading-tight text-foreground">
+                <div className="text-[12px] font-semibold leading-tight text-foreground truncate">
                   {category}
                 </div>
-                <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground line-clamp-2">
+                <p className="mt-0.5 text-[10.5px] leading-tight text-muted-foreground truncate">
                   {tagline}
                 </p>
               </div>

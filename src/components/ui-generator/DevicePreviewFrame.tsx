@@ -34,7 +34,14 @@ export function DevicePreviewFrame({
   }, [dim.w, dim.h]);
 
   return (
-    <div ref={wrapRef} className="relative w-full h-full flex items-center justify-center p-2 bg-surface-elevated rounded-xl overflow-hidden">
+    <div
+      ref={wrapRef}
+      className="relative w-full h-full flex items-center justify-center rounded-lg overflow-hidden border border-border/70 bg-[linear-gradient(90deg,color-mix(in_oklab,var(--border)_45%,transparent)_1px,transparent_1px),linear-gradient(0deg,color-mix(in_oklab,var(--border)_35%,transparent)_1px,transparent_1px)] bg-[length:28px_28px]"
+    >
+      <div className="absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-md border border-border/70 bg-background/80 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur">
+        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+        {dim.label}
+      </div>
       <div
         style={{
           width: dim.w,
@@ -45,13 +52,10 @@ export function DevicePreviewFrame({
           borderRadius: mode === "mobile" ? 32 : 8,
           overflow: "hidden",
           background: "#0f1419",
-          boxShadow: "0 20px 60px -10px rgba(0,0,0,0.6)",
+          boxShadow: "0 24px 70px -18px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.08)",
         }}
       >
         {children}
-      </div>
-      <div className="absolute bottom-2 right-2 text-[10px] text-muted-foreground bg-background/70 backdrop-blur px-2 py-0.5 rounded">
-        {dim.label}
       </div>
     </div>
   );
