@@ -1,12 +1,24 @@
 // UI Generator: AI-driven Roblox ScreenGui spec generation + plugin action conversion.
 // Server-only.
 import { generateText, Output } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
 import { createProvider } from "@/lib/ai-providers.server";
 import {
   createGroqProvider,
   BLOXSMITH_THINK_MODEL,
 } from "@/lib/ai-gateway.server";
+
+function createLovableProvider(apiKey: string) {
+  return createOpenAICompatible({
+    name: "lovable",
+    baseURL: "https://ai.gateway.lovable.dev/v1",
+    headers: {
+      "Lovable-API-Key": apiKey,
+      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+    },
+  });
+}
 
 // ---------------- UISpec schema ----------------
 // Compact, model-friendly schema. Coordinates use a single struct so the model
