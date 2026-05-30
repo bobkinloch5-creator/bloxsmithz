@@ -40,6 +40,8 @@ export function UserProfilePopover({
   const [reportReason, setReportReason] = useState("");
   const [presence, setPresence] = useState<Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getRobloxPresence>>>> | null>(null);
   const [presenceLoading, setPresenceLoading] = useState(false);
+  const [achievements, setAchievements] = useState<Array<{ key: string; name: string; icon: string | null; xp_reward: number | null; unlocked_at: string }>>([]);
+  const [level, setLevel] = useState<{ level: number; xp: number } | null>(null);
   const isSelf = user?.id === userId;
   const fetchPresence = useServerFn(getRobloxPresence);
 
