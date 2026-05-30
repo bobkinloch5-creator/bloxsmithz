@@ -24,10 +24,10 @@ const LAYOUTS: Array<{ id: "classic" | "card" | "cinematic" | "compact"; label: 
   { id: "compact", label: "Compact", hint: "Minimal one-row" },
 ];
 const STATUSES = [
-  { id: "online", label: "Online", color: "bg-emerald-500" },
-  { id: "idle", label: "Idle", color: "bg-amber-400" },
-  { id: "dnd", label: "Do not disturb", color: "bg-rose-500" },
-  { id: "invisible", label: "Invisible", color: "bg-zinc-500" },
+  { id: "online",    label: "Online",          color: "bg-emerald-500", glow: "shadow-[0_0_12px_rgba(16,185,129,0.7)]", icon: "●" },
+  { id: "idle",      label: "Idle",            color: "bg-amber-400",   glow: "shadow-[0_0_10px_rgba(251,191,36,0.6)]", icon: "🌙" },
+  { id: "dnd",       label: "Do not disturb",  color: "bg-rose-500",    glow: "shadow-[0_0_12px_rgba(244,63,94,0.7)]",  icon: "⛔" },
+  { id: "invisible", label: "Invisible",       color: "bg-zinc-500",    glow: "",                                       icon: "○" },
 ] as const;
 
 export function ProfileCustomizationCard() {
