@@ -1267,8 +1267,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               return (
                 <div key={m.id} className="group flex gap-2">
                   <ChatAvatar
-                    isBot={isBot}
-                    author={author}
+                    isBot={!!isBot}
+                    author={author ?? null}
                     name={name}
                     onClick={() => !isBot && setProfileUid(m.user_id)}
                   />
