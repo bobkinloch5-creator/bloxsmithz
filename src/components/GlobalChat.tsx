@@ -296,6 +296,36 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         const state = channel.presenceState() as Record<string, any[]>;
         setOnlineUsers(Object.keys(state));
         loadAuthors(Object.keys(state));
+        presenceSyncedRef.current = true;
+      })
+      .on("presence", { event: "join" }, async ({ key }) => {
+        if (!presenceSyncedRef.current) return; // skip initial population
+        if (key === user.id) return;
+        await loadAuthors([key]);
+        const a = authors.get(key);
+        const name = a?.display_name ?? "Someone";
+        if (prefs.sound_enabled) playJoin();
+        setMessages((prev) => [...prev, {
+          id: `sys-join-${key}-${Date.now()}`,
+          user_id: "bloxbot", content: `🟢 ${name} joined the chat`,
+          created_at: new Date().toISOString(),
+          deleted_at: null, reply_to_id: null, attachment_url: null,
+          attachment_type: null, pinned_at: null, flagged: false, ephemeralBot: true,
+        }]);
+      })
+      .on("presence", { event: "leave" }, ({ key }) => {
+        if (!presenceSyncedRef.current) return;
+        if (key === user.id) return;
+        const a = authors.get(key);
+        const name = a?.display_name ?? "Someone";
+        if (prefs.sound_enabled) playLeave();
+        setMessages((prev) => [...prev, {
+          id: `sys-leave-${key}-${Date.now()}`,
+          user_id: "bloxbot", content: `🔴 ${name} left the chat`,
+          created_at: new Date().toISOString(),
+          deleted_at: null, reply_to_id: null, attachment_url: null,
+          attachment_type: null, pinned_at: null, flagged: false, ephemeralBot: true,
+        }]);
       })
       .on("broadcast", { event: "typing" }, (payload) => {
         const uid = (payload.payload as any)?.user_id;
