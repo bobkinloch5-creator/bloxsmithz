@@ -76,6 +76,17 @@ export function UserProfilePopover({
       } else {
         setFriend({ status: "none", requestId: null });
       }
+      // Load follow stats
+      const [{ count: fc }, { data: myFollow }] = await Promise.all([
+        (supabase as any).from("user_follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
+        user
+          ? (supabase as any).from("user_follows").select("follower_id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      if (!cancel) {
+        setFollowerCount(fc ?? 0);
+        setIsFollowing(!!myFollow);
+      }
       setLoading(false);
     })();
     return () => {
