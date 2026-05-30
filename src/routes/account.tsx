@@ -736,6 +736,24 @@ function Account() {
                   />
                   Hide my email
                 </label>
+                <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!(profile as any)?.private_profile}
+                    onChange={async (e) => {
+                      const next = e.target.checked;
+                      const { error } = await (supabase as any)
+                        .from("profiles")
+                        .update({ private_profile: next })
+                        .eq("id", user!.id);
+                      if (error) return toast.error("Couldn't update preference");
+                      await refresh();
+                      toast.success(next ? "Profile is now private — only friends can view it" : "Profile is now public");
+                    }}
+                    className="rounded border-border"
+                  />
+                  Private profile (friends only)
+                </label>
                 <button
                   onClick={saveProfile}
                   className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-sm font-semibold transition shadow-sm"
