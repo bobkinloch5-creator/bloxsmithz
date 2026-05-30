@@ -31,6 +31,39 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.1.1",
+    date: "May 30, 2026",
+    title: "Auth Stability & Console Noise Cleanup",
+    description:
+      "Stops the 401 spam from /auth/v1/user when you're logged out or your session has expired, rotates the AI gateway key behind Sign in with Google to fix the \"Invalid API key\" toast, and keeps audio gesture-gated so Chrome doesn't warn about AudioContext.",
+    updates: [
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Clean Session Handling",
+        detail:
+          "On load we now validate the cached session with the Auth server. If the token is expired, revoked, or the account was removed, we sign you out cleanly instead of letting protected requests 401 in a loop. Logged-out visitors no longer trigger /auth/v1/user calls at all.",
+      },
+      {
+        category: "Backend",
+        tagColor: tagStyles.backend,
+        icon: ShieldCheck,
+        title: "Google Sign-In API Key Refreshed",
+        detail:
+          "Rotated the Lovable AI gateway key powering the Google OAuth broker so the \"Invalid API key\" toast that appeared for some users when clicking Sign in with Google is resolved.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Palette,
+        title: "Audio Stays Quiet Until You Interact",
+        detail:
+          "Confirmed sound effects only initialize after a real user gesture (click/tap/key), so Chrome's \"AudioContext was not allowed to start\" warning no longer appears on first load.",
+      },
+    ],
+  },
+  {
     version: "v3.1.0",
     date: "May 30, 2026",
     title: "Community Lockdown, Chat Customization & Real UI Previews",

@@ -88,11 +88,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     supabase.auth
       .getSession()
-      .then(({ data }) => {
-        setSession(data.session);
-        authReadyRef.current = true;
-        if (data.session?.user) loadProfile(data.session.user.id).finally(() => setLoading(false));
-        else setLoading(false);
+      .then(async ({ data }) => {
+        const sess = data.session;
+        if (sess?.user) {
+          // Validate the token with the Auth server. If it's expired/invalid
+          // (e.g. user was deleted, refresh token revoked), sign out cleanly
+          // instead of letting every protected query throw 401 spam.
+          const { error } = await supabase.auth.getUser();
+          if (error) {
+            try {
+              await supabase.auth.signOut();
+            } catch {
+              /* noop */
+            }
+            setSession(null);
+            authReadyRef.current = true;
+            setLoading(false);
+            return;
+          }
+          setSession(sess);
+          authReadyRef.current = true;
+          loadProfile(sess.user.id).finally(() => setLoading(false));
+        } else {
+          setSession(null);
+          authReadyRef.current = true;
+          setLoading(false);
+        }
       })
       .catch((e: unknown) => {
         console.error("[auth] getSession failed:", e instanceof Error ? e.message : e);
