@@ -1,0 +1,291 @@
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { useServerFn } from "@tanstack/react-start";
+import { getRobloxPresence } from "@/lib/roblox-presence.functions";
+import { toast } from "sonner";
+import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown } from "lucide-react";
+
+type Profile = {
+  id: string;
+  display_name: string | null;
+  chat_nickname: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  roblox_user_id: number | null;
+  roblox_username: string | null;
+  roblox_avatar_url: string | null;
+  banner_url: string | null;
+};
+
+type FriendStatus = "none" | "pending_out" | "pending_in" | "friends";
+
+export function UserProfilePopover({
+  userId,
+  onClose,
+  onOpenDm,
+}: {
+  userId: string;
+  onClose: () => void;
+  onOpenDm?: (userId: string) => void;
+}) {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [friend, setFriend] = useState<{ status: FriendStatus; requestId: string | null }>({ status: "none", requestId: null });
+  const [presence, setPresence] = useState<Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getRobloxPresence>>>> | null>(null);
+  const [presenceLoading, setPresenceLoading] = useState(false);
+  const isSelf = user?.id === userId;
+  const fetchPresence = useServerFn(getRobloxPresence);
+
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      setLoading(true);
+      const [{ data: p }, { data: fr }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url")
+          .eq("id", userId)
+          .maybeSingle(),
+        user
+          ? (supabase as any)
+              .from("friend_requests")
+              .select("id,requester_id,addressee_id,status")
+              .or(
+                `and(requester_id.eq.${user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${user.id})`,
+              )
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      if (cancel) return;
+      setProfile(p as Profile | null);
+      if (fr) {
+        const status: FriendStatus =
+          fr.status === "accepted"
+            ? "friends"
+            : fr.requester_id === user?.id
+              ? "pending_out"
+              : "pending_in";
+        setFriend({ status, requestId: fr.id });
+      } else {
+        setFriend({ status: "none", requestId: null });
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [userId, user?.id]);
+
+  useEffect(() => {
+    if (!profile?.roblox_user_id) return;
+    let cancel = false;
+    setPresenceLoading(true);
+    fetchPresence({ data: { userId: Number(profile.roblox_user_id) } })
+      .then((p) => {
+        if (!cancel) setPresence(p);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancel) setPresenceLoading(false);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [profile?.roblox_user_id, fetchPresence]);
+
+  const displayName = profile?.chat_nickname || profile?.display_name || "User";
+
+  async function addFriend() {
+    const { error } = await (supabase as any).rpc("send_friend_request", { _target: userId });
+    if (error) return toast.error(error.message);
+    toast.success("Friend request sent");
+    setFriend((f) => ({ ...f, status: "pending_out" }));
+  }
+  async function respond(accept: boolean) {
+    if (!friend.requestId) return;
+    const { error } = await (supabase as any).rpc("respond_friend_request", {
+      _id: friend.requestId,
+      _accept: accept,
+    });
+    if (error) return toast.error(error.message);
+    setFriend((f) => ({ ...f, status: accept ? "friends" : "none" }));
+    toast.success(accept ? "Friend added" : "Request declined");
+  }
+  async function unfriend() {
+    const { error } = await (supabase as any).rpc("remove_friend", { _other: userId });
+    if (error) return toast.error(error.message);
+    setFriend({ status: "none", requestId: null });
+    toast.success("Friend removed");
+  }
+
+  const presenceLabel = useMemo(() => {
+    const p = presence?.presence;
+    if (!p?.type || p.type === "offline" || p.type === "invisible") return "Offline";
+    if (p.type === "online") return "Online on Roblox";
+    if (p.type === "in-game") return `Playing ${p.lastLocation ?? "a game"}`;
+    if (p.type === "in-studio") return `Building ${p.lastLocation ?? "a project"} in Studio`;
+    return p.lastLocation ?? "Online";
+  }, [presence]);
+
+  const presenceColor =
+    presence?.presence.type === "in-game"
+      ? "bg-emerald-400"
+      : presence?.presence.type === "in-studio"
+        ? "bg-indigo-400"
+        : presence?.presence.type === "online"
+          ? "bg-sky-400"
+          : "bg-zinc-500";
+
+  return (
+    <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
+      <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+        <h2 className="text-sm font-bold">Profile</h2>
+        <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="grid h-full place-items-center text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        ) : !profile ? (
+          <div className="p-4 text-sm text-muted-foreground">User not found.</div>
+        ) : (
+          <>
+            {/* Banner + avatar */}
+            <div className="relative">
+              <div
+                className="h-24 w-full bg-gradient-to-br from-primary/30 via-primary/15 to-transparent"
+                style={profile.banner_url ? { backgroundImage: `url(${profile.banner_url})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+              />
+              <div className="absolute -bottom-8 left-3">
+                <div className="grid h-16 w-16 place-items-center rounded-full border-4 border-surface-elevated bg-surface">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                  ) : (
+                    <span className="text-lg font-bold text-muted-foreground">{displayName.slice(0, 1).toUpperCase()}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 px-3 pb-3 pt-10">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold">{displayName}</h3>
+                  {profile.chat_nickname && profile.display_name && (
+                    <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
+                  )}
+                </div>
+                {profile.bio && <p className="mt-1 text-xs text-muted-foreground">{profile.bio}</p>}
+              </div>
+
+              {!isSelf && (
+                <div className="flex flex-wrap gap-1.5">
+                  {friend.status === "none" && (
+                    <button onClick={addFriend} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+                      <UserPlus className="h-3.5 w-3.5" /> Add friend
+                    </button>
+                  )}
+                  {friend.status === "pending_out" && (
+                    <button disabled className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                      <UserCheck className="h-3.5 w-3.5" /> Request sent
+                    </button>
+                  )}
+                  {friend.status === "pending_in" && (
+                    <>
+                      <button onClick={() => respond(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+                        <UserCheck className="h-3.5 w-3.5" /> Accept
+                      </button>
+                      <button onClick={() => respond(false)} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs hover:bg-surface-elevated">
+                        Decline
+                      </button>
+                    </>
+                  )}
+                  {friend.status === "friends" && (
+                    <>
+                      <button onClick={() => onOpenDm?.(userId)} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+                        <MessageCircle className="h-3.5 w-3.5" /> Message
+                      </button>
+                      <button onClick={unfriend} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs hover:bg-destructive/10 hover:text-destructive">
+                        <UserMinus className="h-3.5 w-3.5" /> Unfriend
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Roblox card */}
+              <div className="rounded-xl border border-border bg-background/40 p-3">
+                <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Crown className="h-3 w-3 text-amber-400" /> Roblox
+                </div>
+                {!profile.roblox_user_id ? (
+                  <p className="text-xs text-muted-foreground">No Roblox account linked.</p>
+                ) : (
+                  <div className="flex items-start gap-3">
+                    <div className="relative shrink-0">
+                      <img
+                        src={presence?.headshotUrl ?? profile.roblox_avatar_url ?? ""}
+                        alt=""
+                        className="h-12 w-12 rounded-lg border border-border bg-surface object-cover"
+                      />
+                      <span className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-surface-elevated ${presenceColor}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold">
+                          {presence?.displayName ?? profile.roblox_username}
+                        </span>
+                        <a
+                          href={`https://www.roblox.com/users/${profile.roblox_user_id}/profile`}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">@{profile.roblox_username}</div>
+                      <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                        {presenceLoading ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                        ) : presence?.presence.type === "in-game" ? (
+                          <Gamepad2 className="h-3 w-3 text-emerald-400" />
+                        ) : presence?.presence.type === "in-studio" ? (
+                          <Hammer className="h-3 w-3 text-indigo-400" />
+                        ) : null}
+                        <span className={presence?.presence.type === "offline" ? "text-muted-foreground" : "text-foreground"}>
+                          {presenceLoading ? "Checking…" : presenceLabel}
+                        </span>
+                      </div>
+                      {presence?.thumbnail.gameThumbnailUrl && (
+                        <a
+                          href={presence.presence.rootPlaceId ? `https://www.roblox.com/games/${presence.presence.rootPlaceId}` : "#"}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="mt-2 block overflow-hidden rounded-md border border-border"
+                        >
+                          <img src={presence.thumbnail.gameThumbnailUrl} alt="" className="h-20 w-full object-cover" />
+                        </a>
+                      )}
+                      {presence?.error === "presence_unavailable" && (
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          Live presence requires the site owner to add a Roblox cookie. Showing static profile only.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
