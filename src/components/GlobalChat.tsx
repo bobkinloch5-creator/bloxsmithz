@@ -262,7 +262,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   // Realtime: messages + reactions + settings + presence + typing
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel("global_chat_v2", { config: { presence: { key: user.id } } })
+    const channel = supabase.channel(`global_chat_v2_${user.id}_${Math.random().toString(36).slice(2)}`, { config: { presence: { key: user.id } } })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chat_messages" }, async (payload) => {
         const row = payload.new as DbMessage;
         if (row.deleted_at) return;
@@ -358,7 +358,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel("achievement_unlocks")
+      .channel(`achievement_unlocks_${user.id}_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "user_achievements" },
