@@ -81,6 +81,16 @@ export function ChatSettingsPanel({
             onChange={(v) => onChange({ sound_enabled: v === "on" })}
           />
         </Row>
+        <Row label="System messages">
+          <ButtonGroup
+            value={prefs.show_system ? "on" : "off"}
+            options={[
+              { v: "on", l: "Show" },
+              { v: "off", l: "Hide" },
+            ]}
+            onChange={(v) => onChange({ show_system: v === "on" })}
+          />
+        </Row>
         <Row label="Notifications">
           <ButtonGroup
             value={prefs.notify_mode}
