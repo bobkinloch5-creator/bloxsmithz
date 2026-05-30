@@ -106,14 +106,24 @@ function LoginPage() {
     const res = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin + "/auth/callback",
     });
-    if (res.error) toast.error(res.error.message ?? "Sign in failed");
+    if (res.error) {
+      toast.error(res.error.message ?? "Sign in failed");
+      return;
+    }
+    // If the provider redirected, the browser is already navigating.
+    // Otherwise the session was set in-place — navigate ourselves.
+    if (!res.redirected) await redirectAfterLogin();
   };
 
   const handleApple = async () => {
     const res = await lovable.auth.signInWithOAuth("apple", {
       redirect_uri: window.location.origin + "/auth/callback",
     });
-    if (res.error) toast.error(res.error.message ?? "Sign in failed");
+    if (res.error) {
+      toast.error(res.error.message ?? "Sign in failed");
+      return;
+    }
+    if (!res.redirected) await redirectAfterLogin();
   };
 
   return (
