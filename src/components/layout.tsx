@@ -280,7 +280,9 @@ export function Header() {
                         <p className="mt-2 text-sm font-semibold truncate">
                           {profile?.display_name || "Builder"}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+                        {profile?.hide_email === false && profile?.email ? (
+                          <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
+                        ) : null}
                       </div>
                       <div className="py-1.5">
                         <Link
