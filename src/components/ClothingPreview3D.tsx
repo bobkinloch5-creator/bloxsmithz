@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Loader2, Maximize2, Minimize2, RotateCw, RefreshCcw } from "lucide-react";
 
 type Kind = "classic_shirt" | "classic_pants" | "tshirt" | "layered_or_accessory";
 
@@ -22,6 +22,7 @@ export function ClothingPreview3D({
     ContactShadows: any;
     Environment: any;
     THREE: any;
+    useThree: any;
   }>(null);
   const [failed, setFailed] = useState(false);
 
@@ -40,6 +41,7 @@ export function ClothingPreview3D({
             ContactShadows: drei.ContactShadows,
             Environment: drei.Environment,
             THREE: three,
+            useThree: fiber.useThree,
           });
       })
       .catch(() => {
@@ -58,6 +60,11 @@ export function ClothingPreview3D({
     );
   }
 
+  const [viewMode, setViewMode] = useState<"torso" | "full">("torso");
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [resetCounter, setResetCounter] = useState(0);
+  const controlsRef = useRef<any>(null);
+
   if (!mod) {
     return (
       <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
@@ -66,53 +73,146 @@ export function ClothingPreview3D({
     );
   }
 
-  const { Canvas, OrbitControls, ContactShadows, THREE } = mod;
+  const { Canvas, OrbitControls, ContactShadows, THREE, useThree } = mod;
 
   return (
-    <Canvas
-      camera={{ position: [0, 1.2, 6.2], fov: 32 }}
-      dpr={[1, 2]}
-      shadows
-      gl={{ antialias: true }}
-    >
-      {/* Soft gradient backdrop */}
-      <color attach="background" args={["#0b0d14"]} />
-      <fog attach="fog" args={["#0b0d14", 8, 18]} />
+    <div className="relative w-full h-full group/preview rounded-2xl overflow-hidden border border-border/40">
+      <Canvas
+        camera={{ position: [0, 0.92, 2.6], fov: 32 }}
+        dpr={[1, 2]}
+        shadows
+        gl={{ antialias: true }}
+      >
+        {/* Soft gradient backdrop */}
+        <color attach="background" args={["#0b0d14"]} />
+        <fog attach="fog" args={["#0b0d14", 8, 18]} />
 
-      {/* Key / fill / rim lighting for a clean studio look */}
-      <ambientLight intensity={0.45} />
-      <directionalLight
-        position={[4, 6, 5]}
-        intensity={1.4}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-      />
-      <directionalLight position={[-5, 3, -2]} intensity={0.35} color="#7aa2ff" />
-      <pointLight position={[0, 2, 5]} intensity={0.4} color="#a0e9ff" />
+        {/* Key / fill / rim lighting for a clean studio look */}
+        <ambientLight intensity={0.45} />
+        <directionalLight
+          position={[4, 6, 5]}
+          intensity={1.4}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+        />
+        <directionalLight position={[-5, 3, -2]} intensity={0.35} color="#7aa2ff" />
+        <pointLight position={[0, 2, 5]} intensity={0.4} color="#a0e9ff" />
 
-      <Avatar imageUrl={imageUrl} kind={kind} THREE={THREE} />
+        <Avatar imageUrl={imageUrl} kind={kind} THREE={THREE} />
 
-      <ContactShadows
-        position={[0, -1.55, 0]}
-        opacity={0.55}
-        scale={6}
-        blur={2.4}
-        far={3}
-        color="#000000"
-      />
+        <ContactShadows
+          position={[0, -1.55, 0]}
+          opacity={0.55}
+          scale={6}
+          blur={2.4}
+          far={3}
+          color="#000000"
+        />
 
-      <OrbitControls
-        enablePan={false}
-        enableZoom={false}
-        autoRotate
-        autoRotateSpeed={1.2}
-        minPolarAngle={Math.PI / 2.8}
-        maxPolarAngle={Math.PI / 1.9}
-        target={[0, 0.4, 0]}
-      />
-    </Canvas>
+        <OrbitControls
+          ref={controlsRef}
+          enablePan={false}
+          enableZoom={true}
+          autoRotate={autoRotate}
+          autoRotateSpeed={1.2}
+          minPolarAngle={Math.PI / 2.8}
+          maxPolarAngle={Math.PI / 1.9}
+          minDistance={1.2}
+          maxDistance={8.0}
+          target={viewMode === "torso" ? [0, 0.92, 0] : [0, 0.4, 0]}
+        />
+
+        <CameraController
+          viewMode={viewMode}
+          resetCounter={resetCounter}
+          controlsRef={controlsRef}
+          useThreeHook={useThree}
+        />
+      </Canvas>
+
+      {/* Floating control toolbar */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-background/80 hover:bg-background/95 backdrop-blur-md border border-border/60 rounded-full px-2 py-1 shadow-lg transition duration-200 pointer-events-auto">
+        {/* View mode toggle */}
+        <button
+          onClick={() => setViewMode(viewMode === "torso" ? "full" : "torso")}
+          className="flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-foreground hover:bg-muted/70 transition"
+          title={viewMode === "torso" ? "Switch to Full Body view" : "Switch to Detail/Torso view"}
+        >
+          {viewMode === "torso" ? (
+            <>
+              <Maximize2 className="h-3.5 w-3.5" />
+              <span>Full View</span>
+            </>
+          ) : (
+            <>
+              <Minimize2 className="h-3.5 w-3.5" />
+              <span>Torso View</span>
+            </>
+          )}
+        </button>
+
+        <div className="h-4 w-[1px] bg-border/60 mx-1" />
+
+        {/* Auto-rotate toggle */}
+        <button
+          onClick={() => setAutoRotate(!autoRotate)}
+          className={`p-1.5 rounded-full hover:bg-muted/70 transition ${autoRotate ? "text-primary-glow bg-primary/10" : "text-muted-foreground"}`}
+          title={autoRotate ? "Pause auto-rotation" : "Enable auto-rotation"}
+        >
+          <RotateCw className="h-4 w-4" />
+        </button>
+
+        {/* Reset Camera button */}
+        <button
+          onClick={() => setResetCounter(c => c + 1)}
+          className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/70 transition"
+          title="Reset Camera View"
+        >
+          <RefreshCcw className="h-4 w-4" />
+        </button>
+      </div>
+      
+      {/* Scroll to Zoom Hint */}
+      <div className="absolute top-3 right-3 text-[10px] font-medium text-muted-foreground/60 bg-background/30 backdrop-blur-sm border border-border/20 rounded-md px-2 py-0.5 pointer-events-none select-none">
+        Scroll / Pinch to zoom
+      </div>
+    </div>
   );
+}
+
+function CameraController({
+  viewMode,
+  resetCounter,
+  controlsRef,
+  useThreeHook,
+}: {
+  viewMode: "torso" | "full";
+  resetCounter: number;
+  controlsRef: React.RefObject<any>;
+  useThreeHook: any;
+}) {
+  const { camera } = useThreeHook();
+
+  useEffect(() => {
+    if (!camera) return;
+    const isTorso = viewMode === "torso";
+    const posY = isTorso ? 0.92 : 0.6;
+    const posZ = isTorso ? 2.6 : 4.6;
+    const targetY = isTorso ? 0.92 : 0.4;
+
+    camera.position.set(0, posY, posZ);
+    const controls = controlsRef.current;
+    if (controls) {
+      controls.target.set(0, targetY, 0);
+      controls.update();
+    } else {
+      camera.lookAt(0, targetY, 0);
+    }
+    camera.updateProjectionMatrix();
+  }, [viewMode, resetCounter, camera, controlsRef]);
+
+  return null;
 }
 
 interface Rect {

@@ -33,9 +33,16 @@ export const sanitizingFetch: typeof fetch = async (input, init) => {
         modelName.includes("thinking") ||
         parsed?.thinking === true;
 
-      if (needsCompletionTokens && typeof parsed.max_tokens === "number") {
-        parsed.max_completion_tokens = parsed.max_tokens;
-        delete parsed.max_tokens;
+      if (needsCompletionTokens) {
+        if (typeof parsed.max_tokens === "number") {
+          parsed.max_completion_tokens = parsed.max_tokens;
+          delete parsed.max_tokens;
+        }
+        // Remove parameters unsupported by reasoning models
+        delete parsed.temperature;
+        delete parsed.top_p;
+        delete parsed.presence_penalty;
+        delete parsed.frequency_penalty;
       }
 
       init = { ...init, body: JSON.stringify(parsed) };
