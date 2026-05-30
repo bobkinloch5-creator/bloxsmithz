@@ -192,6 +192,33 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
   const [chatBubbles, setChatBubbles] = useState<{ id: string; userId: string; name: string; color: string | null; avatar: string | null; content: string }[]>([]);
+  const [translations, setTranslations] = useState<Map<string, { text: string; detected: string } | "loading">>(new Map());
+  const translateFn = useServerFn(translateChatMessage);
+  const handleTranslate = useCallback(async (msgId: string, content: string) => {
+    setTranslations((prev) => {
+      const next = new Map(prev);
+      // toggle off if already shown
+      const cur = next.get(msgId);
+      if (cur && cur !== "loading") { next.delete(msgId); return next; }
+      next.set(msgId, "loading");
+      return next;
+    });
+    try {
+      const res = await translateFn({ data: { content, target: "English" } });
+      setTranslations((prev) => {
+        const next = new Map(prev);
+        next.set(msgId, { text: res.text, detected: res.detected });
+        return next;
+      });
+    } catch {
+      setTranslations((prev) => {
+        const next = new Map(prev);
+        next.delete(msgId);
+        return next;
+      });
+      toast.error("Translation failed");
+    }
+  }, [translateFn]);
   const [typingUsers, setTypingUsers] = useState<Map<string, number>>(new Map());
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<{ id: string; reason: string | null }[]>([]);
