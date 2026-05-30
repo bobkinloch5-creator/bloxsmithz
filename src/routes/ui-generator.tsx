@@ -156,12 +156,64 @@ function UIGeneratorPage() {
       setResult({ id: row.id, spec: row.spec, actions: row.actions ?? [], files: row.files ?? [] });
       setCategory(row.category);
       if (row.style) setStyle(row.style as UIStyle);
+      setImgSrc(null);
+      setImgFinal(false);
+      setImgError(null);
       setTab("preview");
       setShowLib(false);
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't open.");
     }
   };
+
+  const generateImage = async () => {
+    if (!result) return;
+    imgAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    imgAbortRef.current = ctrl;
+    setImgBusy(true);
+    setImgError(null);
+    setImgFinal(false);
+    setImgSrc(null);
+
+    const sections: string[] = Array.isArray(result.spec?.sections)
+      ? result.spec.sections
+          .slice(0, 8)
+          .map((s: any) => (typeof s === "string" ? s : s?.title || s?.name || ""))
+          .filter(Boolean)
+      : [];
+    const titleText = result.spec?.title || title || category;
+    const prompt = [
+      `A high-fidelity screenshot of a ${style} Roblox in-game ${category} GUI titled "${titleText}".`,
+      `Color palette — primary ${primary}, accent ${accent}, background ${bg}.`,
+      sections.length ? `Visible sections: ${sections.join(", ")}.` : "",
+      `Clean modern game UI: rounded corners, soft shadows, crisp typography, glossy buttons, icons, subtle gradients.`,
+      `Composed on a transparent-feeling Roblox game viewport, sharp UI, 1:1 framing, no watermark, no text artifacts.`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    try {
+      await streamImage(
+        "/api/generate-image",
+        { prompt, size: "1024x1024" },
+        (dataUrl, isFinal) => {
+          setImgSrc(dataUrl);
+          if (isFinal) setImgFinal(true);
+        },
+        ctrl.signal,
+      );
+    } catch (e: any) {
+      if (e?.name !== "AbortError") {
+        setImgError(e?.message || "Image generation failed.");
+        toast.error(e?.message || "Image generation failed.");
+      }
+    } finally {
+      setImgBusy(false);
+    }
+  };
+
+  useEffect(() => () => imgAbortRef.current?.abort(), []);
 
   const removeSaved = async (id: string) => {
     if (!confirm("Delete this saved UI?")) return;
