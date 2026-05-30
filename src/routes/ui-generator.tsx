@@ -12,7 +12,7 @@ import {
   insertUIIntoStudioFn,
   UI_GEN_CREDIT_COST,
 } from "@/lib/ui-generator.functions";
-import { UI_STYLES, type UIStyle, type UICategory } from "@/lib/ui-generator.server";
+import { UI_STYLES, type UIStyle, type UICategory } from "@/lib/ui-generator.shared";
 import { TemplateGrid } from "@/components/ui-generator/TemplateGrid";
 import { UIPreview } from "@/components/ui-generator/UIPreview";
 import { DevicePreviewFrame, type DeviceMode } from "@/components/ui-generator/DevicePreviewFrame";

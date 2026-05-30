@@ -21,7 +21,7 @@ import {
   Heart,
   Wand2,
 } from "lucide-react";
-import type { UICategory } from "@/lib/ui-generator.server";
+import type { UICategory } from "@/lib/ui-generator.shared";
 
 type Item = { category: UICategory; icon: any; tagline: string };
 

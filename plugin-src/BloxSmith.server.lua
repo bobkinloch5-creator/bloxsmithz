@@ -937,8 +937,36 @@ local function coerceValue(v)
 		return CFrame.new(num(v,"x","X",1,0), num(v,"y","Y",2,0), num(v,"z","Z",3,0))
 			* CFrame.Angles(math.rad(v.rx or v.RX or 0), math.rad(v.ry or v.RY or 0), math.rad(v.rz or v.RZ or 0))
 	end
-	if t == "UDim2"   then return UDim2.new(v.xs or 0, v.xo or 0, v.ys or 0, v.yo or 0) end
-	if t == "UDim"    then return UDim.new(v.s or 0, v.o or 0) end
+	if t == "UDim2"   then
+		return UDim2.new(
+			v.xs or v.xScale or v.XScale or 0,
+			v.xo or v.xOffset or v.XOffset or 0,
+			v.ys or v.yScale or v.YScale or 0,
+			v.yo or v.yOffset or v.YOffset or 0
+		)
+	end
+	if t == "UDim"    then
+		return UDim.new(v.s or v.scale or v.Scale or 0, v.o or v.offset or v.Offset or 0)
+	end
+	if t == "ColorSequence" then
+		local stops = v.stops or v.keypoints or v.Keypoints
+		if type(stops) == "table" and #stops > 0 then
+			local keypoints = {}
+			for _, stop in ipairs(stops) do
+				local tm = stop.time or stop.Time or 0
+				local col = stop.color or stop.Color or stop.value or stop.Value or {r=255,g=255,b=255}
+				table.insert(keypoints, ColorSequenceKeypoint.new(tm, toColor3(col)))
+			end
+			table.sort(keypoints, function(a, b) return a.Time < b.Time end)
+			return ColorSequence.new(keypoints)
+		end
+		if v.from and v.to then
+			return ColorSequence.new({
+				ColorSequenceKeypoint.new(0, toColor3(v.from)),
+				ColorSequenceKeypoint.new(1, toColor3(v.to)),
+			})
+		end
+	end
 	if t == "Enum" and v.enum and v.value then
 		local ok, e = pcall(function() return Enum[v.enum][v.value] end)
 		if ok then return e end
