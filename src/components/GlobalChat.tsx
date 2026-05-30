@@ -982,7 +982,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 className={cn("max-h-32 min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border", fontSizeClass(prefs.font_size), chatFontStyle(profile?.chat_font) && "")}
                 style={chatFontStyle(profile?.chat_font)}
               />
-              <button type="submit" disabled={sending || (!draft.trim() && !pendingFile) || !!muted} aria-label="Send"
+              <button type="submit" disabled={sending || (!draft.trim() && !pendingFile) || !!muted || !canPostHere} aria-label="Send"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
                 style={accent ? { background: accent } : undefined}>
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
