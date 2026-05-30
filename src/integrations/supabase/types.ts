@@ -1288,6 +1288,7 @@ export type Database = {
           private_profile: boolean
           profile_accent: string | null
           profile_background: string | null
+          profile_badges: string[]
           profile_effect: string | null
           profile_layout: string
           pronouns: string | null
@@ -1336,6 +1337,7 @@ export type Database = {
           private_profile?: boolean
           profile_accent?: string | null
           profile_background?: string | null
+          profile_badges?: string[]
           profile_effect?: string | null
           profile_layout?: string
           pronouns?: string | null
@@ -1384,6 +1386,7 @@ export type Database = {
           private_profile?: boolean
           profile_accent?: string | null
           profile_background?: string | null
+          profile_badges?: string[]
           profile_effect?: string | null
           profile_layout?: string
           pronouns?: string | null
