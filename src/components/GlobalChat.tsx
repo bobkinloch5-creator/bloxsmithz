@@ -1037,14 +1037,19 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               }
               return (
                 <div key={m.id} className="group flex gap-2">
-                  <div className={cn(
-                    "grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-bold",
-                    isBot ? "bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40" : "bg-surface text-muted-foreground",
-                  )}>
+                  <button
+                    type="button"
+                    onClick={() => !isBot && setProfileUid(m.user_id)}
+                    disabled={isBot}
+                    className={cn(
+                      "grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-bold transition",
+                      isBot ? "bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40 cursor-default" : "bg-surface text-muted-foreground hover:ring-2 hover:ring-primary/40",
+                    )}
+                  >
                     {isBot ? <img src={bloxbotAvatar} alt="BloxBot" className="h-8 w-8 rounded-full object-cover" />
                       : author?.avatar_url ? <img src={author.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
                       : name.slice(0, 1).toUpperCase()}
-                  </div>
+                  </button>
                   <div className="min-w-0 flex-1">
                     {replyTarget && (
                       <div className="mb-1 flex items-center gap-1 rounded-md border-l-2 border-primary/50 bg-surface/40 px-2 py-0.5 text-[11px] text-muted-foreground">
@@ -1059,9 +1064,18 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                         const stops = author.chat_name_gradient;
                         return <Ico className="h-3.5 w-3.5 shrink-0" style={stops?.length ? { color: stops[0] } : undefined} aria-hidden />;
                       })() : null}
-                      <span className="truncate text-xs font-semibold" style={!isBot ? { ...gradientTextStyle(author?.chat_name_gradient), ...chatFontStyle(author?.chat_font) } : undefined}>
-                        {name}
-                      </span>
+                      {isBot ? (
+                        <span className="truncate text-xs font-semibold">{name}</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setProfileUid(m.user_id)}
+                          className="truncate text-xs font-semibold hover:underline"
+                          style={{ ...gradientTextStyle(author?.chat_name_gradient), ...chatFontStyle(author?.chat_font) }}
+                        >
+                          {name}
+                        </button>
+                      )}
                       {isBot ? (
                         <span className="rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">BOT</span>
                       ) : (author && <RoleBadges roles={author.roles} size="sm" showLabel={false} />)}
