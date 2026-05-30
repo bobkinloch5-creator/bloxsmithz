@@ -135,6 +135,41 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const moderate = useServerFn(moderateChatMessage);
 
   const [open, setOpen] = useState(inline);
+  const [size, setSize] = useState<{ w: number; h: number }>(() => {
+    if (typeof window === "undefined") return { w: 480, h: 720 };
+    try {
+      const raw = localStorage.getItem("globalChat:size");
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (typeof p?.w === "number" && typeof p?.h === "number") return p;
+      }
+    } catch {}
+    return { w: 480, h: 720 };
+  });
+  useEffect(() => {
+    try { localStorage.setItem("globalChat:size", JSON.stringify(size)); } catch {}
+  }, [size]);
+  const startResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = size.w;
+    const startH = size.h;
+    const onMove = (ev: PointerEvent) => {
+      const maxW = Math.max(360, window.innerWidth - 40);
+      const maxH = Math.max(420, window.innerHeight - 60);
+      // Anchored bottom-left: drag right grows width, drag up grows height
+      const nextW = Math.min(maxW, Math.max(360, startW + (ev.clientX - startX)));
+      const nextH = Math.min(maxH, Math.max(420, startH - (ev.clientY - startY)));
+      setSize({ w: nextW, h: nextH });
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, [size.w, size.h]);
   const [messages, setMessages] = useState<RenderMessage[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
@@ -918,13 +953,25 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             "flex flex-col overflow-hidden border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl",
             inline
               ? "relative h-[min(720px,calc(100dvh-14rem))] min-h-[420px] w-full rounded-2xl border"
-              : "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] rounded-2xl border md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]",
+              : "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] rounded-2xl border md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]",
           )}
           style={{
             ...(chatBackgroundStyle(prefs) ?? {}),
             ...(accent ? ({ ["--chat-accent" as any]: accent } as React.CSSProperties) : {}),
+            ...(!inline && typeof window !== "undefined" && window.matchMedia?.("(min-width: 768px)").matches
+              ? { width: `${size.w}px`, height: `${size.h}px` }
+              : {}),
           }}
         >
+          {!inline && (
+            <div
+              onPointerDown={startResize}
+              role="separator"
+              aria-label="Resize chat"
+              title="Drag to resize"
+              className="hidden md:block absolute -top-1 -right-1 z-20 h-5 w-5 cursor-nesw-resize rounded-tr-2xl bg-transparent hover:bg-primary/20 transition"
+            />
+          )}
           <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
               <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/15" style={accent ? { background: `${accent}22`} : undefined}>
