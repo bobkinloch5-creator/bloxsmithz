@@ -950,6 +950,34 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   return (
     <>
+      {/* Floating chat bubble popups */}
+      {chatBubbles.length > 0 && (
+        <div className="pointer-events-none fixed z-[9997] top-20 right-4 flex w-[min(320px,calc(100vw-2rem))] flex-col gap-2">
+          {chatBubbles.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => { setOpen(true); setChatBubbles((prev) => prev.filter((x) => x.id !== b.id)); }}
+              className="pointer-events-auto group flex items-start gap-2 rounded-2xl border border-border bg-surface-elevated/95 px-3 py-2 text-left shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 fade-in duration-300 hover:border-primary hover:bg-surface-elevated"
+            >
+              {b.avatar ? (
+                <img src={b.avatar} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+              ) : (
+                <div className="h-8 w-8 shrink-0 rounded-full bg-primary/20" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-bold leading-tight" style={b.color ? { color: b.color } : undefined}>
+                  {b.name}
+                </div>
+                <div className="line-clamp-2 text-[12px] leading-snug text-muted-foreground group-hover:text-foreground">
+                  {b.content}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
       {!inline && !open && (
         <button
           type="button"
