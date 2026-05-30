@@ -1289,6 +1289,7 @@ export type Database = {
           profile_accent: string | null
           profile_background: string | null
           profile_badges: string[]
+          profile_decoration: string
           profile_effect: string | null
           profile_layout: string
           pronouns: string | null
@@ -1338,6 +1339,7 @@ export type Database = {
           profile_accent?: string | null
           profile_background?: string | null
           profile_badges?: string[]
+          profile_decoration?: string
           profile_effect?: string | null
           profile_layout?: string
           pronouns?: string | null
@@ -1387,6 +1389,7 @@ export type Database = {
           profile_accent?: string | null
           profile_background?: string | null
           profile_badges?: string[]
+          profile_decoration?: string
           profile_effect?: string | null
           profile_layout?: string
           pronouns?: string | null
