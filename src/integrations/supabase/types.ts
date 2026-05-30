@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_fingerprints: {
+        Row: {
+          created_at: string
+          fingerprint_hash: string
+          id: string
+          ip_hash: string | null
+          last_seen_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fingerprint_hash: string
+          id?: string
+          ip_hash?: string | null
+          last_seen_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fingerprint_hash?: string
+          id?: string
+          ip_hash?: string | null
+          last_seen_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           category: string
