@@ -77,6 +77,7 @@ export function ProfileCustomizationCard() {
       presence_enabled: q.presence_enabled !== false,
       show_activity: q.show_activity !== false,
       presence_status: q.presence_status ?? s.presence_status,
+      profile_badges: Array.isArray(q.profile_badges) ? q.profile_badges : s.profile_badges,
     }));
   }, [profile]);
 
