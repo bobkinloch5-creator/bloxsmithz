@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { recordAndEnforceSingleAccount } from "@/lib/account-guard.functions";
+import { getDeviceFingerprint } from "@/lib/device-fingerprint";
+import { toast } from "sonner";
+
 
 type Profile = {
   id: string;
