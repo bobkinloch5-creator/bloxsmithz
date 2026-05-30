@@ -168,6 +168,73 @@ export function chatBackgroundStyle(prefs: ChatPrefs): React.CSSProperties | und
       ].join(", ");
       backgroundColor = "#05060d";
       break;
+    case "aurora-anim":
+      backgroundImage = [
+        `radial-gradient(60% 50% at 20% 30%, ${c1}cc 0%, transparent 60%)`,
+        `radial-gradient(50% 60% at 80% 70%, ${c2}cc 0%, transparent 60%)`,
+        `radial-gradient(40% 40% at 60% 20%, ${c1}88 0%, transparent 60%)`,
+      ].join(", ");
+      backgroundColor = "#05060d";
+      backgroundSize = "200% 200%";
+      (base as any).animation = "chatbg-aurora 18s ease-in-out infinite";
+      break;
+    case "stars":
+      backgroundImage = [
+        `radial-gradient(2px 2px at 20% 30%, #fff, transparent)`,
+        `radial-gradient(1.5px 1.5px at 70% 80%, #fff, transparent)`,
+        `radial-gradient(1.5px 1.5px at 40% 60%, #fff, transparent)`,
+        `radial-gradient(2px 2px at 85% 25%, #fff, transparent)`,
+        `radial-gradient(1px 1px at 10% 80%, #fff, transparent)`,
+        `radial-gradient(1.5px 1.5px at 55% 15%, #fff, transparent)`,
+      ].join(", ");
+      backgroundSize = "300px 300px";
+      backgroundColor = "#03040a";
+      (base as any).animation = "chatbg-stars 60s linear infinite";
+      break;
+    case "matrix":
+      backgroundImage = `repeating-linear-gradient(180deg, ${c1}22 0 2px, transparent 2px 22px), repeating-linear-gradient(90deg, ${c2}22 0 2px, transparent 2px 22px)`;
+      backgroundColor = "#020a04";
+      backgroundSize = "100% 100%, 100% 100%";
+      (base as any).animation = "chatbg-matrix 30s linear infinite";
+      break;
+    case "roblox-studio":
+      // Diagonal blueprint / grid like Roblox Studio viewport
+      backgroundImage = `
+        linear-gradient(135deg, #0e1726 0%, #1a2a4a 100%),
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)
+      `;
+      backgroundSize = "100% 100%, 36px 36px, 36px 36px";
+      backgroundColor = "#0e1726";
+      break;
+    case "neon-city":
+      backgroundImage = [
+        `radial-gradient(60% 60% at 20% 80%, #ec489966 0%, transparent 60%)`,
+        `radial-gradient(60% 60% at 80% 20%, #06b6d466 0%, transparent 60%)`,
+        `linear-gradient(180deg, #07091a 0%, #1a0b2e 100%)`,
+      ].join(", ");
+      backgroundColor = "#07091a";
+      backgroundSize = "200% 200%, 200% 200%, 100% 100%";
+      (base as any).animation = "chatbg-aurora 24s ease-in-out infinite";
+      break;
+    case "lava":
+      backgroundImage = [
+        `radial-gradient(50% 50% at 30% 70%, #f9731699 0%, transparent 60%)`,
+        `radial-gradient(50% 50% at 70% 30%, #dc262699 0%, transparent 60%)`,
+        `linear-gradient(180deg, #1a0a05 0%, #2b0a04 100%)`,
+      ].join(", ");
+      backgroundColor = "#1a0a05";
+      backgroundSize = "200% 200%, 200% 200%, 100% 100%";
+      (base as any).animation = "chatbg-aurora 16s ease-in-out infinite";
+      break;
+    case "custom-image":
+      if (prefs.bg_image_url) {
+        backgroundImage = `url("${prefs.bg_image_url}")`;
+        backgroundSize = "cover";
+        backgroundPosition = "center";
+        backgroundColor = "#000";
+      }
+      break;
   }
 
   return {
