@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          created_at: string
+          credit_reward: number
+          description: string
+          icon: string
+          id: string
+          key: string
+          name: string
+          sort_order: number
+          xp_reward: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          credit_reward?: number
+          description: string
+          icon?: string
+          id?: string
+          key: string
+          name: string
+          sort_order?: number
+          xp_reward?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          credit_reward?: number
+          description?: string
+          icon?: string
+          id?: string
+          key?: string
+          name?: string
+          sort_order?: number
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       agent_conversations: {
         Row: {
           created_at: string
@@ -1932,6 +1971,24 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_key: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_badges: {
         Row: {
           badge: string
@@ -1989,6 +2046,33 @@ export type Database = {
           created_at?: string
           follower_id?: string
           following_id?: string
+        }
+        Relationships: []
+      }
+      user_levels: {
+        Row: {
+          chat_credits_earned: number
+          level: number
+          messages_sent: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          chat_credits_earned?: number
+          level?: number
+          messages_sent?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          chat_credits_earned?: number
+          level?: number
+          messages_sent?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
         }
         Relationships: []
       }
@@ -2281,6 +2365,10 @@ export type Database = {
       spend_credits_atomic: { Args: { _amount: number }; Returns: number }
       toggle_gallery_like: { Args: { _post: string }; Returns: boolean }
       unfollow_user: { Args: { _target: string }; Returns: undefined }
+      unlock_achievement: {
+        Args: { _key: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "owner" | "admin" | "user"

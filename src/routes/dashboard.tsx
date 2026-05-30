@@ -19,6 +19,7 @@ import {
   Sparkles,
   Gift,
   Ticket,
+  Award,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Onboarding } from "@/components/Onboarding";
@@ -296,6 +297,24 @@ function Dashboard() {
             </div>
           </div>
         )}
+
+        <Link
+          to="/achievements"
+          className="glass rounded-2xl p-5 flex items-center gap-3 hover:bg-surface transition"
+        >
+          <div className="h-10 w-10 rounded-xl bg-primary/15 grid place-items-center shrink-0">
+            <Award className="h-5 w-5 text-primary-glow" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-medium">Earn free credits by chatting</div>
+            <div className="text-xs text-muted-foreground">
+              +2 credits every 10 messages you send in Community Chat. Unlock badges to level up &
+              earn more.
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-primary-glow shrink-0">View perks →</span>
+        </Link>
+
 
         {!isOwner && <UsageRemaining />}
 
