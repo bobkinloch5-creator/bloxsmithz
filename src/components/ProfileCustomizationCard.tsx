@@ -51,6 +51,7 @@ export function ProfileCustomizationCard() {
     presence_enabled: p.presence_enabled !== false,
     show_activity: p.show_activity !== false,
     presence_status: (p.presence_status ?? "online") as "online" | "idle" | "dnd" | "invisible",
+    profile_badges: (Array.isArray(p.profile_badges) ? p.profile_badges : []) as string[],
   });
   const [saving, setSaving] = useState(false);
 
