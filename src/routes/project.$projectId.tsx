@@ -553,7 +553,7 @@ function ProjectEditor() {
 
     load();
     const ch = supabase
-      .channel("ai-indicator")
+      .channel(`ai-indicator-${projectId}-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "user_mcp_servers" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "mcp_tokens" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_ai_settings" }, load)
