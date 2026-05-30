@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Header, Footer } from "@/components/layout";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { streamImage } from "@/lib/streamImage";
+import { Image as ImageIcon, RefreshCw } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   generateRobloxUIFn,
@@ -63,7 +65,7 @@ function UIGeneratorPage() {
   const [bg, setBg] = useState("#0f172a");
 
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<"preview" | "luau" | "spec">("preview");
+  const [tab, setTab] = useState<"preview" | "image" | "luau" | "spec">("preview");
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [result, setResult] = useState<{
     id: string | null;
@@ -71,6 +73,13 @@ function UIGeneratorPage() {
     actions: any[];
     files: any[];
   } | null>(null);
+
+  // Image preview state
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [imgFinal, setImgFinal] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState<string | null>(null);
+  const imgAbortRef = useRef<AbortController | null>(null);
 
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [projectId, setProjectId] = useState<string>("");
@@ -128,6 +137,9 @@ function UIGeneratorPage() {
         },
       });
       setResult({ id: res.id, spec: res.spec, actions: res.actions, files: res.files });
+      setImgSrc(null);
+      setImgFinal(false);
+      setImgError(null);
       setTab("preview");
       toast.success(`UI generated — charged ${res.creditsCharged} credits.`);
       refreshLibrary();
@@ -144,12 +156,64 @@ function UIGeneratorPage() {
       setResult({ id: row.id, spec: row.spec, actions: row.actions ?? [], files: row.files ?? [] });
       setCategory(row.category);
       if (row.style) setStyle(row.style as UIStyle);
+      setImgSrc(null);
+      setImgFinal(false);
+      setImgError(null);
       setTab("preview");
       setShowLib(false);
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't open.");
     }
   };
+
+  const generateImage = async () => {
+    if (!result) return;
+    imgAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    imgAbortRef.current = ctrl;
+    setImgBusy(true);
+    setImgError(null);
+    setImgFinal(false);
+    setImgSrc(null);
+
+    const sections: string[] = Array.isArray(result.spec?.sections)
+      ? result.spec.sections
+          .slice(0, 8)
+          .map((s: any) => (typeof s === "string" ? s : s?.title || s?.name || ""))
+          .filter(Boolean)
+      : [];
+    const titleText = result.spec?.title || title || category;
+    const prompt = [
+      `A high-fidelity screenshot of a ${style} Roblox in-game ${category} GUI titled "${titleText}".`,
+      `Color palette — primary ${primary}, accent ${accent}, background ${bg}.`,
+      sections.length ? `Visible sections: ${sections.join(", ")}.` : "",
+      `Clean modern game UI: rounded corners, soft shadows, crisp typography, glossy buttons, icons, subtle gradients.`,
+      `Composed on a transparent-feeling Roblox game viewport, sharp UI, 1:1 framing, no watermark, no text artifacts.`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    try {
+      await streamImage(
+        "/api/generate-image",
+        { prompt, size: "1024x1024" },
+        (dataUrl, isFinal) => {
+          setImgSrc(dataUrl);
+          if (isFinal) setImgFinal(true);
+        },
+        ctrl.signal,
+      );
+    } catch (e: any) {
+      if (e?.name !== "AbortError") {
+        setImgError(e?.message || "Image generation failed.");
+        toast.error(e?.message || "Image generation failed.");
+      }
+    } finally {
+      setImgBusy(false);
+    }
+  };
+
+  useEffect(() => () => imgAbortRef.current?.abort(), []);
 
   const removeSaved = async (id: string) => {
     if (!confirm("Delete this saved UI?")) return;
@@ -330,7 +394,7 @@ function UIGeneratorPage() {
           <section className="glass rounded-2xl p-4 flex flex-col lg:sticky lg:top-20 lg:h-[calc(100vh-7rem)] min-h-[640px]">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="inline-flex rounded-lg bg-surface border border-border p-0.5">
-                {(["preview", "luau", "spec"] as const).map((t) => (
+                {(["preview", "image", "luau", "spec"] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setTab(t)}
@@ -338,7 +402,13 @@ function UIGeneratorPage() {
                       tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {t === "preview" ? "Preview" : t === "luau" ? "Luau Code" : "JSON Spec"}
+                    {t === "preview"
+                      ? "Preview"
+                      : t === "image"
+                        ? "Image"
+                        : t === "luau"
+                          ? "Luau Code"
+                          : "JSON Spec"}
                   </button>
                 ))}
               </div>
@@ -362,6 +432,22 @@ function UIGeneratorPage() {
                   </button>
                 </div>
               )}
+              {tab === "image" && result && (
+                <button
+                  onClick={generateImage}
+                  disabled={imgBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-surface-elevated disabled:opacity-60"
+                >
+                  {imgBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : imgSrc ? (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  {imgBusy ? "Rendering…" : imgSrc ? "Regenerate" : "Render image"}
+                </button>
+              )}
             </div>
 
             <div className="flex-1 min-h-0 overflow-auto">
@@ -383,6 +469,54 @@ function UIGeneratorPage() {
                   <DevicePreviewFrame mode={device}>
                     <UIPreview spec={result.spec} bg={bg} />
                   </DevicePreviewFrame>
+                </div>
+              ) : tab === "image" ? (
+                <div className="h-full min-h-[480px] flex items-center justify-center rounded-xl border border-border bg-background/40 p-3">
+                  {imgSrc ? (
+                    <div className="relative flex h-full w-full items-center justify-center">
+                      <img
+                        src={imgSrc}
+                        alt="AI-rendered UI preview"
+                        className={`max-h-full max-w-full rounded-lg shadow-2xl transition-[filter] duration-300 ${
+                          imgFinal ? "blur-0" : "blur-2xl"
+                        }`}
+                      />
+                      {!imgFinal && (
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Rendering preview…
+                        </div>
+                      )}
+                    </div>
+                  ) : imgBusy ? (
+                    <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      Rendering image preview…
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center px-6">
+                      <div className="relative mb-3">
+                        <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
+                        <div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/30">
+                          <ImageIcon className="h-6 w-6 text-primary" />
+                        </div>
+                      </div>
+                      <h3 className="text-sm font-semibold mb-1">Render a real image preview</h3>
+                      <p className="text-xs text-muted-foreground max-w-xs mb-3">
+                        Use AI to generate a high-fidelity screenshot of this {category} based on your style and colors.
+                      </p>
+                      <button
+                        onClick={generateImage}
+                        disabled={imgBusy}
+                        className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-primary to-primary/85 px-3.5 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-60"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" /> Render image
+                      </button>
+                      {imgError && (
+                        <p className="mt-3 text-[11px] text-destructive max-w-xs">{imgError}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : tab === "luau" ? (
                 <pre className="text-[11px] leading-relaxed bg-surface rounded-lg p-3 overflow-auto h-full whitespace-pre-wrap">
