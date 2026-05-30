@@ -380,8 +380,14 @@ export function Header() {
             rel="noopener noreferrer"
             className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-[#5865F2]/30 bg-[#5865F2]/15 px-3 py-2 text-xs font-bold text-[#8ea0ff] active:scale-[0.98] hover:bg-[#5865F2]/25"
           >
-            Discord
+            Discord +5
           </a>
+          {user && (
+            <>
+              <PluginStatus compact />
+              <McpStatus compact />
+            </>
+          )}
         </div>
       </nav>
     </header>
