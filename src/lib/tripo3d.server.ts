@@ -22,11 +22,15 @@ const TRIPO_BASE = "https://api.tripo3d.ai/v2/openapi";
 export type Tripo3DOptions = {
   userId: string;
   prompt: string;
+  inputMode?: "text" | "image";
+  imageDataUrl?: string | null;
   quality?: "turbo" | "standard" | "detailed";
   format?: "GLB" | "OBJ" | "FBX";
   faceLimit?: number;
   style?: string | null;
   texture?: boolean;
+  rigged?: boolean;
+  animateInPlace?: boolean;
 };
 
 const MODEL_VERSION_BY_QUALITY: Record<string, string> = {
@@ -60,6 +64,16 @@ function authHeaders(): Record<string, string> {
   };
 }
 
+function bearerHeaders(): Record<string, string> {
+  const key = process.env.TRIPO_API_KEY || process.env.TRIPO_KEY;
+  if (!key) {
+    throw new Error(
+      "TRIPO_API_KEY is not set. Add it to your environment variables to enable 3D generation.",
+    );
+  }
+  return { Authorization: `Bearer ${key}` };
+}
+
 async function createTask(body: Record<string, unknown>): Promise<string> {
   const res = await fetch(`${TRIPO_BASE}/task`, {
     method: "POST",
@@ -75,6 +89,29 @@ async function createTask(body: Record<string, unknown>): Promise<string> {
   const taskId = json?.data?.task_id;
   if (!taskId) throw new Error("Tripo did not return a task_id.");
   return taskId as string;
+}
+
+async function uploadImage(dataUrl: string): Promise<string> {
+  const { parseImageDataUrl } = await import("./content-safety.server");
+  const parsed = parseImageDataUrl(dataUrl);
+  if (!parsed) throw new Error("Upload a PNG, JPG, or WEBP image.");
+  const form = new FormData();
+  const ext = parsed.mime === "image/png" ? "png" : parsed.mime === "image/webp" ? "webp" : "jpg";
+  form.append("file", new Blob([new Uint8Array(parsed.bytes)], { type: parsed.mime }), `reference.${ext}`);
+  const res = await fetch(`${TRIPO_BASE}/upload`, {
+    method: "POST",
+    headers: bearerHeaders(),
+    body: form,
+  });
+  const json: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      `Tripo image upload failed (${res.status}): ${json?.message || JSON.stringify(json).slice(0, 200)}`,
+    );
+  }
+  const token = json?.data?.image_token || json?.data?.file_token;
+  if (!token) throw new Error("Tripo did not return an image token.");
+  return String(token);
 }
 
 type PollResult = { status: string; output: any; progress: number };
@@ -139,13 +176,23 @@ export async function generate3DModel(opts: Tripo3DOptions): Promise<Tripo3DResu
     const faceLimit = Math.min(Math.max(opts.faceLimit ?? 10000, 1000), 50000);
     const modelVersion = MODEL_VERSION_BY_QUALITY[quality] ?? MODEL_VERSION_BY_QUALITY.turbo;
 
-    // 1. text_to_model with the chosen quality tier.
-    const genBody: Record<string, unknown> = {
-      type: "text_to_model",
-      model_version: modelVersion,
-      prompt: opts.prompt.slice(0, 1024),
-      texture: opts.texture !== false,
-    };
+    // 1. Generate from text or from a moderated reference image.
+    const genBody: Record<string, unknown> =
+      opts.inputMode === "image" && opts.imageDataUrl
+        ? {
+            type: "image_to_model",
+            model_version: modelVersion,
+            file: { type: "image", file_token: await uploadImage(opts.imageDataUrl) },
+            prompt: opts.prompt.slice(0, 1024),
+            texture: opts.texture !== false,
+            enable_image_autofix: true,
+          }
+        : {
+            type: "text_to_model",
+            model_version: modelVersion,
+            prompt: opts.prompt.slice(0, 1024),
+            texture: opts.texture !== false,
+          };
     if (opts.style) genBody.style = opts.style;
     const genTaskId = await createTask(genBody);
     const gen = await pollTask(genTaskId, { timeoutMs: 180_000 });
@@ -203,6 +250,9 @@ export async function generate3DModel(opts: Tripo3DOptions): Promise<Tripo3DResu
         face_limit: faceLimit,
         flatten_bottom: true,
         pivot_to_center_bottom: true,
+        with_animation: opts.rigged === true,
+        animate_in_place: opts.animateInPlace === true,
+        fbx_preset: opts.rigged === true && downloadFormat === "FBX" ? "mixamo" : undefined,
       });
       const conv = await pollTask(convTaskId, { timeoutMs: 150_000 });
       fileUrl = conv.output?.model || conv.output?.pbr_model || conv.output?.base_model || "";

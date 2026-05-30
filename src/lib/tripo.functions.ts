@@ -5,12 +5,16 @@ import { isGeneratorOwner, spendCreditsAfterSuccess } from "./generator-credits.
 
 const InputSchema = z.object({
   projectId: z.string().uuid().optional(),
-  prompt: z.string().min(3).max(1024),
+  inputMode: z.enum(["text", "image"]).default("text"),
+  prompt: z.string().max(1024).default(""),
+  imageDataUrl: z.string().max(11_500_000).optional(),
   quality: z.enum(["turbo", "standard", "detailed"]).default("turbo"),
   format: z.enum(["GLB", "OBJ", "FBX"]).default("GLB"),
   faceLimit: z.number().int().min(1000).max(50000).default(10000),
   texture: z.boolean().default(true),
   style: z.string().max(64).optional(),
+  rigged: z.boolean().default(false),
+  animateInPlace: z.boolean().default(false),
 });
 
 export type Generate3DResult =
@@ -43,6 +47,21 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { generate3DModel } = await import("./tripo3d.server");
+    const { checkTextSafeFor3D, checkImageSafeFor3D } = await import("./content-safety.server");
+
+    const safePrompt = data.prompt.trim();
+    if (data.inputMode === "text" && safePrompt.length < 3) {
+      return { ok: false, error: "Describe the model you want in at least a few words." };
+    }
+    if (data.inputMode === "image" && !data.imageDataUrl) {
+      return { ok: false, error: "Upload a reference image for image-to-3D." };
+    }
+    const textSafety = checkTextSafeFor3D(safePrompt);
+    if (!textSafety.safe) return { ok: false, error: textSafety.reason };
+    if (data.inputMode === "image" && data.imageDataUrl) {
+      const imageSafety = await checkImageSafeFor3D(data.imageDataUrl);
+      if (!imageSafety.safe) return { ok: false, error: imageSafety.reason };
+    }
 
     const isOwner = await isGeneratorOwner(userId, supabase);
 
@@ -94,12 +113,18 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
     // 3. Generate (text → model → chosen format → stored file + preview GLB).
     const result = await generate3DModel({
       userId,
-      prompt: data.prompt,
+      prompt:
+        safePrompt ||
+        "Create a safe Roblox-ready 3D model from this reference image. Keep it clean, non-NSFW, game-friendly, and suitable for all ages.",
+      inputMode: data.inputMode,
+      imageDataUrl: data.imageDataUrl ?? null,
       quality: data.quality,
-      format: data.format,
+      format: data.rigged && data.format === "OBJ" ? "FBX" : data.format,
       faceLimit: data.faceLimit,
       texture: data.texture,
       style: data.style ?? null,
+      rigged: data.rigged,
+      animateInPlace: data.animateInPlace,
     });
     if (!result.ok) {
       return { ok: false, error: `${result.error} (No credits were charged.)` };

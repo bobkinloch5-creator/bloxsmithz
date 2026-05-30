@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Header, Footer } from "@/components/layout";
 import {
   Award,
+  Box,
   Bot,
   CheckCircle,
   CreditCard,
@@ -86,6 +87,22 @@ const changelogItems = [
         title: "Manual Save to UI Library",
         detail:
           "Generated previews now have a visible Save to Library action, so users can keep a generated UI even if the automatic save path did not return a saved generation id.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.integrations,
+        icon: MessageSquare,
+        title: "Resend Signup Confirmation",
+        detail:
+          "Signup now includes a resend confirmation email action for users who created an account but never received the verification message.",
+      },
+      {
+        category: "3D",
+        tagColor: tagStyles.tools,
+        icon: Box,
+        title: "Image to 3D, Rigged Export & Safety",
+        detail:
+          "The 3D generator now supports safe reference-image uploads, server-side NSFW checks, and Tripo rigged / animation-ready export controls with FBX-friendly settings.",
       },
       {
         category: "Community",

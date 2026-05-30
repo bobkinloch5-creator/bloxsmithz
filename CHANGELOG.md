@@ -2,6 +2,12 @@
 
 ## Latest Updates
 
+### Signup Email & 3D Generator Safety
+- Added a Resend confirmation email action on signup for users who did not receive their email.
+- Added Image to 3D mode to the 3D generator with PNG/JPG/WEBP uploads and image preview.
+- Added server-side NSFW safety checks for 3D text prompts and image uploads before Tripo generation starts.
+- Added rigged / animation-ready Tripo export controls with FBX-friendly settings and in-place animation export support.
+
 ### UI Generator Reliability & Polish
 - Fixed the UI Generator getting stuck and ending with "No output generated."
 - Added a complete deterministic ScreenGui fallback so slow or empty AI responses still return usable Roblox UI.

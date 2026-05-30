@@ -36,6 +36,7 @@ function SignupPage() {
   const [refCode, setRefCode] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const formatAuthError = (message: string) => {
     if (message.includes("weak_password") || message.includes("known to be weak")) {
@@ -117,6 +118,38 @@ function SignupPage() {
       redirect_uri: window.location.origin + "/auth/callback",
     });
     if (res.error) toast.error(res.error.message ?? "Sign up failed");
+  };
+
+  const resendSignupEmail = async () => {
+    const target = email.trim();
+    if (!target) {
+      toast.error("Enter the email you signed up with first.");
+      return;
+    }
+    setResendLoading(true);
+    setErrorMessage(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: target,
+        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (error) {
+        const message = formatAuthError(error.message);
+        setErrorMessage(message);
+        toast.error(message);
+        return;
+      }
+      const message = `Confirmation email resent to ${target}. Check spam/promotions too.`;
+      setSuccessMessage(message);
+      toast.success(message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Could not resend confirmation email.";
+      setErrorMessage(formatAuthError(msg));
+      toast.error(msg);
+    } finally {
+      setResendLoading(false);
+    }
   };
 
 
@@ -233,6 +266,19 @@ function SignupPage() {
             Log in
           </Link>
         </p>
+        <div className="mt-4 rounded-xl border border-border bg-surface/50 p-3 text-center">
+          <p className="text-xs text-muted-foreground">
+            Signed up but did not get the confirmation email?
+          </p>
+          <button
+            type="button"
+            onClick={resendSignupEmail}
+            disabled={resendLoading || !email.trim()}
+            className="mt-2 text-xs font-semibold text-primary-glow underline disabled:opacity-50"
+          >
+            {resendLoading ? "Sending..." : "Resend confirmation email"}
+          </button>
+        </div>
       </div>
     </div>
   );

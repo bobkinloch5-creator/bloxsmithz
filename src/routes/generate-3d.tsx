@@ -22,6 +22,9 @@ import {
   Gauge,
   Layers,
   Palette,
+  Upload,
+  ShieldCheck,
+  WandSparkles,
 } from "lucide-react";
 
 export const Route = createFileRoute("/generate-3d")({
@@ -32,7 +35,7 @@ export const Route = createFileRoute("/generate-3d")({
       {
         name: "description",
         content:
-          "Generate textured 3D models from text and import them into Roblox Studio. Live WebGL preview, quality settings, multiple formats. One per week.",
+            "Generate textured 3D models from text or a safe reference image and import them into Roblox Studio. Live WebGL preview, rigged FBX export, quality settings, multiple formats. One per week.",
       },
       { property: "og:title", content: "AI 3D Model Generator for Roblox | BloxSmith" },
       { property: "og:url", content: "https://bloxsmith.pro/generate-3d" },
@@ -91,7 +94,10 @@ function Generate3DPage() {
   const run = useServerFn(generate3DModelFn);
   const getStatus = useServerFn(get3DStatusFn);
 
+  const [inputMode, setInputMode] = useState<"text" | "image">("text");
   const [prompt, setPrompt] = useState("");
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [imageName, setImageName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Extract<Generate3DResult, { ok: true }> | null>(null);
   const [limitMsg, setLimitMsg] = useState<string | null>(null);
@@ -102,6 +108,8 @@ function Generate3DPage() {
   const [faceLimit, setFaceLimit] = useState(10000);
   const [texture, setTexture] = useState(true);
   const [style, setStyle] = useState<string>("");
+  const [rigged, setRigged] = useState(false);
+  const [animateInPlace, setAnimateInPlace] = useState(true);
 
   const [status, setStatus] = useState<{
     canGenerate: boolean;
@@ -164,6 +172,26 @@ function Generate3DPage() {
     "a medieval stone fountain",
   ];
 
+  const onImagePick = (file: File | null) => {
+    if (!file) return;
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      toast.error("Upload a PNG, JPG, or WEBP image.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Image uploads must be 8 MB or smaller.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageDataUrl(String(reader.result));
+      setImageName(file.name);
+      setInputMode("image");
+    };
+    reader.onerror = () => toast.error("Could not read that image.");
+    reader.readAsDataURL(file);
+  };
+
   const generate = async () => {
     if (!user) {
       toast.error("Please log in to generate 3D models.");
@@ -174,8 +202,12 @@ function Generate3DPage() {
       return;
     }
     const p = prompt.trim();
-    if (p.length < 3) {
+    if (inputMode === "text" && p.length < 3) {
       toast.error("Describe the model you want (at least a few words).");
+      return;
+    }
+    if (inputMode === "image" && !imageDataUrl) {
+      toast.error("Upload a reference image first.");
       return;
     }
     setBusy(true);
@@ -186,10 +218,14 @@ function Generate3DPage() {
       const out = (await run({
         data: {
           prompt: p,
+          inputMode,
+          ...(imageDataUrl ? { imageDataUrl } : {}),
           quality,
-          format,
+          format: rigged && format === "OBJ" ? "FBX" : format,
           faceLimit,
           texture,
+          rigged,
+          animateInPlace,
           ...(style ? { style } : {}),
         },
       })) as Generate3DResult;
@@ -302,17 +338,72 @@ function Generate3DPage() {
 
         <div className="grid gap-5 lg:grid-cols-2">
           <div className="rounded-2xl border border-border bg-surface/60 p-5 shadow-lg">
-            <label className="block text-sm font-semibold mb-2">Describe your model</label>
+            <div className="mb-4 flex rounded-xl border border-border bg-background/50 p-1">
+              {[
+                { value: "text", label: "Text to 3D", icon: WandSparkles },
+                { value: "image", label: "Image to 3D", icon: Upload },
+              ].map((mode) => {
+                const Icon = mode.icon;
+                const active = inputMode === mode.value;
+                return (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setInputMode(mode.value as "text" | "image")}
+                    className={`flex-1 inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${
+                      active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" /> {mode.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {inputMode === "image" && (
+              <div className="mb-4 rounded-xl border border-dashed border-primary/35 bg-primary/5 p-3">
+                <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg bg-background/40 px-4 py-5 text-center transition hover:bg-background/70">
+                  <Upload className="h-6 w-6 text-primary" />
+                  <span className="text-sm font-semibold">
+                    {imageName ? imageName : "Upload a safe reference image"}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    PNG, JPG, or WEBP. No NSFW, gore, hate, or unsafe content.
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={busy}
+                    onChange={(e) => onImagePick(e.target.files?.[0] ?? null)}
+                    className="sr-only"
+                  />
+                </label>
+                {imageDataUrl && (
+                  <div className="mt-3 overflow-hidden rounded-lg border border-border bg-background/50">
+                    <img src={imageDataUrl} alt="Reference preview" className="max-h-56 w-full object-contain" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <label className="block text-sm font-semibold mb-2">
+              {inputMode === "image" ? "Prompt guidance (optional)" : "Describe your model"}
+            </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g. a low-poly treasure chest with gold trim"
+              placeholder={
+                inputMode === "image"
+                  ? "e.g. make it low-poly, Roblox-safe, with chunky readable shapes"
+                  : "e.g. a low-poly treasure chest with gold trim"
+              }
               rows={3}
               maxLength={1024}
               disabled={busy}
               className="w-full resize-none rounded-xl border border-border bg-background/60 px-3.5 py-3 text-sm outline-none focus:border-primary/50 disabled:opacity-60"
             />
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            {inputMode === "text" && <div className="mt-3 flex flex-wrap gap-1.5">
               {examples.map((ex) => (
                 <button
                   key={ex}
@@ -324,7 +415,7 @@ function Generate3DPage() {
                   {ex}
                 </button>
               ))}
-            </div>
+            </div>}
 
             <div className="mt-5 space-y-4 border-t border-border/60 pt-4">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -353,7 +444,7 @@ function Generate3DPage() {
                 </div>
                 <Segmented
                   value={format}
-                  onChange={setFormat}
+                  onChange={(v) => setFormat(v)}
                   disabled={busy}
                   options={[
                     { value: "GLB", label: "GLB", hint: "Studio import" },
@@ -410,11 +501,50 @@ function Generate3DPage() {
                 />
                 Generate textures (recommended)
               </label>
+
+              <label className="flex items-start gap-2 text-xs font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rigged}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setRigged(e.target.checked);
+                    if (e.target.checked && format === "OBJ") setFormat("FBX");
+                  }}
+                  className="mt-0.5 h-4 w-4 accent-emerald-500"
+                />
+                <span>
+                  Rigged / animation-ready export
+                  <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
+                    Uses Tripo's animated export structure when supported. FBX is recommended for rigs.
+                  </span>
+                </span>
+              </label>
+
+              {rigged && (
+                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={animateInPlace}
+                    disabled={busy}
+                    onChange={(e) => setAnimateInPlace(e.target.checked)}
+                    className="h-4 w-4 accent-emerald-500"
+                  />
+                  Keep animations in place for game use
+                </label>
+              )}
+
+              <div className="flex gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                <span>
+                  Server safety checks block NSFW text and moderate uploaded images before 3D generation starts.
+                </span>
+              </div>
             </div>
 
             <button
               onClick={generate}
-              disabled={busy || !prompt.trim() || locked}
+              disabled={busy || locked || (inputMode === "text" ? !prompt.trim() : !imageDataUrl)}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 transition disabled:opacity-40"
             >
               {busy ? (
@@ -427,7 +557,7 @@ function Generate3DPage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" /> Generate 3D model · {cost} credits
+                  <Sparkles className="h-4 w-4" /> Generate {inputMode === "image" ? "image-to-3D" : "3D model"} · {cost} credits
                 </>
               )}
             </button>
@@ -491,6 +621,7 @@ function Generate3DPage() {
                       In Studio: <b>Avatar</b> tab → <b>Import 3D</b>.
                     </li>
                     <li>Select the file — the mesh drops into your Workspace.</li>
+                    {rigged && <li>For rigged FBX files, use Roblox's avatar/animation import flow and review the generated rig before publishing.</li>}
                     <li>Anchor &amp; position it. Done.</li>
                   </ol>
                   <p className="mt-2 text-[10px] text-muted-foreground">
