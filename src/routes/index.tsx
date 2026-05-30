@@ -1016,12 +1016,12 @@ function Landing() {
               place to share your Roblox creations.
             </p>
             <a
-              href="https://discord.gg/J9TU7syJCr"
+              href="https://discord.gg/ZzdqTpntB"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-[#5865F2] px-6 py-3 text-sm font-bold text-white shadow-lg hover:opacity-90 transition"
             >
-              Join Discord +5 credits <ArrowRight className="h-4 w-4" />
+              Join Discord +10 credits <ArrowRight className="h-4 w-4" />
             </a>
           </div>
         </div>

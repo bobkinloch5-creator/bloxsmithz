@@ -26,6 +26,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as ImageGeneratorRouteImport } from './routes/image-generator'
 import { Route as IdeasRouteImport } from './routes/ideas'
+import { Route as Generate3dRouteImport } from './routes/generate-3d'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as ExecuteRouteImport } from './routes/execute'
@@ -149,6 +150,11 @@ const ImageGeneratorRoute = ImageGeneratorRouteImport.update({
 const IdeasRoute = IdeasRouteImport.update({
   id: '/ideas',
   path: '/ideas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Generate3dRoute = Generate3dRouteImport.update({
+  id: '/generate-3d',
+  path: '/generate-3d',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryRoute = GalleryRouteImport.update({
@@ -364,6 +370,7 @@ export interface FileRoutesByFullPath {
   '/execute': typeof ExecuteRoute
   '/faq': typeof FaqRoute
   '/gallery': typeof GalleryRoute
+  '/generate-3d': typeof Generate3dRoute
   '/ideas': typeof IdeasRoute
   '/image-generator': typeof ImageGeneratorRoute
   '/legal': typeof LegalRoute
@@ -422,6 +429,7 @@ export interface FileRoutesByTo {
   '/execute': typeof ExecuteRoute
   '/faq': typeof FaqRoute
   '/gallery': typeof GalleryRoute
+  '/generate-3d': typeof Generate3dRoute
   '/ideas': typeof IdeasRoute
   '/image-generator': typeof ImageGeneratorRoute
   '/legal': typeof LegalRoute
@@ -481,6 +489,7 @@ export interface FileRoutesById {
   '/execute': typeof ExecuteRoute
   '/faq': typeof FaqRoute
   '/gallery': typeof GalleryRoute
+  '/generate-3d': typeof Generate3dRoute
   '/ideas': typeof IdeasRoute
   '/image-generator': typeof ImageGeneratorRoute
   '/legal': typeof LegalRoute
@@ -541,6 +550,7 @@ export interface FileRouteTypes {
     | '/execute'
     | '/faq'
     | '/gallery'
+    | '/generate-3d'
     | '/ideas'
     | '/image-generator'
     | '/legal'
@@ -599,6 +609,7 @@ export interface FileRouteTypes {
     | '/execute'
     | '/faq'
     | '/gallery'
+    | '/generate-3d'
     | '/ideas'
     | '/image-generator'
     | '/legal'
@@ -657,6 +668,7 @@ export interface FileRouteTypes {
     | '/execute'
     | '/faq'
     | '/gallery'
+    | '/generate-3d'
     | '/ideas'
     | '/image-generator'
     | '/legal'
@@ -716,6 +728,7 @@ export interface RootRouteChildren {
   ExecuteRoute: typeof ExecuteRoute
   FaqRoute: typeof FaqRoute
   GalleryRoute: typeof GalleryRoute
+  Generate3dRoute: typeof Generate3dRoute
   IdeasRoute: typeof IdeasRoute
   ImageGeneratorRoute: typeof ImageGeneratorRoute
   LegalRoute: typeof LegalRoute
@@ -879,6 +892,13 @@ declare module '@tanstack/react-router' {
       path: '/ideas'
       fullPath: '/ideas'
       preLoaderRoute: typeof IdeasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/generate-3d': {
+      id: '/generate-3d'
+      path: '/generate-3d'
+      fullPath: '/generate-3d'
+      preLoaderRoute: typeof Generate3dRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery': {
@@ -1183,6 +1203,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExecuteRoute: ExecuteRoute,
   FaqRoute: FaqRoute,
   GalleryRoute: GalleryRoute,
+  Generate3dRoute: Generate3dRoute,
   IdeasRoute: IdeasRoute,
   ImageGeneratorRoute: ImageGeneratorRoute,
   LegalRoute: LegalRoute,
@@ -1231,3 +1252,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

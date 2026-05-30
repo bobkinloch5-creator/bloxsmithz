@@ -49,7 +49,7 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
     // 1. Weekly limit — count successful generations in the last 7 days.
     if (!isOwner) {
       const since = new Date(Date.now() - WEEKLY_WINDOW_MS).toISOString();
-      const { data: recent, error: cntErr } = await supabaseAdmin
+      const { data: recent, error: cntErr } = await (supabaseAdmin as any)
         .from("model_generations_3d")
         .select("created_at")
         .eq("user_id", userId)
@@ -122,7 +122,7 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
     }
 
     // 5. Record the generation (drives the weekly limit + the user's history).
-    await supabaseAdmin.from("model_generations_3d").insert({
+    await (supabaseAdmin as any).from("model_generations_3d").insert({
       user_id: userId,
       project_id: data.projectId ?? null,
       prompt: data.prompt,
@@ -182,7 +182,7 @@ export const get3DStatusFn = createServerFn({ method: "POST" })
       }
 
       const since = new Date(Date.now() - WEEKLY_WINDOW_MS).toISOString();
-      const { data: recent } = await supabaseAdmin
+      const { data: recent } = await (supabaseAdmin as any)
         .from("model_generations_3d")
         .select("created_at")
         .eq("user_id", userId)

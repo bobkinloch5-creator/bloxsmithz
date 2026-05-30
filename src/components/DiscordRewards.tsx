@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { Copy, Gift, Users } from "lucide-react";
 
-export const DISCORD_INVITE = "https://discord.gg/J9TU7syJCr";
+export const DISCORD_INVITE = "https://discord.gg/ZzdqTpntB";
 
 export function DiscordRewards() {
   const { user, profile, refresh } = useAuth();
@@ -93,7 +93,7 @@ export function DiscordRewards() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="font-semibold text-sm">Join the BloxSmith Discord</div>
-            <div className="text-xs text-muted-foreground">Get +5 credits, instant.</div>
+            <div className="text-xs text-muted-foreground">Get +10 credits, instant.</div>
           </div>
           <a
             href={DISCORD_INVITE}
@@ -109,7 +109,7 @@ export function DiscordRewards() {
           disabled={claiming || alreadyClaimed}
           className="w-full rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-3 py-2 text-sm font-semibold transition disabled:opacity-50"
         >
-          {alreadyClaimed ? "Claimed ✓" : claiming ? "…" : "I joined — claim +5 credits"}
+          {alreadyClaimed ? "Claimed ✓" : claiming ? "…" : "I joined — claim +10 credits"}
         </button>
       </div>
 

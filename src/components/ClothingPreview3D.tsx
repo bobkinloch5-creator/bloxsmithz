@@ -115,58 +115,288 @@ export function ClothingPreview3D({
   );
 }
 
-function useTexture(imageUrl: string, THREE: any) {
-  const [tex, setTex] = useState<any>(null);
-  useEffect(() => {
-    let alive = true;
-    const loader = new THREE.TextureLoader();
-    loader.setCrossOrigin("anonymous");
-    loader.load(
-      imageUrl,
-      (t: any) => {
-        if (!alive) return;
-        t.colorSpace = THREE.SRGBColorSpace;
-        t.anisotropy = 8;
-        t.minFilter = THREE.LinearFilter;
-        t.magFilter = THREE.LinearFilter;
-        setTex(t);
-      },
-      undefined,
-      () => {
-        /* leave tex null → falls back to solid material */
-      },
-    );
-    return () => {
-      alive = false;
-    };
-  }, [imageUrl, THREE]);
-  return tex;
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
+
+const TORSO_MAP: { [face: string]: Rect } = {
+  right:  { x: 89,  y: 64, w: 64,  h: 128 },
+  left:   { x: 281, y: 64, w: 64,  h: 128 },
+  top:    { x: 153, y: 0,  w: 128, h: 64 },
+  bottom: { x: 281, y: 0,  w: 128, h: 64 },
+  front:  { x: 153, y: 64, w: 128, h: 128 },
+  back:   { x: 345, y: 64, w: 128, h: 128 }
+};
+
+// For Right Arm (in shirt) or Right Leg (in pants)
+const RIGHT_LIMB_MAP: { [face: string]: Rect } = {
+  right:  { x: 89,  y: 264, w: 64, h: 128 }, // Outer Right
+  front:  { x: 153, y: 264, w: 64, h: 128 },
+  left:   { x: 217, y: 264, w: 64, h: 128 }, // Inner Left
+  back:   { x: 281, y: 264, w: 64, h: 128 },
+  top:    { x: 153, y: 200, w: 64, h: 64 },
+  bottom: { x: 217, y: 200, w: 64, h: 64 }
+};
+
+// For Left Arm (in shirt) or Left Leg (in pants)
+const LEFT_LIMB_MAP: { [face: string]: Rect } = {
+  right:  { x: 329, y: 264, w: 64, h: 128 }, // Inner Right
+  front:  { x: 393, y: 264, w: 64, h: 128 },
+  left:   { x: 457, y: 264, w: 64, h: 128 }, // Outer Left
+  back:   { x: 521, y: 264, w: 64, h: 128 },
+  top:    { x: 393, y: 200, w: 64, h: 64 },
+  bottom: { x: 457, y: 200, w: 64, h: 64 }
+};
 
 const SKIN = "#f0c89a";
 const HAIR = "#1f1410";
 const DEFAULT_PANTS = "#2b313d";
 const DEFAULT_SHIRT = "#3a4150";
 
+function createRobloxFaceTexture(THREE: any) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    // Fill skin color background
+    ctx.fillStyle = SKIN;
+    ctx.fillRect(0, 0, 256, 256);
+
+    // Draw classic Roblox smile:
+    ctx.fillStyle = "#15171c";
+    
+    // Left eye (oval)
+    ctx.beginPath();
+    ctx.ellipse(90, 100, 12, 20, 0, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Right eye (oval)
+    ctx.beginPath();
+    ctx.ellipse(166, 100, 12, 20, 0, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Mouth smile curve
+    ctx.strokeStyle = "#15171c";
+    ctx.lineWidth = 10;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(128, 140, 45, 0.1 * Math.PI, 0.9 * Math.PI, false);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function useSlicedTextures(imageUrl: string, kind: Kind, THREE: any) {
+  const [textures, setTextures] = useState<any>(null);
+
+  useEffect(() => {
+    if (!THREE || !imageUrl) return;
+
+    let alive = true;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = imageUrl;
+
+    img.onload = () => {
+      if (!alive) return;
+
+      const createFaceTexture = (rect: Rect) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = rect.w;
+        canvas.height = rect.h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        return tex;
+      };
+
+      try {
+        if (kind === "classic_shirt" || kind === "classic_pants") {
+          // Slice Torso
+          const torso = [
+            createFaceTexture(TORSO_MAP.right),  // +x
+            createFaceTexture(TORSO_MAP.left),   // -x
+            createFaceTexture(TORSO_MAP.top),    // +y
+            createFaceTexture(TORSO_MAP.bottom), // -y
+            createFaceTexture(TORSO_MAP.front),  // +z
+            createFaceTexture(TORSO_MAP.back),   // -z
+          ];
+
+          // Slice Right Limb
+          const rightLimb = [
+            createFaceTexture(RIGHT_LIMB_MAP.right),
+            createFaceTexture(RIGHT_LIMB_MAP.left),
+            createFaceTexture(RIGHT_LIMB_MAP.top),
+            createFaceTexture(RIGHT_LIMB_MAP.bottom),
+            createFaceTexture(RIGHT_LIMB_MAP.front),
+            createFaceTexture(RIGHT_LIMB_MAP.back),
+          ];
+
+          // Slice Left Limb
+          const leftLimb = [
+            createFaceTexture(LEFT_LIMB_MAP.right),
+            createFaceTexture(LEFT_LIMB_MAP.left),
+            createFaceTexture(LEFT_LIMB_MAP.top),
+            createFaceTexture(LEFT_LIMB_MAP.bottom),
+            createFaceTexture(LEFT_LIMB_MAP.front),
+            createFaceTexture(LEFT_LIMB_MAP.back),
+          ];
+
+          setTextures({
+            torso,
+            rightLimb,
+            leftLimb,
+            single: null,
+          });
+        } else {
+          // For tshirt or layered/accessory, we just load the single texture
+          const loader = new THREE.TextureLoader();
+          loader.setCrossOrigin("anonymous");
+          loader.load(imageUrl, (t: any) => {
+            if (!alive) return;
+            t.colorSpace = THREE.SRGBColorSpace;
+            t.minFilter = THREE.LinearFilter;
+            t.magFilter = THREE.LinearFilter;
+            setTextures({
+              torso: null,
+              rightLimb: null,
+              leftLimb: null,
+              single: t,
+            });
+          });
+        }
+      } catch (err) {
+        console.error("Error slicing textures:", err);
+      }
+    };
+
+    return () => {
+      alive = false;
+    };
+  }, [imageUrl, kind, THREE]);
+
+  return textures;
+}
+
 function Avatar({
   imageUrl,
   kind,
-  THREE: _THREE,
+  THREE,
 }: {
   imageUrl: string;
   kind: Kind;
   THREE: any;
 }) {
-  const tex = useTexture(imageUrl, _THREE);
+  const sliced = useSlicedTextures(imageUrl, kind, THREE);
 
   const isPants = kind === "classic_pants";
-  const isShirtLike = !isPants; // classic_shirt | tshirt | layered
+  const isShirtLike = !isPants;
 
-  const clothedMat = tex ? { map: tex } : { color: isPants ? DEFAULT_PANTS : DEFAULT_SHIRT };
-  const fallbackShirt = { color: DEFAULT_SHIRT };
-  const fallbackPants = { color: DEFAULT_PANTS };
+  // Materials arrays
+  // For Head: Face on front, skin on others
+  const headMaterials = THREE ? [
+    new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.85 }), // +x
+    new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.85 }), // -x
+    new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.85 }), // +y
+    new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.85 }), // -y
+    new THREE.MeshStandardMaterial({ map: createRobloxFaceTexture(THREE), roughness: 0.85 }), // +z (Face)
+    new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.85 }), // -z
+  ] : null;
 
-  // R6-ish proportions with small gaps between parts so they read as separate limbs.
+  // For Torso:
+  let torsoMaterials = null;
+  if (THREE) {
+    if (sliced) {
+      if (sliced.torso) {
+        torsoMaterials = sliced.torso.map(
+          (tex: any) => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75, metalness: 0.02 })
+        );
+      } else if (sliced.single) {
+        // Tshirt or layered/accessory: flat decal on front
+        torsoMaterials = [
+          new THREE.MeshStandardMaterial({ color: DEFAULT_SHIRT, roughness: 0.75 }),
+          new THREE.MeshStandardMaterial({ color: DEFAULT_SHIRT, roughness: 0.75 }),
+          new THREE.MeshStandardMaterial({ color: DEFAULT_SHIRT, roughness: 0.75 }),
+          new THREE.MeshStandardMaterial({ color: DEFAULT_SHIRT, roughness: 0.75 }),
+          new THREE.MeshStandardMaterial({ map: sliced.single, transparent: true, roughness: 0.75 }), // Front
+          new THREE.MeshStandardMaterial({ color: DEFAULT_SHIRT, roughness: 0.75 }),
+        ];
+      }
+    }
+    if (!torsoMaterials) {
+      torsoMaterials = Array(6).fill(
+        new THREE.MeshStandardMaterial({ color: isPants ? DEFAULT_PANTS : DEFAULT_SHIRT, roughness: 0.75 })
+      );
+    }
+  }
+
+  // For Right Arm:
+  let rightArmMaterials = null;
+  if (THREE) {
+    if (sliced && sliced.rightLimb && isShirtLike) {
+      rightArmMaterials = sliced.rightLimb.map(
+        (tex: any) => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 })
+      );
+    } else {
+      rightArmMaterials = Array(6).fill(
+        new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.85 })
+      );
+    }
+  }
+
+  // For Left Arm:
+  let leftArmMaterials = null;
+  if (THREE) {
+    if (sliced && sliced.leftLimb && isShirtLike) {
+      leftArmMaterials = sliced.leftLimb.map(
+        (tex: any) => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 })
+      );
+    } else {
+      leftArmMaterials = Array(6).fill(
+        new THREE.MeshStandardMaterial({ color: SKIN, roughness: 0.85 })
+      );
+    }
+  }
+
+  // For Right Leg:
+  let rightLegMaterials = null;
+  if (THREE) {
+    if (sliced && sliced.rightLimb && isPants) {
+      rightLegMaterials = sliced.rightLimb.map(
+        (tex: any) => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 })
+      );
+    } else {
+      rightLegMaterials = Array(6).fill(
+        new THREE.MeshStandardMaterial({ color: DEFAULT_PANTS, roughness: 0.8 })
+      );
+    }
+  }
+
+  // For Left Leg:
+  let leftLegMaterials = null;
+  if (THREE) {
+    if (sliced && sliced.leftLimb && isPants) {
+      leftLegMaterials = sliced.leftLimb.map(
+        (tex: any) => new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 })
+      );
+    } else {
+      leftLegMaterials = Array(6).fill(
+        new THREE.MeshStandardMaterial({ color: DEFAULT_PANTS, roughness: 0.8 })
+      );
+    }
+  }
+
   return (
     <group position={[0, -0.25, 0]}>
       {/* Hair cap */}
@@ -176,45 +406,54 @@ function Avatar({
       </mesh>
 
       {/* Head */}
-      <mesh position={[0, 1.78, 0]} castShadow>
-        <boxGeometry args={[0.66, 0.66, 0.66]} />
-        <meshStandardMaterial color={SKIN} roughness={0.85} />
-      </mesh>
-
-      {/* Eyes */}
-      <mesh position={[-0.14, 1.82, 0.331]}>
-        <boxGeometry args={[0.08, 0.08, 0.01]} />
-        <meshStandardMaterial color="#0d0d0d" />
-      </mesh>
-      <mesh position={[0.14, 1.82, 0.331]}>
-        <boxGeometry args={[0.08, 0.08, 0.01]} />
-        <meshStandardMaterial color="#0d0d0d" />
-      </mesh>
-
-      {/* Neck gap is implicit via spacing */}
-
-      {/* Torso (shirt) */}
-      <mesh position={[0, 0.92, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.0, 1.1, 0.55]} />
-        <meshStandardMaterial
-          {...(isShirtLike ? clothedMat : fallbackShirt)}
-          roughness={0.75}
-          metalness={0.02}
-        />
-      </mesh>
-
-      {/* Arms — separated from torso by a clear gap */}
-      {[-0.72, 0.72].map((x) => (
-        <mesh key={x} position={[x, 0.92, 0]} castShadow>
-          <boxGeometry args={[0.36, 1.1, 0.4]} />
-          <meshStandardMaterial
-            {...(isShirtLike ? clothedMat : { color: SKIN })}
-            roughness={isShirtLike ? 0.75 : 0.85}
-          />
+      {headMaterials ? (
+        <mesh position={[0, 1.78, 0]} material={headMaterials} castShadow>
+          <boxGeometry args={[0.66, 0.66, 0.66]} />
         </mesh>
-      ))}
+      ) : (
+        <mesh position={[0, 1.78, 0]} castShadow>
+          <boxGeometry args={[0.66, 0.66, 0.66]} />
+          <meshStandardMaterial color={SKIN} roughness={0.85} />
+        </mesh>
+      )}
 
-      {/* Hands (always skin) */}
+      {/* Torso */}
+      {torsoMaterials ? (
+        <mesh position={[0, 0.92, 0]} material={torsoMaterials} castShadow receiveShadow>
+          <boxGeometry args={[1.0, 1.1, 0.55]} />
+        </mesh>
+      ) : (
+        <mesh position={[0, 0.92, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.0, 1.1, 0.55]} />
+          <meshStandardMaterial color={isPants ? DEFAULT_PANTS : DEFAULT_SHIRT} roughness={0.75} />
+        </mesh>
+      )}
+
+      {/* Right Arm */}
+      {rightArmMaterials ? (
+        <mesh position={[-0.72, 0.92, 0]} material={rightArmMaterials} castShadow>
+          <boxGeometry args={[0.36, 1.1, 0.4]} />
+        </mesh>
+      ) : (
+        <mesh position={[-0.72, 0.92, 0]} castShadow>
+          <boxGeometry args={[0.36, 1.1, 0.4]} />
+          <meshStandardMaterial color={SKIN} roughness={0.85} />
+        </mesh>
+      )}
+
+      {/* Left Arm */}
+      {leftArmMaterials ? (
+        <mesh position={[0.72, 0.92, 0]} material={leftArmMaterials} castShadow>
+          <boxGeometry args={[0.36, 1.1, 0.4]} />
+        </mesh>
+      ) : (
+        <mesh position={[0.72, 0.92, 0]} castShadow>
+          <boxGeometry args={[0.36, 1.1, 0.4]} />
+          <meshStandardMaterial color={SKIN} roughness={0.85} />
+        </mesh>
+      )}
+
+      {/* Hands */}
       {[-0.72, 0.72].map((x) => (
         <mesh key={`h${x}`} position={[x, 0.27, 0]} castShadow>
           <boxGeometry args={[0.36, 0.18, 0.4]} />
@@ -222,16 +461,29 @@ function Avatar({
         </mesh>
       ))}
 
-      {/* Legs */}
-      {[-0.26, 0.26].map((x) => (
-        <mesh key={`l${x}`} position={[x, -0.3, 0]} castShadow receiveShadow>
+      {/* Right Leg */}
+      {rightLegMaterials ? (
+        <mesh position={[-0.26, -0.3, 0]} material={rightLegMaterials} castShadow receiveShadow>
           <boxGeometry args={[0.46, 1.3, 0.5]} />
-          <meshStandardMaterial
-            {...(isPants ? clothedMat : fallbackPants)}
-            roughness={0.8}
-          />
         </mesh>
-      ))}
+      ) : (
+        <mesh position={[-0.26, -0.3, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.46, 1.3, 0.5]} />
+          <meshStandardMaterial color={DEFAULT_PANTS} roughness={0.8} />
+        </mesh>
+      )}
+
+      {/* Left Leg */}
+      {leftLegMaterials ? (
+        <mesh position={[0.26, -0.3, 0]} material={leftLegMaterials} castShadow receiveShadow>
+          <boxGeometry args={[0.46, 1.3, 0.5]} />
+        </mesh>
+      ) : (
+        <mesh position={[0.26, -0.3, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.46, 1.3, 0.5]} />
+          <meshStandardMaterial color={DEFAULT_PANTS} roughness={0.8} />
+        </mesh>
+      )}
 
       {/* Shoes */}
       {[-0.26, 0.26].map((x) => (

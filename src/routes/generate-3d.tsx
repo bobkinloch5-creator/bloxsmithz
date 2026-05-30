@@ -117,7 +117,7 @@ function Generate3DPage() {
 
   useEffect(() => {
     if (!user) return;
-    getStatus({ data: {} })
+    getStatus({ data: undefined as any })
       .then((s: any) => {
         setStatus(s);
         if (!s.canGenerate) setNextAvailable(s.nextAvailable);
