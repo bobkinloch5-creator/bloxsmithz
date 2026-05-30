@@ -3,6 +3,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
+const PROFILE_EFFECT_IDS = ["none", "sparkle", "aurora", "neon", "holographic", "confetti", "stars"] as const;
+const PROFILE_BACKGROUND_IDS = ["none", "custom", "studio", "neon-city", "obby", "forest", "space", "lava", "clouds", "void", "sunset", "ocean", "candy", "matrix"] as const;
+const PFP_EFFECT_IDS = ["none", "gold", "rainbow", "flame", "electric", "ice", "galaxy", "rose"] as const;
+const PROFILE_DECORATION_IDS = ["none", "top_hat", "halo", "crown", "devil_horns", "headphones", "flower_crown", "wings", "snowflake", "santa", "party", "ninja", "witch", "neon_ring", "pumpkin", "cyber_visor", "bunny_ears"] as const;
+const PROFILE_BADGE_IDS = ["founder", "early", "developer", "verified", "supporter", "booster", "legend", "creator", "translator", "bug_hunter", "staff", "moderator", "og", "nitro", "active", "explorer", "artist", "scripter"] as const;
 
 const Schema = z
   .object({
@@ -15,32 +20,17 @@ const Schema = z
     avatar_url: z.string().url().max(1024).optional().nullable(),
     profile_accent: z.string().regex(HEX).optional().nullable(),
     profile_effect: z
-      .enum(["none", "sparkle", "aurora", "neon", "holographic", "confetti", "stars"])
+      .enum(PROFILE_EFFECT_IDS)
       .optional()
       .nullable(),
     profile_background: z
-      .enum([
-        "none",
-        "custom",
-        "studio",
-        "neon-city",
-        "obby",
-        "forest",
-        "space",
-        "lava",
-        "clouds",
-        "void",
-        "sunset",
-        "ocean",
-        "candy",
-        "matrix",
-      ])
+      .enum(PROFILE_BACKGROUND_IDS)
       .optional()
       .nullable(),
     custom_background_url: z.string().url().max(1024).optional().nullable(),
     profile_layout: z.enum(["classic", "card", "cinematic", "compact"]).optional(),
     pfp_effect: z
-      .enum(["none", "gold", "rainbow", "flame", "electric", "ice", "galaxy", "rose"])
+      .enum(PFP_EFFECT_IDS)
       .optional(),
     private_profile: z.boolean().optional(),
     hide_email: z.boolean().optional(),
@@ -48,10 +38,11 @@ const Schema = z
     show_activity: z.boolean().optional(),
     presence_status: z.enum(["online", "idle", "dnd", "invisible"]).optional(),
     profile_badges: z
-      .array(z.string().regex(/^[a-z0-9_-]+$/).max(32))
+      .array(z.enum(PROFILE_BADGE_IDS))
       .max(12)
+      .transform((ids) => Array.from(new Set(ids)))
       .optional(),
-    profile_decoration: z.string().regex(/^[a-z0-9_-]{1,32}$/).optional(),
+    profile_decoration: z.enum(PROFILE_DECORATION_IDS).optional(),
   })
   .strict();
 
