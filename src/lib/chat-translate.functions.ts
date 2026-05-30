@@ -39,7 +39,7 @@ export const translateChatMessage = createServerFn({ method: "POST" })
             { role: "user", content: data.content.slice(0, 1500) },
           ],
           temperature: 0,
-          max_tokens: 400,
+          max_completion_tokens: 400,
         }),
       });
       if (!res.ok) {

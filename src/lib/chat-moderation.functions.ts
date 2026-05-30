@@ -37,7 +37,7 @@ export const moderateChatMessage = createServerFn({ method: "POST" })
             { role: "user", content: data.content.slice(0, 1000) },
           ],
           temperature: 0,
-          max_tokens: 80,
+          max_completion_tokens: 80,
         }),
       });
       if (!res.ok) {
