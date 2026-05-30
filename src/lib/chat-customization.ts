@@ -109,3 +109,34 @@ export function gradientTextStyle(
     WebkitTextFillColor: "transparent",
   };
 }
+
+/** Curated set of safe, broadly-supported fonts for chat. */
+export const CHAT_FONTS: { id: string; label: string; stack: string }[] = [
+  { id: "default", label: "Default", stack: "" },
+  { id: "sans", label: "Sans", stack: "'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif" },
+  { id: "serif", label: "Serif", stack: "Georgia, 'Times New Roman', serif" },
+  { id: "mono", label: "Mono", stack: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" },
+  { id: "rounded", label: "Rounded", stack: "'Nunito', 'Quicksand', system-ui, sans-serif" },
+  { id: "display", label: "Display", stack: "'Space Grotesk', 'Poppins', system-ui, sans-serif" },
+  { id: "handwritten", label: "Handwritten", stack: "'Caveat', 'Comic Sans MS', cursive" },
+  { id: "futuristic", label: "Futuristic", stack: "'Orbitron', 'Audiowide', system-ui, sans-serif" },
+  { id: "elegant", label: "Elegant", stack: "'Playfair Display', Georgia, serif" },
+];
+
+export const CHAT_FONT_MAP: Record<string, string> = Object.fromEntries(
+  CHAT_FONTS.map((f) => [f.id, f.stack]),
+);
+
+export function sanitizeFont(id: unknown): string | null {
+  if (typeof id !== "string") return null;
+  if (id === "default" || !(id in CHAT_FONT_MAP)) return null;
+  return id;
+}
+
+export function chatFontStyle(id: string | null | undefined): React.CSSProperties | undefined {
+  if (!id) return undefined;
+  const stack = CHAT_FONT_MAP[id];
+  if (!stack) return undefined;
+  return { fontFamily: stack };
+}
+
