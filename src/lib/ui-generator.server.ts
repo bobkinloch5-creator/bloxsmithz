@@ -1,6 +1,6 @@
-// UI Generator: AI-driven Roblox ScreenGui spec generation + plugin action conversion.
+// UI Generator: fast Roblox ScreenGui spec generation + plugin action conversion.
 // Server-only.
-import { generateText, Output } from "ai";
+import { generateText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
 import { createProvider } from "@/lib/ai-providers.server";
@@ -87,7 +87,7 @@ type UIElement = {
   children?: UIElement[];
 };
 
-// Use z.lazy for recursion — Output.object handles it
+// Use z.lazy for recursion so both AI output and deterministic templates validate.
 const UIElementSchema: z.ZodType<UIElement> = z.lazy(() =>
   z.object({
     type: z.enum(["Frame", "TextLabel", "TextButton", "ImageButton", "ImageLabel", "ScrollingFrame"]),
@@ -150,6 +150,9 @@ export type UICategory = (typeof UI_CATEGORIES)[number];
 
 export const UI_STYLES = ["Modern", "Neon", "Minimal", "Cartoon", "Glass", "Anime"] as const;
 export type UIStyle = (typeof UI_STYLES)[number];
+
+const UI_AI_TIMEOUT_MS = 7_500;
+const UI_AI_OUTPUT_TOKENS = 4_500;
 
 const STYLE_HINTS: Record<UIStyle, string> = {
   Modern: "Rounded corners (12-16px), drop shadows via UIStroke, balanced spacing, subtle gradients.",
@@ -306,6 +309,176 @@ function createFallbackUISpec(opts: {
   const buttons = buttonTextForCategory(opts.category);
   const needsRemote = /Shop|Rewards|Spin|Codes|Trading|Admin/.test(opts.category);
 
+  if (opts.category === "Spin Wheel") {
+    const rewards = ["500 Coins", "2x Luck", "Rare Pet", "Gems", "Boost", "Jackpot"];
+    const rewardBadges: UIElement[] = rewards.map((label, idx) => {
+      const positions = [
+        { xScale: 0.5, yScale: 0.02 },
+        { xScale: 0.82, yScale: 0.18 },
+        { xScale: 0.84, yScale: 0.62 },
+        { xScale: 0.5, yScale: 0.78 },
+        { xScale: 0.16, yScale: 0.62 },
+        { xScale: 0.18, yScale: 0.18 },
+      ];
+      const pos = positions[idx] ?? positions[0];
+      return {
+        type: "TextLabel",
+        id: `RewardBadge${idx + 1}`,
+        name: `RewardBadge${idx + 1}`,
+        text: label,
+        textColor: { r: 255, g: 255, b: 255 },
+        textSize: 16,
+        font: "GothamBold",
+        anchorPoint: { x: 0.5, y: 0.5 },
+        position: { xScale: pos.xScale, xOffset: 0, yScale: pos.yScale, yOffset: 0 },
+        size: { xScale: 0, xOffset: 118, yScale: 0, yOffset: 38 },
+        backgroundColor: idx % 2 === 0 ? primary : accent,
+        strokeColor: { r: 255, g: 255, b: 255 },
+        strokeThickness: 1,
+        cornerRadius: 18,
+      };
+    });
+
+    const spec: UISpec = {
+      title,
+      screenGuiName,
+      mobileFriendly: true,
+      description: `Generated ${opts.style} Spin Wheel UI with server-validated reward request.`,
+      root: {
+        type: "Frame",
+        id: "RootFrame",
+        name: "RootFrame",
+        position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
+        size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
+        backgroundColor: bg,
+        children: [
+          {
+            type: "Frame",
+            id: "MainPanel",
+            name: "MainPanel",
+            anchorPoint: { x: 0.5, y: 0.5 },
+            position: { xScale: 0.5, xOffset: 0, yScale: 0.5, yOffset: 0 },
+            size: { xScale: 0.62, xOffset: 0, yScale: 0.68, yOffset: 0 },
+            backgroundColor: { r: 10, g: 14, b: 24 },
+            backgroundTransparency: opts.style === "Glass" ? 0.16 : 0,
+            cornerRadius: opts.style === "Cartoon" ? 30 : 20,
+            strokeColor: accent,
+            strokeThickness: opts.style === "Neon" ? 3 : 1.5,
+            gradient: opts.style === "Minimal" ? undefined : { from: bg, to: { r: 17, g: 24, b: 39 }, rotation: 135 },
+            children: [
+              {
+                type: "TextLabel",
+                id: "TitleLabel",
+                name: "TitleLabel",
+                text: title,
+                textColor: { r: 255, g: 255, b: 255 },
+                textSize: 34,
+                font: "GothamBlack",
+                position: { xScale: 0.06, xOffset: 0, yScale: 0.06, yOffset: 0 },
+                size: { xScale: 0.72, xOffset: 0, yScale: 0, yOffset: 52 },
+                backgroundTransparency: 1,
+                textAlign: "Left",
+              },
+              {
+                type: "TextButton",
+                id: "CloseButton",
+                name: "CloseButton",
+                text: "X",
+                textColor: { r: 255, g: 255, b: 255 },
+                textSize: 20,
+                font: "GothamBold",
+                position: { xScale: 0.9, xOffset: 0, yScale: 0.06, yOffset: 0 },
+                size: { xScale: 0, xOffset: 42, yScale: 0, yOffset: 42 },
+                backgroundColor: { r: 31, g: 41, b: 55 },
+                cornerRadius: 12,
+              },
+              {
+                type: "Frame",
+                id: "WheelRing",
+                name: "WheelRing",
+                anchorPoint: { x: 0.5, y: 0.5 },
+                position: { xScale: 0.44, xOffset: 0, yScale: 0.52, yOffset: 0 },
+                size: { xScale: 0, xOffset: 390, yScale: 0, yOffset: 390 },
+                backgroundColor: { r: 18, g: 24, b: 38 },
+                cornerRadius: 64,
+                strokeColor: primary,
+                strokeThickness: 5,
+                gradient: { from: primary, to: accent, rotation: 45 },
+                children: [
+                  ...rewardBadges,
+                  {
+                    type: "TextLabel",
+                    id: "Pointer",
+                    name: "Pointer",
+                    text: "WIN",
+                    textColor: { r: 12, g: 18, b: 28 },
+                    textSize: 18,
+                    font: "GothamBlack",
+                    anchorPoint: { x: 0.5, y: 0.5 },
+                    position: { xScale: 0.5, xOffset: 0, yScale: 0.5, yOffset: 0 },
+                    size: { xScale: 0, xOffset: 104, yScale: 0, yOffset: 104 },
+                    backgroundColor: { r: 255, g: 255, b: 255 },
+                    strokeColor: primary,
+                    strokeThickness: 3,
+                    cornerRadius: 52,
+                  },
+                ],
+              },
+              {
+                type: "Frame",
+                id: "RewardPanel",
+                name: "RewardPanel",
+                position: { xScale: 0.7, xOffset: 0, yScale: 0.25, yOffset: 0 },
+                size: { xScale: 0.24, xOffset: 0, yScale: 0.46, yOffset: 0 },
+                backgroundColor: { r: 15, g: 23, b: 42 },
+                backgroundTransparency: 0.08,
+                cornerRadius: 16,
+                strokeColor: { r: 71, g: 85, b: 105 },
+                strokeThickness: 1,
+                layout: "List",
+                layoutPadding: 10,
+                children: rewards.slice(0, 4).map((label, idx) => ({
+                  type: "TextLabel",
+                  id: `PrizeRow${idx + 1}`,
+                  name: `PrizeRow${idx + 1}`,
+                  text: `${idx + 1}. ${label}`,
+                  textColor: { r: 226, g: 232, b: 240 },
+                  textSize: 15,
+                  font: "GothamBold",
+                  backgroundColor: { r: 30, g: 41, b: 59 },
+                  backgroundTransparency: 0.12,
+                  cornerRadius: 10,
+                  textAlign: "Left",
+                })),
+              },
+              {
+                type: "TextButton",
+                id: "SpinButton",
+                name: "SpinButton",
+                text: "SPIN NOW",
+                textColor: { r: 255, g: 255, b: 255 },
+                textSize: 22,
+                font: "GothamBlack",
+                anchorPoint: { x: 0.5, y: 0.5 },
+                position: { xScale: 0.82, xOffset: 0, yScale: 0.82, yOffset: 0 },
+                size: { xScale: 0.24, xOffset: 0, yScale: 0, yOffset: 58 },
+                backgroundColor: primary,
+                strokeColor: accent,
+                strokeThickness: 2,
+                cornerRadius: 16,
+              },
+            ],
+          },
+        ],
+      },
+      remoteEvents: [`${screenGuiName}Request`],
+      localScript: `local gui = script.Parent\nlocal close = gui:FindFirstChild("CloseButton", true)\nlocal spin = gui:FindFirstChild("SpinButton", true)\nif close and close:IsA("TextButton") then\n\tclose.MouseButton1Click:Connect(function()\n\t\tgui.Enabled = false\n\tend)\nend\nif spin and spin:IsA("TextButton") then\n\tspin.MouseButton1Click:Connect(function()\n\t\tprint("BloxSmith spin requested")\n\tend)\nend`,
+      serverScript: `local ReplicatedStorage = game:GetService("ReplicatedStorage")\nlocal remote = ReplicatedStorage:FindFirstChild("${screenGuiName}Request") or Instance.new("RemoteEvent")\nremote.Name = "${screenGuiName}Request"\nremote.Parent = ReplicatedStorage\nremote.OnServerEvent:Connect(function(player)\n\tprint("BloxSmith Spin Wheel request", player.Name)\n\t-- Validate cooldowns and grant rewards here.\nend)`,
+    };
+
+    return normalizeUISpec(spec, opts);
+  }
+
   const cardChildren: UIElement[] = buttons.map((label, idx) => ({
     type: "TextButton",
     id: `ActionButton${idx + 1}`,
@@ -324,7 +497,7 @@ function createFallbackUISpec(opts: {
     title,
     screenGuiName,
     mobileFriendly: true,
-    description: `Fallback-safe ${opts.style} ${opts.category} generated by BloxSmith.`,
+    description: `Generated ${opts.style} ${opts.category} UI by BloxSmith.`,
     root: {
       type: "Frame",
       id: "RootFrame",
@@ -377,7 +550,7 @@ function createFallbackUISpec(opts: {
               type: "TextButton",
               id: "CloseButton",
               name: "CloseButton",
-              text: "×",
+              text: "X",
               textColor: { r: 255, g: 255, b: 255 },
               textSize: 24,
               font: "GothamBold",
@@ -425,27 +598,14 @@ function createFallbackUISpec(opts: {
   return normalizeUISpec(spec, opts);
 }
 
-async function tryGenerateStructured(gateway: GatewayChoice, userPrompt: string): Promise<UISpec> {
-  const { output } = await generateText({
-    model: gateway.gw(gateway.modelName) as any,
-    system: UI_SYSTEM_PROMPT,
-    prompt: userPrompt,
-    output: Output.object({ schema: UISpecSchema as any }),
-    maxOutputTokens: 6000,
-    maxRetries: 1,
-    abortSignal: AbortSignal.timeout(90_000),
-  });
-  return UISpecSchema.parse(output);
-}
-
 async function tryGeneratePlainJson(gateway: GatewayChoice, userPrompt: string): Promise<UISpec> {
   const { text } = await generateText({
     model: gateway.gw(gateway.modelName) as any,
     system: `${UI_SYSTEM_PROMPT}\n\nReturn ONLY parseable JSON. Do not wrap it in markdown.`,
     prompt: userPrompt,
-    maxOutputTokens: 6000,
-    maxRetries: 1,
-    abortSignal: AbortSignal.timeout(90_000),
+    maxOutputTokens: UI_AI_OUTPUT_TOKENS,
+    maxRetries: 0,
+    abortSignal: AbortSignal.timeout(UI_AI_TIMEOUT_MS),
   });
   if (!text?.trim()) throw new Error("No text returned by provider.");
   return UISpecSchema.parse(parseJsonObject(text));
@@ -461,10 +621,11 @@ export async function generateUISpec(opts: {
   bgColor?: { r: number; g: number; b: number };
   title?: string;
 }): Promise<UISpec> {
+  const instantSpec = createFallbackUISpec(opts);
   const gateways = listGateways();
   if (gateways.length === 0) {
     console.warn("[ui-gen] no AI provider configured; using deterministic fallback UI");
-    return createFallbackUISpec(opts);
+    return instantSpec;
   }
 
   const styleHint = STYLE_HINTS[opts.style];
@@ -482,30 +643,21 @@ Palette: ${palette}
 ${opts.title ? `Preferred title text: "${opts.title}"\n` : ""}User request:
 ${opts.prompt}
 
-Produce a polished, fully populated UISpec for this Roblox UI. Include working LocalScript and (where it makes sense) a ServerScript with RemoteEvents for purchase/reward validation. Be specific and complete.`;
+Produce a polished, fully populated UISpec for this Roblox UI. Include working LocalScript and (where it makes sense) a ServerScript with RemoteEvents for purchase/reward validation. Keep the hierarchy concise and complete.`;
 
   let lastErr: any = null;
-  for (const gateway of gateways) {
-    try {
-      const spec = await tryGenerateStructured(gateway, userPrompt);
-      return normalizeUISpec(spec, opts);
-    } catch (err: any) {
-      lastErr = err;
-      console.warn(`[ui-gen] ${gateway.providerName}/${gateway.modelName} structured output failed:`, err?.message || err);
-    }
-
+  for (const gateway of gateways.slice(0, 2)) {
     try {
       const spec = await tryGeneratePlainJson(gateway, userPrompt);
       return normalizeUISpec(spec, opts);
     } catch (err: any) {
       lastErr = err;
-      console.warn(`[ui-gen] ${gateway.providerName}/${gateway.modelName} plain JSON fallback failed:`, err?.message || err);
-      continue;
+      console.warn(`[ui-gen] ${gateway.providerName}/${gateway.modelName} JSON output failed; trying deterministic fallback:`, err?.message || err);
     }
   }
 
-  console.warn("[ui-gen] all providers failed; returning deterministic fallback UI:", lastErr?.message || lastErr);
-  return createFallbackUISpec(opts);
+  console.warn("[ui-gen] providers were slow/empty; returning deterministic UI:", lastErr?.message || lastErr);
+  return instantSpec;
 }
 
 // ---------------- Spec -> plugin actions + files ----------------

@@ -136,6 +136,9 @@ function UIGeneratorPage() {
           projectId: projectId || undefined,
         },
       });
+      if (!res?.spec?.root || !Array.isArray(res?.actions) || res.actions.length === 0) {
+        throw new Error("The generator returned an empty UI. Please try again.");
+      }
       setResult({ id: res.id, spec: res.spec, actions: res.actions, files: res.files });
       setImgSrc(null);
       setImgFinal(false);
@@ -581,7 +584,7 @@ function UILoadingScreen({ styleName, categoryName }: UILoadingScreenProps) {
     "Polishing layout constraints...",
   ];
 
-  const totalDuration = 18000;
+  const totalDuration = 8000;
   const updateInterval = 100;
 
   useEffect(() => {
