@@ -32,6 +32,7 @@ import { Route as DocsRouteImport } from './routes/docs'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ClothingRouteImport } from './routes/clothing'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as AuthorizeRouteImport } from './routes/authorize'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AccountRouteImport } from './routes/account'
@@ -173,6 +174,11 @@ const ClothingRoute = ClothingRouteImport.update({
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthorizeRoute = AuthorizeRouteImport.update({
@@ -318,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/authorize': typeof AuthorizeRoute
+  '/browse': typeof BrowseRoute
   '/changelog': typeof ChangelogRoute
   '/clothing': typeof ClothingRoute
   '/dashboard': typeof DashboardRoute
@@ -370,6 +377,7 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/authorize': typeof AuthorizeRoute
+  '/browse': typeof BrowseRoute
   '/changelog': typeof ChangelogRoute
   '/clothing': typeof ClothingRoute
   '/dashboard': typeof DashboardRoute
@@ -423,6 +431,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
   '/authorize': typeof AuthorizeRoute
+  '/browse': typeof BrowseRoute
   '/changelog': typeof ChangelogRoute
   '/clothing': typeof ClothingRoute
   '/dashboard': typeof DashboardRoute
@@ -477,6 +486,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/authorize'
+    | '/browse'
     | '/changelog'
     | '/clothing'
     | '/dashboard'
@@ -529,6 +539,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/authorize'
+    | '/browse'
     | '/changelog'
     | '/clothing'
     | '/dashboard'
@@ -581,6 +592,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/authorize'
+    | '/browse'
     | '/changelog'
     | '/clothing'
     | '/dashboard'
@@ -634,6 +646,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRoute
   AuthorizeRoute: typeof AuthorizeRoute
+  BrowseRoute: typeof BrowseRoute
   ChangelogRoute: typeof ChangelogRoute
   ClothingRoute: typeof ClothingRoute
   DashboardRoute: typeof DashboardRoute
@@ -842,6 +855,13 @@ declare module '@tanstack/react-router' {
       path: '/changelog'
       fullPath: '/changelog'
       preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/authorize': {
@@ -1053,6 +1073,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   AdminRoute: AdminRoute,
   AuthorizeRoute: AuthorizeRoute,
+  BrowseRoute: BrowseRoute,
   ChangelogRoute: ChangelogRoute,
   ClothingRoute: ClothingRoute,
   DashboardRoute: DashboardRoute,
