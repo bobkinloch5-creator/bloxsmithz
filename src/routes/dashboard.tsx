@@ -25,9 +25,14 @@ import { toast } from "sonner";
 import { Onboarding } from "@/components/Onboarding";
 import { UsageRemaining } from "@/components/UsageRemaining";
 import { useDailyClaimCooldown } from "@/hooks/useDailyClaimCooldown";
+import { RequireAuth } from "@/components/RequireAuth";
 
 export const Route = createFileRoute("/dashboard")({
-  component: Dashboard,
+  component: () => (
+    <RequireAuth>
+      <Dashboard />
+    </RequireAuth>
+  ),
   head: () => ({
     meta: [
       { title: "Dashboard — BloxSmith" },
@@ -36,6 +41,7 @@ export const Route = createFileRoute("/dashboard")({
     ],
   }),
 });
+
 
 type Project = { id: string; name: string; game_type: string; updated_at: string; status: string };
 
