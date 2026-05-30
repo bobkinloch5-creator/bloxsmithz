@@ -41,6 +41,7 @@ import { Route as ProjectProjectIdRouteImport } from './routes/project.$projectI
 import { Route as CheckoutCustomRouteImport } from './routes/checkout.custom'
 import { Route as CheckoutPackRouteImport } from './routes/checkout.$pack'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
 import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
 import { Route as ApiStudioSnapshotRouteImport } from './routes/api/studio/snapshot'
@@ -219,6 +220,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
+  id: '/api/generate-image',
+  path: '/api/generate-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotwellKnownOauthProtectedResourceRoute =
   DotwellKnownOauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -337,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/api/generate-image': typeof ApiGenerateImageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$pack': typeof CheckoutPackRoute
   '/checkout/custom': typeof CheckoutCustomRoute
@@ -388,6 +395,7 @@ export interface FileRoutesByTo {
   '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/api/generate-image': typeof ApiGenerateImageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$pack': typeof CheckoutPackRoute
   '/checkout/custom': typeof CheckoutCustomRoute
@@ -440,6 +448,7 @@ export interface FileRoutesById {
   '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/api/generate-image': typeof ApiGenerateImageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$pack': typeof CheckoutPackRoute
   '/checkout/custom': typeof CheckoutCustomRoute
@@ -493,6 +502,7 @@ export interface FileRouteTypes {
     | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/api/generate-image'
     | '/auth/callback'
     | '/checkout/$pack'
     | '/checkout/custom'
@@ -544,6 +554,7 @@ export interface FileRouteTypes {
     | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/api/generate-image'
     | '/auth/callback'
     | '/checkout/$pack'
     | '/checkout/custom'
@@ -595,6 +606,7 @@ export interface FileRouteTypes {
     | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/api/generate-image'
     | '/auth/callback'
     | '/checkout/$pack'
     | '/checkout/custom'
@@ -647,6 +659,7 @@ export interface RootRouteChildren {
   UiGeneratorRoute: typeof UiGeneratorRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
+  ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   CheckoutPackRoute: typeof CheckoutPackRoute
   CheckoutCustomRoute: typeof CheckoutCustomRoute
@@ -894,6 +907,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/generate-image': {
+      id: '/api/generate-image'
+      path: '/api/generate-image'
+      fullPath: '/api/generate-image'
+      preLoaderRoute: typeof ApiGenerateImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -1060,6 +1080,7 @@ const rootRouteChildren: RootRouteChildren = {
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
     DotwellKnownOauthProtectedResourceRoute,
+  ApiGenerateImageRoute: ApiGenerateImageRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   CheckoutPackRoute: CheckoutPackRoute,
   CheckoutCustomRoute: CheckoutCustomRoute,
