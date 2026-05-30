@@ -184,7 +184,7 @@ function AuthorizePage() {
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Signed in as {user.email}.{" "}
+          Signed in.{" "}
           <Link to="/account" className="underline">
             Account
           </Link>

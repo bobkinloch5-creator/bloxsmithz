@@ -296,8 +296,7 @@ function PluginWizard() {
                 body={
                   user ? (
                     <p>
-                      Signed in as <span className="text-foreground font-medium">{user.email}</span>
-                      . Continue to step 2 →
+                      Signed in. Continue to step 2 →
                     </p>
                   ) : (
                     <p>You'll need an account to mint a plugin token and own your projects.</p>
