@@ -89,6 +89,27 @@ export function UserProfilePopover({
         setFollowerCount(fc ?? 0);
         setIsFollowing(!!myFollow);
       }
+      // Load achievements + level
+      const [{ data: ua }, { data: lv }] = await Promise.all([
+        (supabase as any)
+          .from("user_achievements")
+          .select("achievement_key, unlocked_at, achievements:achievement_key(name,icon,xp_reward)")
+          .eq("user_id", userId)
+          .order("unlocked_at", { ascending: false })
+          .limit(50),
+        (supabase as any).from("user_levels").select("level,xp").eq("user_id", userId).maybeSingle(),
+      ]);
+      if (!cancel) {
+        const list = ((ua ?? []) as any[]).map((r) => ({
+          key: r.achievement_key as string,
+          name: (r.achievements?.name as string) ?? r.achievement_key,
+          icon: (r.achievements?.icon as string | null) ?? null,
+          xp_reward: (r.achievements?.xp_reward as number | null) ?? null,
+          unlocked_at: r.unlocked_at as string,
+        }));
+        setAchievements(list);
+        setLevel(lv ? { level: (lv as any).level ?? 1, xp: (lv as any).xp ?? 0 } : null);
+      }
       setLoading(false);
     })();
     return () => {
