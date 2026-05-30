@@ -237,7 +237,7 @@ export async function generateImageFromPrompt(opts: {
   if (!geminiKey) {
     return {
       error:
-        "Image generation is unavailable — set GEMINI_API_KEY (your Google Gemini key) or NEOKENS_KEY on the server to enable clothing/texture generation.",
+        "Image generation is unavailable. Lovable AI credits may be exhausted — add credits in Settings → Workspace → Usage, or set GEMINI_API_KEY on the server to use your own Google Gemini key.",
     };
   }
 
