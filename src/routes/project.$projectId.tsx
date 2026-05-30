@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { RequireAuth } from "@/components/RequireAuth";
 import { Header } from "@/components/layout";
 import { AiSourceSettings } from "@/components/AiSourceSettings";
 import { ModelPicker } from "@/components/ModelPicker";
@@ -73,7 +74,7 @@ import { TaskBoard } from "@/components/TaskBoard";
 import { MessagesSquare, Kanban } from "lucide-react";
 
 export const Route = createFileRoute("/project/$projectId")({
-  component: ProjectEditor,
+  component: () => (<RequireAuth><ProjectEditor /></RequireAuth>),
   head: () => ({ meta: [{ title: "Project — BloxSmith" }] }),
 });
 
