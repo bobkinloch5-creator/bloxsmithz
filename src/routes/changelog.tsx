@@ -1,20 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Header, Footer } from "@/components/layout";
 import {
+  Award,
   Bot,
   CheckCircle,
   CreditCard,
   FileCode,
+  Flag,
+  Gift,
   Globe2,
+  Image as ImageIcon,
   Languages,
   LayoutDashboard,
+  Link2Off,
   Menu,
+  MessageSquare,
   Palette,
   Play,
   Server,
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Trash2,
+  Users,
   Wrench,
   Zap,
 } from "lucide-react";
@@ -30,6 +38,95 @@ const tagStyles = {
 };
 
 const changelogItems = [
+  {
+    version: "v3.3.0",
+    date: "May 30, 2026",
+    title: "Achievements, Perks, Gallery & Community Polish",
+    description:
+      "Big community update: a full achievements & leveling system with free credits for chatting, a clean image-only Gallery, follow/report on every profile, server-side link blocking, a custom bot avatar, automatic 7-day chat retention, and a mobile-friendly pass across the app.",
+    updates: [
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Award,
+        title: "Achievements, Badges & Levels",
+        detail:
+          "New /achievements page with an XP bar, your current level, and badges across Chat, Level, Gallery, and Social categories. Unlocking a badge instantly drops bonus credits + XP into your account.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Gift,
+        title: "+2 Free Credits Every 10 Messages",
+        detail:
+          "Stay active in Community Chat and BloxSmith automatically tops your balance: every 10 messages you send = +2 credits, tracked server-side and logged in your credit history. Mentioned on the dashboard and the achievements page.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: ImageIcon,
+        title: "Image-Only Gallery",
+        detail:
+          "New /gallery feed for sharing Roblox screenshots. Image-only uploads up to 6 MB, caption moderation, likes, and one-click follow on the creator's profile. Clean by default — no links, no NSFW.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Users,
+        title: "Follow & Profile Actions",
+        detail:
+          "Click any name in chat or gallery to open the profile popover with live follower count, Follow / Unfollow, and friend / DM shortcuts.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: Flag,
+        title: "Report System",
+        detail:
+          "Every profile and gallery post can be reported with a reason. Reports queue into the admin moderation panel alongside chat reports.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: Link2Off,
+        title: "Link Blocker in Chat",
+        detail:
+          "Server-side regex blocks http(s)://, www., common TLDs (.com / .gg / .net …) and Discord invites in every channel. A friendly \"Links aren't allowed\" toast replaces the silent failure.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: MessageSquare,
+        title: "Channels: Announcements, Help & More",
+        detail:
+          "Community Chat now has multiple channels (General, Announcements, Help, Showcase, Off-topic) with per-role posting rules and a slim channel sidebar.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Bot,
+        title: "BloxBot Got a Face",
+        detail:
+          "The in-chat assistant now shows a custom BloxBot avatar with a primary-color ring instead of the generic robot icon.",
+      },
+      {
+        category: "Backend",
+        tagColor: tagStyles.backend,
+        icon: Trash2,
+        title: "7-Day Chat Retention",
+        detail:
+          "A scheduled job runs hourly to purge global chat messages, reactions, and project chat older than 7 days, keeping the database lean and conversations fresh.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Smartphone,
+        title: "Mobile Polish",
+        detail:
+          "Browse header, stat cards, chat composer and gallery grids all reflow cleanly at 390-430 px. No more overflowing numbers or clipped titles on phones.",
+      },
+    ],
+  },
   {
     version: "v3.2.0",
     date: "May 30, 2026",
