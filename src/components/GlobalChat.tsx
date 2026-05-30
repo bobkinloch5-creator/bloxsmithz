@@ -165,6 +165,13 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const presenceChanRef = useRef<any>(null);
   const lastTypingSentRef = useRef(0);
+  // Refs to keep realtime handler stable (avoid re-subscribing on every state change)
+  const authorsRef = useRef(authors);
+  const openRef = useRef(open);
+  const prefsRef = useRef(prefs);
+  useEffect(() => { authorsRef.current = authors; }, [authors]);
+  useEffect(() => { openRef.current = open; }, [open]);
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
   // Open state
   useEffect(() => {
@@ -177,7 +184,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   // Hydrate authors
   const loadAuthors = useCallback(async (ids: string[]) => {
-    const need = ids.filter((id) => id && !authors.has(id));
+    const current = authorsRef.current;
+    const need = ids.filter((id) => id && !current.has(id));
     if (!need.length) return;
     const [{ data: profs }, { data: rs }, { data: badges }] = await Promise.all([
       supabase.from("profiles").select(
@@ -216,7 +224,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       });
       return next;
     });
-  }, [authors]);
+  }, []);
 
   // Initial fetch
   useEffect(() => {
@@ -259,18 +267,19 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         const row = payload.new as DbMessage;
         if (row.deleted_at) return;
         setMessages((prev) => prev.some((m) => m.id === row.id) ? prev : [...prev, row]);
-        if (!open && row.user_id !== user.id) setUnread((u) => u + 1);
+        if (!openRef.current && row.user_id !== user.id) setUnread((u) => u + 1);
         await loadAuthors([row.user_id]);
         // Sound + notification
         if (row.user_id !== user.id) {
-          const mentioned = mentionsMe(row.content, authors.get(user.id)?.display_name);
-          if (prefs.sound_enabled && (prefs.notify_mode === "all" || (prefs.notify_mode === "mentions" && mentioned))) {
+          const p = prefsRef.current;
+          const mentioned = mentionsMe(row.content, authorsRef.current.get(user.id)?.display_name);
+          if (p.sound_enabled && (p.notify_mode === "all" || (p.notify_mode === "mentions" && mentioned))) {
             playPing();
           }
-          if (prefs.notify_mode !== "off" && document.hidden && typeof Notification !== "undefined" && Notification.permission === "granted") {
-            if (prefs.notify_mode === "all" || mentioned) {
-              const a = authors.get(row.user_id);
-              new Notification(a?.display_name ?? "New message", { body: row.content.slice(0, 140), silent: !prefs.sound_enabled });
+          if (p.notify_mode !== "off" && document.hidden && typeof Notification !== "undefined" && Notification.permission === "granted") {
+            if (p.notify_mode === "all" || mentioned) {
+              const a = authorsRef.current.get(row.user_id);
+              new Notification(a?.display_name ?? "New message", { body: row.content.slice(0, 140), silent: !p.sound_enabled });
             }
           }
         }
@@ -302,9 +311,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         if (!presenceSyncedRef.current) return; // skip initial population
         if (key === user.id) return;
         await loadAuthors([key]);
-        const a = authors.get(key);
+        const a = authorsRef.current.get(key);
         const name = a?.display_name ?? "Someone";
-        if (prefs.sound_enabled) playJoin();
+        if (prefsRef.current.sound_enabled) playJoin();
         setMessages((prev) => [...prev, {
           id: `sys-join-${key}-${Date.now()}`,
           user_id: "bloxbot", content: `🟢 ${name} joined the chat`,
@@ -316,9 +325,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       .on("presence", { event: "leave" }, ({ key }) => {
         if (!presenceSyncedRef.current) return;
         if (key === user.id) return;
-        const a = authors.get(key);
+        const a = authorsRef.current.get(key);
         const name = a?.display_name ?? "Someone";
-        if (prefs.sound_enabled) playLeave();
+        if (prefsRef.current.sound_enabled) playLeave();
         setMessages((prev) => [...prev, {
           id: `sys-leave-${key}-${Date.now()}`,
           user_id: "bloxbot", content: `🔴 ${name} left the chat`,
@@ -343,7 +352,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     });
     presenceChanRef.current = channel;
     return () => { supabase.removeChannel(channel); presenceChanRef.current = null; };
-  }, [user?.id, open, prefs.sound_enabled, prefs.notify_mode, loadAuthors, authors]);
+  }, [user?.id, loadAuthors]);
 
   // Prune stale typing entries
   useEffect(() => {

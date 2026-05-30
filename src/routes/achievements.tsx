@@ -45,11 +45,13 @@ function AchievementsPage() {
   const [stats, setStats] = useState<UserLevel | null>(null);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    const load = async () => {
       const { data: ach } = await supabase
         .from("achievements")
         .select("*")
         .order("sort_order", { ascending: true });
+      if (cancelled) return;
       setItems((ach ?? []) as Achievement[]);
 
       if (user) {
@@ -57,10 +59,37 @@ function AchievementsPage() {
           supabase.from("user_achievements").select("achievement_key").eq("user_id", user.id),
           supabase.from("user_levels").select("*").eq("user_id", user.id).maybeSingle(),
         ]);
+        if (cancelled) return;
         setUnlocked(new Set((ua ?? []).map((r: any) => r.achievement_key)));
         setStats((lv as UserLevel) ?? { xp: 0, level: 1, messages_sent: 0, chat_credits_earned: 0 });
       }
-    })();
+    };
+    load();
+
+    if (!user) return () => { cancelled = true; };
+
+    // Realtime: refresh on unlocks / XP changes for this user
+    const channel = supabase
+      .channel(`achievements-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_achievements", filter: `user_id=eq.${user.id}` },
+        () => { load(); },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_levels", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const lv = payload.new as UserLevel | undefined;
+          if (lv) setStats(lv);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const xp = stats?.xp ?? 0;
