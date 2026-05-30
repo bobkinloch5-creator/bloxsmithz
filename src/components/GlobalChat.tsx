@@ -165,6 +165,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [profileUid, setProfileUid] = useState<string | null>(null);
   const [dmUnread, setDmUnread] = useState(0);
   const presenceSyncedRef = useRef(false);
+  const activeDmRef = useRef<string | null>(null);
+  useEffect(() => { activeDmRef.current = activeDm; }, [activeDm]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
