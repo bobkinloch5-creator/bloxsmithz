@@ -470,6 +470,54 @@ function UIGeneratorPage() {
                     <UIPreview spec={result.spec} bg={bg} />
                   </DevicePreviewFrame>
                 </div>
+              ) : tab === "image" ? (
+                <div className="h-full min-h-[480px] flex items-center justify-center rounded-xl border border-border bg-background/40 p-3">
+                  {imgSrc ? (
+                    <div className="relative flex h-full w-full items-center justify-center">
+                      <img
+                        src={imgSrc}
+                        alt="AI-rendered UI preview"
+                        className={`max-h-full max-w-full rounded-lg shadow-2xl transition-[filter] duration-300 ${
+                          imgFinal ? "blur-0" : "blur-2xl"
+                        }`}
+                      />
+                      {!imgFinal && (
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Rendering preview…
+                        </div>
+                      )}
+                    </div>
+                  ) : imgBusy ? (
+                    <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      Rendering image preview…
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center px-6">
+                      <div className="relative mb-3">
+                        <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
+                        <div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/30">
+                          <ImageIcon className="h-6 w-6 text-primary" />
+                        </div>
+                      </div>
+                      <h3 className="text-sm font-semibold mb-1">Render a real image preview</h3>
+                      <p className="text-xs text-muted-foreground max-w-xs mb-3">
+                        Use AI to generate a high-fidelity screenshot of this {category} based on your style and colors.
+                      </p>
+                      <button
+                        onClick={generateImage}
+                        disabled={imgBusy}
+                        className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-br from-primary to-primary/85 px-3.5 py-2 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-60"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" /> Render image
+                      </button>
+                      {imgError && (
+                        <p className="mt-3 text-[11px] text-destructive max-w-xs">{imgError}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               ) : tab === "luau" ? (
                 <pre className="text-[11px] leading-relaxed bg-surface rounded-lg p-3 overflow-auto h-full whitespace-pre-wrap">
                   {luauPreview || "(no scripts in this UI)"}
