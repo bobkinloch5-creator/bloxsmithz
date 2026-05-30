@@ -120,12 +120,12 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
   });
 }
 
-export function GlobalChat() {
+export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const { user, profile, isAdmin, roles, refresh } = useAuth();
   const { prefs, update: updatePrefs } = useChatPrefs();
   const moderate = useServerFn(moderateChatMessage);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(inline);
   const [messages, setMessages] = useState<RenderMessage[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
