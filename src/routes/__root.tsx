@@ -272,6 +272,8 @@ function BetaBanner() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useUnlockAudio();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const hideFloatingChat = pathname.startsWith("/browse");
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
@@ -282,7 +284,7 @@ function RootComponent() {
           <RobloxModelExplainer />
           <ImageGeneratorButtonInjector />
           <ClickRipple />
-          <GlobalChat />
+          {!hideFloatingChat && <GlobalChat />}
           <Toaster theme="dark" position="top-right" />
         </AuthProvider>
       </QueryClientProvider>
