@@ -2243,6 +2243,7 @@ export type Database = {
           title: string
         }[]
       }
+      purge_old_chat_messages: { Args: never; Returns: undefined }
       redeem_promo_code: { Args: { _code: string }; Returns: number }
       refund_credits: {
         Args: { _amount: number; _reason?: string }
