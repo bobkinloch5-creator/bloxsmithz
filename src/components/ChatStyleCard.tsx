@@ -72,6 +72,8 @@ export function ChatStyleCard() {
       if (trimmedNick && !NICK_RE.test(trimmedNick)) {
         throw new Error("Nickname must be 1-24 chars: letters, numbers, space . _ -");
       }
+      const cleanAccent = HEX_RE.test(accent) ? accent : null;
+      const cleanEffect = PROFILE_EFFECTS.some((e) => e.id === effect) ? effect : "none";
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -80,10 +82,13 @@ export function ChatStyleCard() {
           chat_icon: cleanIcon,
           chat_nickname: trimmedNick || null,
           chat_font: cleanFont,
+          profile_accent: cleanAccent,
+          profile_effect: cleanEffect,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", user.id);
       if (error) throw error;
+
       await refresh();
       toast.success("Chat style saved");
     } catch (e: any) {
