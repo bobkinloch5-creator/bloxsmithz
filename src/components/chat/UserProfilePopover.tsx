@@ -244,8 +244,16 @@ export function UserProfilePopover({
                     <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
                   )}
                 </div>
-                <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                   <span><span className="font-semibold text-foreground">{followerCount}</span> follower{followerCount === 1 ? "" : "s"}</span>
+                  {level && (
+                    <span className="inline-flex items-center gap-1">
+                      <Trophy className="h-3 w-3 text-amber-400" />
+                      <span className="font-semibold text-foreground">Lv {level.level}</span>
+                      <span className="text-muted-foreground">· {level.xp.toLocaleString()} XP</span>
+                    </span>
+                  )}
+                  <span><span className="font-semibold text-foreground">{achievements.length}</span> achievement{achievements.length === 1 ? "" : "s"}</span>
                 </div>
                 {profile.bio && <p className="mt-1 text-xs text-muted-foreground">{profile.bio}</p>}
               </div>
