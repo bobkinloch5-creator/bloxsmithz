@@ -135,6 +135,30 @@ export function UserProfilePopover({
     setFriend({ status: "none", requestId: null });
     toast.success("Friend removed");
   }
+  async function toggleFollow() {
+    if (!user || followBusy) return;
+    setFollowBusy(true);
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setFollowerCount((c) => c + (wasFollowing ? -1 : 1));
+    const { error } = await (supabase as any).rpc(wasFollowing ? "unfollow_user" : "follow_user", { _target: userId });
+    setFollowBusy(false);
+    if (error) {
+      setIsFollowing(wasFollowing);
+      setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
+      return toast.error(error.message);
+    }
+    toast.success(wasFollowing ? "Unfollowed" : "Following");
+  }
+  async function submitReport() {
+    const reason = reportReason.trim();
+    if (!reason) return toast.error("Please describe what's wrong");
+    const { error } = await (supabase as any).rpc("report_user", { _target: userId, _reason: reason, _context: null });
+    if (error) return toast.error(error.message);
+    toast.success("Report sent to moderators. Thank you.");
+    setReporting(false);
+    setReportReason("");
+  }
 
   const presenceLabel = useMemo(() => {
     const p = presence?.presence;
