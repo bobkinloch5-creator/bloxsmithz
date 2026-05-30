@@ -4,6 +4,7 @@ import {
   ShieldAlert, Bot, MoreVertical, Reply, Pin, PinOff, Flag,
   Image as ImageIcon, Settings2, Shield, AtSign, Users, Hash, Megaphone, LifeBuoy,
   FileText, Gamepad2, ExternalLink, UserPlus, Languages,
+  ScrollText, CheckCircle2, AlertTriangle, Clock, Ban,
 } from "lucide-react";
 import { translateChatMessage } from "@/lib/chat-translate.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +73,56 @@ type Reaction = { id: string; message_id: string; user_id: string; emoji: string
 type RenderMessage = DbMessage & { ephemeralBot?: boolean };
 
 const OPEN_KEY = "bloxsmith.globalchat.open";
+
+const CHAT_RULES = [
+  {
+    title: "Be respectful",
+    detail: "No bullying, harassment, threats, hate speech, slurs, or targeting people.",
+  },
+  {
+    title: "Keep it BloxSmith and Roblox friendly",
+    detail: "Talk about builds, scripts, UI, games, feedback, trading ideas, and community help.",
+  },
+  {
+    title: "No spam or flooding",
+    detail: "Do not repeat messages, blast emotes, advertise constantly, or try to bypass slow mode.",
+  },
+  {
+    title: "No scams, unsafe links, or begging",
+    detail: "Do not ask for passwords, tokens, Robux, accounts, payment info, or suspicious off-site clicks.",
+  },
+  {
+    title: "Keep it clean",
+    detail: "No NSFW, gore, illegal content, extreme profanity, or content meant to shock other users.",
+  },
+  {
+    title: "Protect privacy",
+    detail: "Do not share private info like real names, addresses, phone numbers, emails, or school details.",
+  },
+  {
+    title: "Follow staff directions",
+    detail: "If staff ask you to stop, move channels, or cool down, listen the first time.",
+  },
+];
+
+const CHAT_CONSEQUENCES = [
+  {
+    title: "Message blocked or removed",
+    detail: "Unsafe words, duplicate spam, banned links, and reported messages can be blocked or deleted.",
+  },
+  {
+    title: "Warning",
+    detail: "Staff may send a warning that appears at the top of chat so you know what to fix.",
+  },
+  {
+    title: "Timeout or mute",
+    detail: "Repeated rule breaks can lead to a 5 minute, 1 hour, or longer mute from Global Chat.",
+  },
+  {
+    title: "Account restriction",
+    detail: "Scams, threats, NSFW content, harassment, ban evasion, or serious abuse can lead to a ban.",
+  },
+];
 
 function realtimeTopic(prefix: string) {
   const id = typeof globalThis.crypto?.randomUUID === "function"
@@ -198,6 +249,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [blockedWords, setBlockedWords] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showMod, setShowMod] = useState(false);
+  const [showRules, setShowRules] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showRobloxShare, setShowRobloxShare] = useState(false);
@@ -814,7 +866,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       ].join("\n"));
       return;
     }
-    if (cmd === "rules") { pushEphemeralBot("Rules: be kind, keep it Roblox/BloxSmith related, no spam, no harassment, no NSFW, no scams, and follow staff directions."); return; }
+    if (cmd === "rules") {
+      setShowRules(true);
+      pushEphemeralBot("Opened Global Chat rules. Short version: be respectful, keep it BloxSmith/Roblox friendly, no spam, scams, NSFW, harassment, unsafe links, or personal info. Breaking rules can mean message removal, a warning, timeout/mute, or account restrictions.");
+      return;
+    }
     if (cmd === "credits") { pushEphemeralBot(`Credit balance: ${roles.includes("owner") ? "unlimited (owner)" : `${profile?.credits ?? 0} credits`}.`); return; }
     if (cmd === "daily") { const { data, error } = await (supabase as any).rpc("claim_daily_credits"); if (error) toast.error(error.message); else { await refresh(); pushEphemeralBot((data as any)?.claimed ? `Daily claimed: +${(data as any).amount} credits. Balance: ${(data as any).credits}.` : "Daily already claimed today."); } return; }
     if (cmd === "profile") { pushEphemeralBot(`Profile: ${profile?.display_name ?? user?.email ?? "Builder"}\nRank: ${roles.join(", ") || "user"}\nCredits: ${profile?.credits ?? 0}`); return; }
@@ -1150,6 +1206,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
                 <FileText className="h-4 w-4" />
               </button>
+              <button type="button" onClick={() => setShowRules(true)} aria-label="Chat rules" title="Chat rules"
+                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
+                <ScrollText className="h-4 w-4" />
+              </button>
               <button type="button" onClick={() => setShowSettings(true)} aria-label="Settings"
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
                 <Settings2 className="h-4 w-4" />
@@ -1472,6 +1532,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
           {showSettings && <ChatSettingsPanel prefs={prefs} onChange={updatePrefs} onClose={() => setShowSettings(false)} />}
           {showMod && isAdmin && <ChatModerationPanel onClose={() => setShowMod(false)} onDeleteMessage={deleteMessage} />}
+          {showRules && <ChatRulesPanel onClose={() => setShowRules(false)} />}
 
           {view === "friends" && (
             <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
@@ -1581,6 +1642,81 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 }
 
 function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+function ChatRulesPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
+      <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+        <h2 className="flex items-center gap-2 text-sm font-bold">
+          <ScrollText className="h-4 w-4 text-primary" /> Global Chat Rules
+        </h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close chat rules"
+          className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="rounded-xl border border-primary/25 bg-primary/10 p-3">
+          <div className="flex items-start gap-2">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+              <Shield className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="text-sm font-bold">Keep Global Chat safe and useful.</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Global Chat is for builders helping builders. Moderation can block unsafe messages automatically, and staff can review reports when something slips through.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {CHAT_RULES.map((rule, index) => (
+            <div key={rule.title} className="flex gap-2 rounded-lg border border-border bg-surface/55 p-2.5">
+              <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md bg-emerald-500/10 text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold">
+                  {index + 1}. {rule.title}
+                </div>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{rule.detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <section className="mt-3 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-300">
+            <AlertTriangle className="h-4 w-4" /> What happens if you break rules
+          </div>
+          <div className="space-y-2">
+            {CHAT_CONSEQUENCES.map((item) => (
+              <div key={item.title} className="flex gap-2 rounded-lg border border-amber-500/15 bg-background/35 p-2">
+                <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md bg-amber-500/15 text-amber-300">
+                  {item.title.includes("Timeout") ? <Clock className="h-3.5 w-3.5" /> : item.title.includes("Account") ? <Ban className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                </div>
+                <div>
+                  <div className="text-xs font-bold">{item.title}</div>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-amber-100/75">{item.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="mt-3 rounded-lg border border-border bg-background/40 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
+          Use <span className="font-mono text-foreground">/report @user reason</span> or the message menu to report problems. False reports, dogpiling, and trying to dodge moderation can also be moderated.
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ChatAvatar({
   isBot,

@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Palette,
   Play,
+  ScrollText,
   Server,
   ShieldCheck,
   Smartphone,
@@ -42,9 +43,9 @@ const changelogItems = [
   {
     version: "v3.4.0",
     date: "May 30, 2026",
-    title: "UI Generator Reliability, Builder Polish & Fancy Output",
+    title: "UI Generator Reliability, Builder Polish & Chat Rules",
     description:
-      "The Roblox UI Generator is faster, more reliable, and much better-looking. Generations now fall back to complete Roblox ScreenGui specs instead of empty output, the page has a cleaner builder workspace, and generated templates now use more premium panels, gradients, badges, strokes, and buttons.",
+      "The Roblox UI Generator is faster, more reliable, and much better-looking. Generations now fall back to complete Roblox ScreenGui specs instead of empty output, the page has a cleaner builder workspace, generated templates now use more premium styling, and Global Chat now clearly explains community rules and consequences.",
     updates: [
       {
         category: "Tools",
@@ -85,6 +86,14 @@ const changelogItems = [
         title: "Manual Save to UI Library",
         detail:
           "Generated previews now have a visible Save to Library action, so users can keep a generated UI even if the automatic save path did not return a saved generation id.",
+      },
+      {
+        category: "Community",
+        tagColor: tagStyles.security,
+        icon: ScrollText,
+        title: "Global Chat Rules Panel",
+        detail:
+          "Global Chat now has a dedicated rules panel and /rules command covering respect, spam, scams, unsafe links, privacy, staff directions, and what happens when rules are broken.",
       },
       {
         category: "Tools",

@@ -11,6 +11,11 @@
 - Made generated UI templates fancier with layered panels, gradients, header glow, badges, thicker strokes, stronger buttons, and clearer Roblox-style hierarchy.
 - Upgraded Spin Wheel output into a more circular premium wheel with glow, reward badges, pointer marker, prize panel, spin button, RemoteEvent, LocalScript, and ServerScript.
 
+### Global Chat Rules
+- Added a Global Chat rules panel that explains respect, spam, scams, unsafe links, privacy, clean content, and staff direction rules.
+- Updated `/rules` to open the rules panel and explain what happens after rule breaks.
+- Clarified moderation consequences including blocked/removed messages, warnings, timeouts/mutes, and account restrictions for serious abuse.
+
 ### Profile Fixes
 - Fixed profile settings not saving correctly.
 - Added a stronger fallback save system for display name, bio, and studio specialty.
