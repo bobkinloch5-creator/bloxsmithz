@@ -10,7 +10,7 @@ import { RoleBadges, type Role } from "@/components/RoleBadge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  CHAT_ICON_MAP, gradientTextStyle, sanitizeGradient, sanitizeIcon,
+  CHAT_ICON_MAP, gradientTextStyle, sanitizeGradient, sanitizeIcon, sanitizeFont, chatFontStyle,
 } from "@/lib/chat-customization";
 import { EmojiPicker, QUICK_REACTIONS } from "@/components/chat/EmojiPicker";
 import { ChatSettingsPanel } from "@/components/chat/ChatSettingsPanel";
@@ -40,6 +40,8 @@ type Author = {
   chat_name_gradient: string[] | null;
   chat_text_gradient: string[] | null;
   chat_icon: string | null;
+  chat_nickname: string | null;
+  chat_font: string | null;
 };
 
 type Reaction = { id: string; message_id: string; user_id: string; emoji: string };
@@ -136,7 +138,7 @@ export function GlobalChat() {
     if (!need.length) return;
     const [{ data: profs }, { data: rs }, { data: badges }] = await Promise.all([
       supabase.from("profiles").select(
-        "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon",
+        "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
       ).in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
       (supabase as any).from("user_badges").select("user_id,badge").in("user_id", need),
@@ -156,14 +158,17 @@ export function GlobalChat() {
     setAuthors((prev) => {
       const next = new Map(prev);
       (profs ?? []).forEach((p: any) => {
+        const nick = typeof p.chat_nickname === "string" && p.chat_nickname.trim() ? p.chat_nickname.trim() : null;
         next.set(p.id, {
-          display_name: p.display_name,
+          display_name: nick ?? p.display_name,
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
           badges: badgesByUser.get(p.id) ?? [],
           chat_name_gradient: sanitizeGradient(p.chat_name_gradient),
           chat_text_gradient: sanitizeGradient(p.chat_text_gradient),
           chat_icon: sanitizeIcon(p.chat_icon),
+          chat_nickname: nick,
+          chat_font: sanitizeFont(p.chat_font),
         });
       });
       return next;
@@ -634,7 +639,7 @@ export function GlobalChat() {
         <aside
           role="dialog"
           aria-label="Global chat"
-          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(80dvh,680px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(680px,calc(100dvh-2.5rem))] md:w-[420px]"
+          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]"
           style={{
             ...(chatBackgroundStyle(prefs) ?? {}),
             ...(accent ? ({ ["--chat-accent" as any]: accent } as React.CSSProperties) : {}),
@@ -775,7 +780,7 @@ export function GlobalChat() {
                         const stops = author.chat_name_gradient;
                         return <Ico className="h-3.5 w-3.5 shrink-0" style={stops?.length ? { color: stops[0] } : undefined} aria-hidden />;
                       })() : null}
-                      <span className="truncate text-xs font-semibold" style={!isBot ? gradientTextStyle(author?.chat_name_gradient) : undefined}>
+                      <span className="truncate text-xs font-semibold" style={!isBot ? { ...gradientTextStyle(author?.chat_name_gradient), ...chatFontStyle(author?.chat_font) } : undefined}>
                         {name}
                       </span>
                       {isBot ? (
@@ -802,7 +807,7 @@ export function GlobalChat() {
                     </div>
                     {m.content && (
                       <div className={cn("mt-0.5 break-words leading-relaxed whitespace-pre-wrap text-foreground", fontSizeClass(prefs.font_size))}
-                        style={!isBot ? gradientTextStyle(author?.chat_text_gradient) : undefined}>
+                        style={!isBot ? { ...gradientTextStyle(author?.chat_text_gradient), ...chatFontStyle(author?.chat_font) } : undefined}>
                         {renderRich(m.content, myName, accent)}
                       </div>
                     )}
@@ -887,8 +892,9 @@ export function GlobalChat() {
                   else if (e.key === "Escape") { setReplyTo(null); setMentionQuery(null); }
                 }}
                 placeholder={muted ? "You're muted" : "Message everyone… (@ to mention, / for commands)"}
-                disabled={!!muted || sending} maxLength={500} rows={1}
-                className={cn("max-h-24 min-w-0 flex-1 resize-none rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50", fontSizeClass(prefs.font_size))}
+                disabled={!!muted || sending} maxLength={500} rows={2}
+                className={cn("max-h-32 min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border", fontSizeClass(prefs.font_size), chatFontStyle(profile?.chat_font) && "")}
+                style={chatFontStyle(profile?.chat_font)}
               />
               <button type="submit" disabled={sending || (!draft.trim() && !pendingFile) || !!muted} aria-label="Send"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"

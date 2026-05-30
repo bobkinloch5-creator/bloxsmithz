@@ -20,6 +20,8 @@ type Profile = {
   chat_name_gradient?: string[] | null;
   chat_text_gradient?: string[] | null;
   chat_icon?: string | null;
+  chat_nickname?: string | null;
+  chat_font?: string | null;
 };
 
 type Role = "owner" | "admin" | "user";
@@ -71,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase
           .from("profiles")
           .select(
-            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon",
+            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
           )
           .eq("id", uid)
           .maybeSingle(),

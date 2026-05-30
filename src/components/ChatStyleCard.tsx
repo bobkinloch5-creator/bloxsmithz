@@ -6,12 +6,17 @@ import { Check, Loader2, Palette, RotateCcw, Sparkles, X } from "lucide-react";
 import {
   CHAT_ICONS,
   CHAT_ICON_MAP,
+  CHAT_FONTS,
   NAME_GRADIENT_PRESETS,
   TEXT_GRADIENT_PRESETS,
+  chatFontStyle,
   gradientTextStyle,
+  sanitizeFont,
   sanitizeGradient,
   sanitizeIcon,
 } from "@/lib/chat-customization";
+
+const NICK_RE = /^[A-Za-z0-9 _.\-]{0,24}$/;
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
@@ -26,19 +31,24 @@ export function ChatStyleCard() {
   const [nameStops, setNameStops] = useState<string[]>([]);
   const [textStops, setTextStops] = useState<string[]>([]);
   const [icon, setIcon] = useState<string | null>(null);
+  const [nickname, setNickname] = useState<string>("");
+  const [font, setFont] = useState<string>("default");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setNameStops(sanitizeGradient(profile?.chat_name_gradient) ?? []);
     setTextStops(sanitizeGradient(profile?.chat_text_gradient) ?? []);
     setIcon(sanitizeIcon(profile?.chat_icon));
-  }, [profile?.chat_name_gradient, profile?.chat_text_gradient, profile?.chat_icon]);
+    setNickname(profile?.chat_nickname ?? "");
+    setFont(sanitizeFont(profile?.chat_font) ?? "default");
+  }, [profile?.chat_name_gradient, profile?.chat_text_gradient, profile?.chat_icon, profile?.chat_nickname, profile?.chat_font]);
 
-  const displayName = profile?.display_name || user?.email?.split("@")[0] || "You";
+  const displayName = (nickname.trim() || profile?.display_name || user?.email?.split("@")[0] || "You");
   const Icon = icon ? CHAT_ICON_MAP[icon] : null;
 
-  const previewName = useMemo(() => gradientTextStyle(nameStops.length ? nameStops : null), [nameStops]);
-  const previewText = useMemo(() => gradientTextStyle(textStops.length ? textStops : null), [textStops]);
+  const fontStyle = useMemo(() => chatFontStyle(font), [font]);
+  const previewName = useMemo(() => ({ ...gradientTextStyle(nameStops.length ? nameStops : null), ...fontStyle }), [nameStops, fontStyle]);
+  const previewText = useMemo(() => ({ ...gradientTextStyle(textStops.length ? textStops : null), ...fontStyle }), [textStops, fontStyle]);
 
   const save = async () => {
     if (!user) return;
@@ -47,12 +57,19 @@ export function ChatStyleCard() {
       const cleanName = sanitizeGradient(nameStops);
       const cleanText = sanitizeGradient(textStops);
       const cleanIcon = sanitizeIcon(icon);
+      const cleanFont = sanitizeFont(font);
+      const trimmedNick = nickname.trim();
+      if (trimmedNick && !NICK_RE.test(trimmedNick)) {
+        throw new Error("Nickname must be 1-24 chars: letters, numbers, space . _ -");
+      }
       const { error } = await supabase
         .from("profiles")
         .update({
           chat_name_gradient: cleanName,
           chat_text_gradient: cleanText,
           chat_icon: cleanIcon,
+          chat_nickname: trimmedNick || null,
+          chat_font: cleanFont,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
@@ -70,6 +87,8 @@ export function ChatStyleCard() {
     setNameStops([]);
     setTextStops([]);
     setIcon(null);
+    setNickname("");
+    setFont("default");
   };
 
   return (
@@ -127,6 +146,66 @@ export function ChatStyleCard() {
           </div>
         </div>
       </div>
+
+      {/* Nickname */}
+      <div className="space-y-1.5">
+        <div>
+          <div className="text-sm font-medium">Chat nickname</div>
+          <div className="text-[11px] text-muted-foreground">
+            Shown in chat instead of your real name. Leave empty to use your display name.
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            maxLength={24}
+            placeholder={profile?.display_name ?? "your nickname"}
+            className="flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary"
+          />
+          {nickname && (
+            <button
+              onClick={() => setNickname("")}
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] hover:bg-surface-elevated"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="text-[10px] text-muted-foreground">
+          Letters, numbers, space, . _ - (max 24). {nickname.length}/24
+        </div>
+      </div>
+
+      {/* Font family */}
+      <div className="space-y-1.5">
+        <div>
+          <div className="text-sm font-medium">Font</div>
+          <div className="text-[11px] text-muted-foreground">Applies to your name and messages in chat.</div>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+          {CHAT_FONTS.map((f) => {
+            const active = font === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFont(f.id)}
+                className={`rounded-lg border px-2 py-2 text-center text-xs transition ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-surface text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                }`}
+                style={chatFontStyle(f.id)}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
 
       {/* Name gradient */}
       <GradientPicker

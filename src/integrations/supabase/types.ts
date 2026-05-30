@@ -1007,8 +1007,10 @@ export type Database = {
           banned_at: string | null
           banner_url: string | null
           bio: string | null
+          chat_font: string | null
           chat_icon: string | null
           chat_name_gradient: string[] | null
+          chat_nickname: string | null
           chat_text_gradient: string[] | null
           created_at: string
           credits: number
@@ -1038,8 +1040,10 @@ export type Database = {
           banned_at?: string | null
           banner_url?: string | null
           bio?: string | null
+          chat_font?: string | null
           chat_icon?: string | null
           chat_name_gradient?: string[] | null
+          chat_nickname?: string | null
           chat_text_gradient?: string[] | null
           created_at?: string
           credits?: number
@@ -1069,8 +1073,10 @@ export type Database = {
           banned_at?: string | null
           banner_url?: string | null
           bio?: string | null
+          chat_font?: string | null
           chat_icon?: string | null
           chat_name_gradient?: string[] | null
+          chat_nickname?: string | null
           chat_text_gradient?: string[] | null
           created_at?: string
           credits?: number
