@@ -358,7 +358,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel("achievement_unlocks")
+      .channel(`achievement_unlocks_${user.id}_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "user_achievements" },
