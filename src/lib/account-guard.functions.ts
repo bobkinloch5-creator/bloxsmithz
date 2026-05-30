@@ -6,7 +6,7 @@ import { z } from "zod";
 import crypto from "crypto";
 
 const Schema = z.object({
-  fingerprint: z.string().min(8).max(256),
+  fingerprint: z.string().min(8).max(100000),
 });
 
 function sha256(input: string) {
