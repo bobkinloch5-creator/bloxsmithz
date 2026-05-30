@@ -31,6 +31,55 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.2.0",
+    date: "May 30, 2026",
+    title: "Global Chat 2.0 — Customization, Reactions & Moderation",
+    description:
+      "A major Global Chat upgrade: per-user preferences, emoji reactions, @mentions with autocomplete, replies, image uploads, markdown, online/typing indicators, pinned messages, and a full moderation suite with reports, blocked words, AI auto-mod, warnings, and an audit log.",
+    updates: [
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Palette,
+        title: "Fully Customizable Chat",
+        detail:
+          "New settings panel (gear icon) lets every user pick their font size, density (compact/cozy/comfy), sound on/off, notification mode (off / mentions / all), and a personal accent color. Name color, message gradient, and chat icon are still set from your profile.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Sparkles,
+        title: "Reactions, Replies, Mentions & Markdown",
+        detail:
+          "Hover any message to react with emoji, reply/quote it, or open the action menu. Type @ to autocomplete people you've seen in chat; mentioning you triggers a ping. Messages support **bold**, *italic*, `code`, and auto-linked URLs.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Sparkles,
+        title: "Images, Presence & Typing",
+        detail:
+          "Upload images up to 5 MB straight into chat. See who's online via the Users chip in the header, and watch a live \"typing…\" indicator when others are mid-message. Pinned messages (admin only) sit at the top of the conversation.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Full Moderation Suite",
+        detail:
+          "Anyone can report a message (admins get a queue). Admins now have a Shield panel with three tabs: Reports, Blocked Words (live profanity list with severity), and an Audit log of every mute, unmute, delete, pin, and warning. New per-message actions: pin, warn, delete, mute (5m/1h/permanent), unmute.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "AI Auto-Moderation & Anti-Spam",
+        detail:
+          "Every message is screened by an AI moderator (Lovable AI gateway) for slurs, threats, and harassment, plus a server-side duplicate-message check, ALL-CAPS detection, and the admin-managed blocked words list. Slow mode and rate limits still apply.",
+      },
+    ],
+  },
+  {
     version: "v3.1.1",
     date: "May 30, 2026",
     title: "Auth Stability & Console Noise Cleanup",
