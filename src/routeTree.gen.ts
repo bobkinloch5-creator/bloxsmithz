@@ -52,6 +52,7 @@ import { Route as ApiStudioPollRouteImport } from './routes/api/studio/poll'
 import { Route as ApiPublicMcpRouteImport } from './routes/api/public/mcp'
 import { Route as ApiPublicHelpChatRouteImport } from './routes/api/public/help-chat'
 import { Route as ApiAssistantExecuteRouteImport } from './routes/api/assistant/execute'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicPluginSyncRouteImport } from './routes/api/public/plugin/sync'
 import { Route as ApiPublicPluginReportRouteImport } from './routes/api/public/plugin/report'
 import { Route as ApiPublicPluginOrganizeRouteImport } from './routes/api/public/plugin/organize'
@@ -280,6 +281,12 @@ const ApiAssistantExecuteRoute = ApiAssistantExecuteRouteImport.update({
   path: '/api/assistant/execute',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPluginSyncRoute = ApiPublicPluginSyncRouteImport.update({
   id: '/api/public/plugin/sync',
   path: '/api/public/plugin/sync',
@@ -385,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/api/public/plugin/organize': typeof ApiPublicPluginOrganizeRoute
   '/api/public/plugin/report': typeof ApiPublicPluginReportRoute
   '/api/public/plugin/sync': typeof ApiPublicPluginSyncRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -440,6 +448,7 @@ export interface FileRoutesByTo {
   '/api/public/plugin/organize': typeof ApiPublicPluginOrganizeRoute
   '/api/public/plugin/report': typeof ApiPublicPluginReportRoute
   '/api/public/plugin/sync': typeof ApiPublicPluginSyncRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -496,6 +505,7 @@ export interface FileRoutesById {
   '/api/public/plugin/organize': typeof ApiPublicPluginOrganizeRoute
   '/api/public/plugin/report': typeof ApiPublicPluginReportRoute
   '/api/public/plugin/sync': typeof ApiPublicPluginSyncRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -553,6 +563,7 @@ export interface FileRouteTypes {
     | '/api/public/plugin/organize'
     | '/api/public/plugin/report'
     | '/api/public/plugin/sync'
+    | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -608,6 +619,7 @@ export interface FileRouteTypes {
     | '/api/public/plugin/organize'
     | '/api/public/plugin/report'
     | '/api/public/plugin/sync'
+    | '/lovable/email/queue/process'
   id:
     | '__root__'
     | '/'
@@ -663,6 +675,7 @@ export interface FileRouteTypes {
     | '/api/public/plugin/organize'
     | '/api/public/plugin/report'
     | '/api/public/plugin/sync'
+    | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -718,6 +731,7 @@ export interface RootRouteChildren {
   ApiPublicPluginOrganizeRoute: typeof ApiPublicPluginOrganizeRoute
   ApiPublicPluginReportRoute: typeof ApiPublicPluginReportRoute
   ApiPublicPluginSyncRoute: typeof ApiPublicPluginSyncRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1023,6 +1037,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssistantExecuteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/plugin/sync': {
       id: '/api/public/plugin/sync'
       path: '/api/public/plugin/sync'
@@ -1163,6 +1184,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPluginOrganizeRoute: ApiPublicPluginOrganizeRoute,
   ApiPublicPluginReportRoute: ApiPublicPluginReportRoute,
   ApiPublicPluginSyncRoute: ApiPublicPluginSyncRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
