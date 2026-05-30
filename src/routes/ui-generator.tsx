@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Header, Footer } from "@/components/layout";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { streamImage } from "@/lib/streamImage";
+import { Image as ImageIcon, RefreshCw } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   generateRobloxUIFn,
