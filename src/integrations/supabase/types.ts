@@ -1161,6 +1161,7 @@ export type Database = {
           hide_email: boolean
           id: string
           manual_sync_only: boolean
+          private_profile: boolean
           referral_code: string | null
           referred_by: string | null
           roblox_avatar_url: string | null
@@ -1194,6 +1195,7 @@ export type Database = {
           hide_email?: boolean
           id: string
           manual_sync_only?: boolean
+          private_profile?: boolean
           referral_code?: string | null
           referred_by?: string | null
           roblox_avatar_url?: string | null
@@ -1227,6 +1229,7 @@ export type Database = {
           hide_email?: boolean
           id?: string
           manual_sync_only?: boolean
+          private_profile?: boolean
           referral_code?: string | null
           referred_by?: string | null
           roblox_avatar_url?: string | null
