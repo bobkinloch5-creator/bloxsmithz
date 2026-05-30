@@ -43,8 +43,8 @@ function LoginPage() {
     if (message.includes("email_not_confirmed")) {
       return "Your email is not confirmed yet. Please open the confirmation email before logging in.";
     }
-    if (message.includes("Invalid login credentials")) {
-      return "Incorrect email or password.";
+    if (message.includes("Invalid login credentials") || message.includes("401")) {
+      return "Invalid login or account not found.";
     }
     return message;
   };
