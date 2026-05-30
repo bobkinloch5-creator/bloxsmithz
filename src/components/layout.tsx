@@ -18,6 +18,16 @@ import {
   MessageCircle,
   Box,
   Shirt,
+  Image as ImageIcon,
+  Layout as LayoutIcon,
+  Star,
+  Users,
+  GalleryHorizontal,
+  Trophy,
+  Lightbulb,
+  Server,
+  FileText,
+  HelpCircle,
 } from "lucide-react";
 import { PluginStatus } from "@/components/PluginStatus";
 import { McpStatus } from "@/components/McpStatus";
