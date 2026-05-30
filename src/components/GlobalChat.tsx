@@ -63,8 +63,8 @@ function formatTime(iso: string) {
 
 // Tiny safe markdown: **bold**, *italic*, `code`, links + @mentions
 function renderRich(text: string, currentUserName: string | null, accent?: string | null) {
-  const parts: Array<{ t: "text" | "b" | "i" | "code" | "link" | "mention"; v: string; href?: string }> = [];
-  const re = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|https?:\/\/\S+|@[A-Za-z0-9_]{2,32})/g;
+  const parts: Array<{ t: "text" | "b" | "i" | "code" | "link" | "mention" | "emote"; v: string; href?: string }> = [];
+  const re = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|https?:\/\/\S+|@[A-Za-z0-9_]{2,32}|:[a-z][a-z0-9_]{1,24}:)/g;
   let last = 0; let m;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) parts.push({ t: "text", v: text.slice(last, m.index) });
@@ -73,15 +73,38 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
     else if (tok.startsWith("`")) parts.push({ t: "code", v: tok.slice(1, -1) });
     else if (tok.startsWith("*")) parts.push({ t: "i", v: tok.slice(1, -1) });
     else if (tok.startsWith("@")) parts.push({ t: "mention", v: tok });
+    else if (tok.startsWith(":") && tok.endsWith(":")) {
+      const key = tok.slice(1, -1).toLowerCase();
+      if (EMOTE_MAP[key]) parts.push({ t: "emote", v: key });
+      else parts.push({ t: "text", v: tok });
+    }
     else parts.push({ t: "link", v: tok, href: tok });
     last = m.index + tok.length;
   }
   if (last < text.length) parts.push({ t: "text", v: text.slice(last) });
+  // If the entire message is just a single emote token, render it larger.
+  const onlyEmote = parts.length === 1 && parts[0].t === "emote";
   return parts.map((p, i) => {
     if (p.t === "b") return <strong key={i}>{p.v}</strong>;
     if (p.t === "i") return <em key={i}>{p.v}</em>;
     if (p.t === "code") return <code key={i} className="rounded bg-surface px-1 py-0.5 text-[0.85em] font-mono">{p.v}</code>;
     if (p.t === "link") return <a key={i} href={p.href} target="_blank" rel="noreferrer noopener" className="underline text-primary break-all">{p.v}</a>;
+    if (p.t === "emote") {
+      const e = EMOTE_MAP[p.v];
+      return (
+        <img
+          key={i}
+          src={e.src}
+          alt={`:${e.name}:`}
+          title={`:${e.name}:`}
+          loading="lazy"
+          className={cn(
+            "inline-block align-[-0.35em] object-contain select-none",
+            onlyEmote ? "h-16 w-16" : "h-6 w-6",
+          )}
+        />
+      );
+    }
     if (p.t === "mention") {
       const mine = currentUserName && p.v.slice(1).toLowerCase() === currentUserName.toLowerCase();
       return (
