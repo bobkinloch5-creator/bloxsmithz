@@ -354,6 +354,42 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     return () => { supabase.removeChannel(channel); presenceChanRef.current = null; };
   }, [user?.id, loadAuthors]);
 
+  // Realtime: achievement unlocks → pop into global chat for everyone
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel("achievement_unlocks")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "user_achievements" },
+        async (payload) => {
+          const row = payload.new as { user_id: string; achievement_key: string };
+          if (!row?.user_id || !row?.achievement_key) return;
+          const [{ data: ach }, _a] = await Promise.all([
+            supabase.from("achievements").select("name,icon,xp_reward,credit_reward").eq("key", row.achievement_key).maybeSingle(),
+            loadAuthors([row.user_id]),
+          ]);
+          const author = authorsRef.current.get(row.user_id);
+          const name = author?.display_name ?? "A builder";
+          const achName = (ach as any)?.name ?? row.achievement_key;
+          const xp = (ach as any)?.xp_reward ?? 0;
+          const credits = (ach as any)?.credit_reward ?? 0;
+          const rewards = [xp ? `+${xp} XP` : null, credits ? `+${credits} credits` : null].filter(Boolean).join(" · ");
+          const content = `🏆 ${name} unlocked **${achName}**${rewards ? ` (${rewards})` : ""}`;
+          setMessages((prev) => [...prev, {
+            id: `ach-${row.user_id}-${row.achievement_key}-${Date.now()}`,
+            user_id: "bloxbot", content,
+            created_at: new Date().toISOString(),
+            deleted_at: null, reply_to_id: null, attachment_url: null,
+            attachment_type: null, pinned_at: null, flagged: false, ephemeralBot: true,
+          }]);
+          if (prefsRef.current.sound_enabled && row.user_id !== user.id) playPing();
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id, loadAuthors]);
+
   // Prune stale typing entries
   useEffect(() => {
     const t = setInterval(() => {
