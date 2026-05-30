@@ -15,7 +15,7 @@ import {
 import { EmojiPicker, QUICK_REACTIONS } from "@/components/chat/EmojiPicker";
 import { ChatSettingsPanel } from "@/components/chat/ChatSettingsPanel";
 import { ChatModerationPanel } from "@/components/chat/ChatModerationPanel";
-import { useChatPrefs, fontSizeClass, densityClass } from "@/lib/chat-prefs";
+import { useChatPrefs, fontSizeClass, densityClass, chatBackgroundStyle } from "@/lib/chat-prefs";
 import { useServerFn } from "@tanstack/react-start";
 import { moderateChatMessage } from "@/lib/chat-moderation.functions";
 
@@ -635,7 +635,10 @@ export function GlobalChat() {
           role="dialog"
           aria-label="Global chat"
           className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(80dvh,680px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(680px,calc(100dvh-2.5rem))] md:w-[420px]"
-          style={accent ? ({ ["--chat-accent" as any]: accent } as React.CSSProperties) : undefined}
+          style={{
+            ...(chatBackgroundStyle(prefs) ?? {}),
+            ...(accent ? ({ ["--chat-accent" as any]: accent } as React.CSSProperties) : {}),
+          }}
         >
           <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
