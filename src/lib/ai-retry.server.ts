@@ -154,26 +154,43 @@ export async function generateTextWithToolFallback(
         })
         .join("\n");
 
-      const finalizeMessages = [
-        ...(opts.messages ?? []),
-        {
-          role: "assistant" as const,
-          content:
-            (priorText ? priorText + "\n\n" : "") +
-            (toolSummary ? `Tool results gathered:\n${toolSummary}` : ""),
-        },
-        {
-          role: "user" as const,
-          content:
+      const gatheredBlock =
+        (priorText ? priorText + "\n\n" : "") +
+        (toolSummary ? `Tool results gathered:\n${toolSummary}\n\n` : "");
+
+      // Callers use EITHER `messages` (chat-style) OR `prompt` (single-string).
+      // Support both so the finalize step never sends an invalid request.
+      let finalizeFields: Record<string, unknown>;
+      if (Array.isArray(opts.messages)) {
+        finalizeFields = {
+          messages: [
+            ...opts.messages,
+            {
+              role: "assistant" as const,
+              content: gatheredBlock || "(researched; ready to finalize)",
+            },
+            {
+              role: "user" as const,
+              content:
+                "Now output the final build as a single valid JSON object. Do not call any tools. Include real actions.",
+            },
+          ],
+        };
+      } else {
+        finalizeFields = {
+          prompt:
+            (opts.prompt ?? "") +
+            "\n\n" +
+            (gatheredBlock ? gatheredBlock + "\n" : "") +
             "Now output the final build as a single valid JSON object. Do not call any tools. Include real actions.",
-        },
-      ];
+        };
+      }
 
       try {
         const finalized = await generateText({
           ...rest,
           system: (opts.system ?? "") + FINALIZE_INSTRUCTION,
-          messages: finalizeMessages,
+          ...finalizeFields,
         });
         if (hasUsableBuildJson(finalized?.text)) {
           console.log(`[ai] ${label}: finalize step recovered a build JSON.`);

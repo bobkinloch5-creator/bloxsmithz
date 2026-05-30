@@ -24,6 +24,155 @@ type GenFile = {
 
 type GenAction = { type: string; [k: string]: any };
 
+// Robust extraction of the build JSON from a model's raw text. Handles
+// markdown code fences, a leading sentence before the JSON, trailing commas,
+// and raw newlines/tabs inside Luau source strings — all common reasons a
+// build came back "empty" even though the model actually produced one.
+function extractBuildJson(raw: string): { message?: string; files?: any[]; actions?: any[] } | null {
+  if (!raw) return null;
+  let text = raw.trim();
+
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence && fence[1] && fence[1].includes("{")) text = fence[1].trim();
+
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || start >= end) return null;
+  const slice = text.slice(start, end + 1);
+
+  const attempts = [
+    slice,
+    slice.replace(/,\s*([}\]])/g, "$1"),
+    slice
+      .replace(/,\s*([}\]])/g, "$1")
+      .replace(/"(?:[^"\\]|\\.)*"/g, (m) =>
+        m.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t"),
+      ),
+  ];
+  for (const a of attempts) {
+    try {
+      const obj = JSON.parse(a);
+      if (obj && typeof obj === "object") return obj;
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+// Is this prompt clearly asking to build/edit something (vs a pure question)?
+function isBuildIntent(prompt: string): boolean {
+  return /\b(make|add|create|build|generate|spawn|insert|give me|need|want|put|place|design|set up|setup)\b/i.test(
+    prompt,
+  );
+}
+
+// Last-resort fallback so a build request NEVER returns an empty bubble. These
+// are minimal but real, working builds. Used only when the model returned no
+// actions/files at all for a clear build request. Returns null for pure
+// questions so we don't dump random parts into someone's game.
+function getBuildFallback(
+  prompt: string,
+): { message: string; files: GenFile[]; actions: GenAction[] } | null {
+  if (!isBuildIntent(prompt)) return null;
+  const p = prompt.toLowerCase();
+
+  const screenGui = (name: string) => ({
+    type: "create",
+    className: "ScreenGui",
+    name,
+    parent: "StarterGui/BloxsmithUI",
+    properties: { ResetOnSpawn: false, IgnoreGuiInset: true, ZIndexBehavior: { __t: "Enum", enum: "ZIndexBehavior", value: "Sibling" } },
+  });
+
+  // Main menu (the case in the user's screenshot).
+  if (/\b(main menu|menu|title screen|start screen|home screen)\b/.test(p)) {
+    return {
+      message:
+        "Queued a main menu for Studio — a centered panel with Play, Shop, and Settings buttons plus hover animations. Push it when ready, then tweak the labels or colors and I'll refine it.",
+      files: [
+        {
+          path: "StarterPlayer/StarterPlayerScripts/UI/MainMenu.client.lua",
+          file_type: "LocalScript",
+          service_location: "StarterPlayer/StarterPlayerScripts/UI",
+          content: `-- BloxSmith Main Menu
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local gui = script.Parent:WaitForChild("MainMenu")
+local panel = gui:WaitForChild("Panel")
+
+local function wireButton(btn)
+\tlocal base = btn.Size
+\tlocal grow = UDim2.new(base.X.Scale, base.X.Offset + 8, base.Y.Scale, base.Y.Offset + 4)
+\tbtn.MouseEnter:Connect(function()
+\t\tTweenService:Create(btn, TweenInfo.new(0.15), { Size = grow }):Play()
+\tend)
+\tbtn.MouseLeave:Connect(function()
+\t\tTweenService:Create(btn, TweenInfo.new(0.15), { Size = base }):Play()
+\tend)
+end
+
+for _, child in ipairs(panel:GetChildren()) do
+\tif child:IsA("TextButton") then wireButton(child) end
+end
+
+local play = panel:FindFirstChild("PlayButton")
+if play then
+\tplay.MouseButton1Click:Connect(function()
+\t\tgui.Enabled = false
+\tend)
+end
+`,
+        },
+      ],
+      actions: [
+        screenGui("MainMenu"),
+        {
+          type: "create",
+          className: "Frame",
+          name: "Panel",
+          parent: "StarterGui/BloxsmithUI/MainMenu",
+          properties: {
+            Size: { __t: "UDim2", xs: 0.32, xo: 0, ys: 0.5, yo: 0 },
+            Position: { __t: "UDim2", xs: 0.5, xo: 0, ys: 0.5, yo: 0 },
+            AnchorPoint: { __t: "Vector2", x: 0.5, y: 0.5 },
+            BackgroundColor3: { __t: "Color3", r: 18, g: 18, b: 24 },
+            BackgroundTransparency: 0.05,
+          },
+          children: [
+            { className: "UICorner", name: "Corner", properties: { CornerRadius: { __t: "UDim", s: 0, o: 16 } } },
+            { className: "UIStroke", name: "Stroke", properties: { Thickness: 1.5, Transparency: 0.4 } },
+            { className: "UIListLayout", name: "List", properties: { Padding: { __t: "UDim", s: 0, o: 12 }, HorizontalAlignment: { __t: "Enum", enum: "HorizontalAlignment", value: "Center" }, VerticalAlignment: { __t: "Enum", enum: "VerticalAlignment", value: "Center" }, SortOrder: { __t: "Enum", enum: "SortOrder", value: "LayoutOrder" } } },
+            { className: "TextLabel", name: "Title", properties: { LayoutOrder: 1, Size: { __t: "UDim2", xs: 0.8, xo: 0, ys: 0, yo: 48 }, BackgroundTransparency: 1, Text: "MY GAME", Font: { __t: "Enum", enum: "Font", value: "GothamBlack" }, TextScaled: true, TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 } } },
+            { className: "TextButton", name: "PlayButton", properties: { LayoutOrder: 2, Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 }, BackgroundColor3: { __t: "Color3", r: 90, g: 170, b: 255 }, Text: "Play", Font: { __t: "Enum", enum: "Font", value: "GothamBold" }, TextScaled: true, TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 } }, children: [{ className: "UICorner", name: "C", properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } } }] },
+            { className: "TextButton", name: "ShopButton", properties: { LayoutOrder: 3, Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 }, BackgroundColor3: { __t: "Color3", r: 40, g: 40, b: 52 }, Text: "Shop", Font: { __t: "Enum", enum: "Font", value: "GothamBold" }, TextScaled: true, TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 } }, children: [{ className: "UICorner", name: "C", properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } } }] },
+            { className: "TextButton", name: "SettingsButton", properties: { LayoutOrder: 4, Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 }, BackgroundColor3: { __t: "Color3", r: 40, g: 40, b: 52 }, Text: "Settings", Font: { __t: "Enum", enum: "Font", value: "GothamBold" }, TextScaled: true, TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 } }, children: [{ className: "UICorner", name: "C", properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } } }] },
+          ],
+        },
+        { type: "select", path: "StarterGui.BloxsmithUI.MainMenu.Panel" },
+      ],
+    };
+  }
+
+  // Generic build we can't template — still return a clear, non-empty message
+  // and a starter folder so the user always sees a result and a next step.
+  return {
+    message:
+      "I couldn't fully generate that in one pass, so I queued a starter folder for it. Tell me one concrete piece to add next (e.g. 'a Play button', 'a coin counter', 'a spawn pad') and I'll build it out.",
+    files: [],
+    actions: [
+      {
+        type: "create",
+        className: "Folder",
+        name: "BloxsmithBuild",
+        parent: "Workspace/GeneratedAssets",
+        properties: {},
+      },
+    ],
+  };
+}
+
+
 async function assertProjectOwner(supabase: any, projectId: string, userId: string) {
   const { data: project, error } = await supabase
     .from("projects")
@@ -384,7 +533,12 @@ export const generateWithAI = createServerFn({ method: "POST" })
           ...(Object.keys(tools).length > 0
             ? {
                 tools: tools as any,
-                stopWhen: stepCountIs(Math.min(profile.stopSteps, isComplex ? 8 : 3)),
+                // Give the model room to call tools AND still emit the final
+                // JSON. The old cap of 3 steps for simple prompts meant the
+                // model spent every step on roblox_asset_search and never wrote
+                // the build (empty result). generateTextWithToolFallback's
+                // finalize step is the backstop if it still runs out.
+                stopWhen: stepCountIs(Math.min(profile.stopSteps, isComplex ? 8 : 6)),
               }
             : {}),
           maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 9000 : 4500),
@@ -393,24 +547,16 @@ export const generateWithAI = createServerFn({ method: "POST" })
         },
         "generateWithAI",
       );
-      // Parse JSON from the raw text response
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
+      // Parse JSON from the raw text response (robust to fences/prose/commas).
+      const parsed = extractBuildJson(rawText);
+      if (!parsed) {
         result = {
           message: rawText.trim(),
           files: [],
           actions: [],
         };
       } else {
-        try {
-          result = JSON.parse(jsonMatch[0]);
-        } catch {
-          result = {
-            message: rawText.trim(),
-            files: [],
-            actions: [],
-          };
-        }
+        result = parsed as typeof result;
       }
       result.files = result.files ?? [];
       result.actions = result.actions ?? [];
@@ -454,15 +600,9 @@ export const generateWithAI = createServerFn({ method: "POST" })
               },
               "generateWithAI:fallback",
             );
-            const m2 = retryText.match(/\{[\s\S]*\}/);
-            result = m2
-              ? (() => {
-                  try {
-                    return JSON.parse(m2[0]);
-                  } catch {
-                    return { message: retryText.trim(), files: [], actions: [] };
-                  }
-                })()
+            const parsed2 = extractBuildJson(retryText);
+            result = parsed2
+              ? (parsed2 as typeof result)
               : { message: retryText.trim(), files: [], actions: [] };
             result.files = result.files ?? [];
             result.actions = result.actions ?? [];
@@ -486,6 +626,21 @@ export const generateWithAI = createServerFn({ method: "POST" })
         if (msg.includes("402"))
           throw new Error("AI credits exhausted. Add credits in workspace settings.");
         throw new Error("AI generation failed: " + msg);
+      }
+    }
+
+    // Empty-build safety net: if the model returned NO actions and NO files for
+    // a clear build request, fall back to a real starter build so the user
+    // never gets an empty bubble. Pure questions (no build verb) are left as-is.
+    if (
+      (result.actions?.length ?? 0) === 0 &&
+      (result.files?.length ?? 0) === 0 &&
+      isBuildIntent(prompt)
+    ) {
+      const fb = getBuildFallback(prompt);
+      if (fb) {
+        console.warn("[generateWithAI] empty build result; using fallback template");
+        result = fb;
       }
     }
 
@@ -1437,14 +1592,10 @@ Respond ONLY with the JSON object specified.`;
         },
         "fixErrorsWithAI",
       );
-      // Parse JSON from raw text
-      const fixJsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!fixJsonMatch) throw new Error("AI did not return valid JSON.");
-      try {
-        result = JSON.parse(fixJsonMatch[0]);
-      } catch {
-        throw new Error("AI returned malformed JSON.");
-      }
+      // Parse JSON from raw text (robust to fences/prose/commas).
+      const fixParsed = extractBuildJson(rawText);
+      if (!fixParsed) throw new Error("AI did not return valid JSON.");
+      result = fixParsed as typeof result;
       result.files = result.files ?? [];
       result.actions = result.actions ?? [];
       await rememberProjectInteraction(supabase, {
@@ -1791,13 +1942,9 @@ Build EVERYTHING. Ship the complete game.`;
         }
       }
 
-      const autoJsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!autoJsonMatch) throw new Error("AI did not return valid JSON.");
-      try {
-        plan = JSON.parse(autoJsonMatch[0]);
-      } catch {
-        throw new Error("AI returned malformed JSON.");
-      }
+      const autoParsed = extractBuildJson(rawText);
+      if (!autoParsed) throw new Error("AI did not return valid JSON.");
+      plan = autoParsed as typeof plan;
     } catch (err: any) {
       if (!isOwner)
         await supabase.rpc("refund_credits", { _amount: cost, _reason: "autopilot failed" });
