@@ -139,6 +139,10 @@ function Pricing() {
           </Link>
         </div>
 
+        <div className="mt-10">
+          <CreditCostBreakdown />
+        </div>
+
         <p className="mt-6 text-center text-xs text-muted-foreground">
           PayPal · credits delivered after manual verification.
         </p>
