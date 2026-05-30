@@ -311,9 +311,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         if (!presenceSyncedRef.current) return; // skip initial population
         if (key === user.id) return;
         await loadAuthors([key]);
-        const a = authors.get(key);
+        const a = authorsRef.current.get(key);
         const name = a?.display_name ?? "Someone";
-        if (prefs.sound_enabled) playJoin();
+        if (prefsRef.current.sound_enabled) playJoin();
         setMessages((prev) => [...prev, {
           id: `sys-join-${key}-${Date.now()}`,
           user_id: "bloxbot", content: `🟢 ${name} joined the chat`,
@@ -325,9 +325,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       .on("presence", { event: "leave" }, ({ key }) => {
         if (!presenceSyncedRef.current) return;
         if (key === user.id) return;
-        const a = authors.get(key);
+        const a = authorsRef.current.get(key);
         const name = a?.display_name ?? "Someone";
-        if (prefs.sound_enabled) playLeave();
+        if (prefsRef.current.sound_enabled) playLeave();
         setMessages((prev) => [...prev, {
           id: `sys-leave-${key}-${Date.now()}`,
           user_id: "bloxbot", content: `🔴 ${name} left the chat`,
