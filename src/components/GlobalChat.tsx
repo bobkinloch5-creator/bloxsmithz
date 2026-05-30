@@ -36,6 +36,7 @@ type Author = {
   display_name: string | null;
   avatar_url: string | null;
   roles: Role[];
+  badges: string[];
   chat_name_gradient: string[] | null;
   chat_text_gradient: string[] | null;
   chat_icon: string | null;
@@ -88,7 +89,7 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
 }
 
 export function GlobalChat() {
-  const { user, isAdmin, roles } = useAuth();
+  const { user, profile, isAdmin, roles, refresh } = useAuth();
   const { prefs, update: updatePrefs } = useChatPrefs();
   const moderate = useServerFn(moderateChatMessage);
 
@@ -108,6 +109,7 @@ export function GlobalChat() {
   const [showMod, setShowMod] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Map<string, number>>(new Map());
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<{ id: string; reason: string | null }[]>([]);
@@ -132,17 +134,24 @@ export function GlobalChat() {
   const loadAuthors = useCallback(async (ids: string[]) => {
     const need = ids.filter((id) => id && !authors.has(id));
     if (!need.length) return;
-    const [{ data: profs }, { data: rs }] = await Promise.all([
+    const [{ data: profs }, { data: rs }, { data: badges }] = await Promise.all([
       supabase.from("profiles").select(
         "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon",
       ).in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
+      (supabase as any).from("user_badges").select("user_id,badge").in("user_id", need),
     ]);
     const rolesByUser = new Map<string, Role[]>();
     ((rs ?? []) as { user_id: string; role: Role }[]).forEach((r) => {
       const arr = rolesByUser.get(r.user_id) ?? [];
       arr.push(r.role);
       rolesByUser.set(r.user_id, arr);
+    });
+    const badgesByUser = new Map<string, string[]>();
+    ((badges ?? []) as { user_id: string; badge: string }[]).forEach((b) => {
+      const arr = badgesByUser.get(b.user_id) ?? [];
+      arr.push(b.badge);
+      badgesByUser.set(b.user_id, arr);
     });
     setAuthors((prev) => {
       const next = new Map(prev);
@@ -151,6 +160,7 @@ export function GlobalChat() {
           display_name: p.display_name,
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
+          badges: badgesByUser.get(p.id) ?? [],
           chat_name_gradient: sanitizeGradient(p.chat_name_gradient),
           chat_text_gradient: sanitizeGradient(p.chat_text_gradient),
           chat_icon: sanitizeIcon(p.chat_icon),
