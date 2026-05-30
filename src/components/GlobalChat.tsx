@@ -3,6 +3,7 @@ import {
   MessagesSquare, Send, X, Loader2, Trash2, Volume2, VolumeX,
   ShieldAlert, Bot, MoreVertical, Reply, Pin, PinOff, Flag,
   Image as ImageIcon, Settings2, Shield, AtSign, Users, Hash, Megaphone, LifeBuoy,
+  FileText, Gamepad2, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -141,6 +142,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [showSettings, setShowSettings] = useState(false);
   const [showMod, setShowMod] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  const [showRobloxShare, setShowRobloxShare] = useState(false);
+  const [robloxUrl, setRobloxUrl] = useState("");
+  const [robloxCaption, setRobloxCaption] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Map<string, number>>(new Map());
@@ -152,6 +157,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [activeDm, setActiveDm] = useState<string | null>(null);
   const [profileUid, setProfileUid] = useState<string | null>(null);
   const [dmUnread, setDmUnread] = useState(0);
+  const presenceSyncedRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -290,6 +296,36 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         const state = channel.presenceState() as Record<string, any[]>;
         setOnlineUsers(Object.keys(state));
         loadAuthors(Object.keys(state));
+        presenceSyncedRef.current = true;
+      })
+      .on("presence", { event: "join" }, async ({ key }) => {
+        if (!presenceSyncedRef.current) return; // skip initial population
+        if (key === user.id) return;
+        await loadAuthors([key]);
+        const a = authors.get(key);
+        const name = a?.display_name ?? "Someone";
+        if (prefs.sound_enabled) playJoin();
+        setMessages((prev) => [...prev, {
+          id: `sys-join-${key}-${Date.now()}`,
+          user_id: "bloxbot", content: `🟢 ${name} joined the chat`,
+          created_at: new Date().toISOString(),
+          deleted_at: null, reply_to_id: null, attachment_url: null,
+          attachment_type: null, pinned_at: null, flagged: false, ephemeralBot: true,
+        }]);
+      })
+      .on("presence", { event: "leave" }, ({ key }) => {
+        if (!presenceSyncedRef.current) return;
+        if (key === user.id) return;
+        const a = authors.get(key);
+        const name = a?.display_name ?? "Someone";
+        if (prefs.sound_enabled) playLeave();
+        setMessages((prev) => [...prev, {
+          id: `sys-leave-${key}-${Date.now()}`,
+          user_id: "bloxbot", content: `🔴 ${name} left the chat`,
+          created_at: new Date().toISOString(),
+          deleted_at: null, reply_to_id: null, attachment_url: null,
+          attachment_type: null, pinned_at: null, flagged: false, ephemeralBot: true,
+        }]);
       })
       .on("broadcast", { event: "typing" }, (payload) => {
         const uid = (payload.payload as any)?.user_id;
@@ -336,7 +372,18 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     }
   }, [open, prefs.notify_mode]);
 
-  function playPing() {
+  function playPing() { playTone(880, 0.18); }
+  function playJoin() {
+    // ascending two-tone
+    playTone(523, 0.12);
+    setTimeout(() => playTone(784, 0.16), 90);
+  }
+  function playLeave() {
+    // descending two-tone
+    playTone(523, 0.12);
+    setTimeout(() => playTone(330, 0.18), 90);
+  }
+  function playTone(freq: number, dur: number) {
     try {
       let ctx = audioCtxRef.current;
       if (!ctx) {
@@ -349,13 +396,13 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
       const o = ctx.createOscillator();
       const g = ctx.createGain();
-      o.frequency.value = 880;
+      o.frequency.value = freq;
       o.connect(g); g.connect(ctx.destination);
       g.gain.setValueAtTime(0.0001, ctx.currentTime);
       g.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
       o.start();
-      o.stop(ctx.currentTime + 0.2);
+      o.stop(ctx.currentTime + dur + 0.02);
     } catch {}
   }
 
@@ -551,6 +598,37 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     await (supabase as any).rpc("send_global_chat_message_v2", { _content: content });
   }
 
+  async function shareRobloxGame() {
+    const url = robloxUrl.trim();
+    const caption = robloxCaption.trim();
+    if (!url) return toast.error("Paste a Roblox game URL");
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { return toast.error("That doesn't look like a valid URL"); }
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (host !== "roblox.com" && host !== "web.roblox.com") {
+      return toast.error("Only roblox.com links are allowed");
+    }
+    if (!/\/games?\//i.test(parsed.pathname) && !/\/users\//i.test(parsed.pathname)) {
+      return toast.error("Use a Roblox game or user link");
+    }
+    setSending(true);
+    try {
+      const { error } = await (supabase as any).rpc("send_global_chat_message_v2", {
+        _content: caption, // caption text only; link goes in attachment_url
+        _reply_to_id: null,
+        _attachment_url: parsed.toString(),
+        _attachment_type: "roblox",
+        _channel_id: currentChannel,
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Roblox game shared");
+        setShowRobloxShare(false); setRobloxUrl(""); setRobloxCaption("");
+      }
+    } finally { setSending(false); }
+  }
+
   function pushEphemeralBot(content: string) {
     setMessages((prev) => [...prev, {
       id: `bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -734,6 +812,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               </div>
             </div>
             <div className="flex items-center gap-0.5">
+              <button type="button" onClick={() => setShowLogs(true)} aria-label="Chat logs"
+                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
+                <FileText className="h-4 w-4" />
+              </button>
               <button type="button" onClick={() => setShowSettings(true)} aria-label="Settings"
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
                 <Settings2 className="h-4 w-4" />
@@ -908,6 +990,19 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                         <img src={m.attachment_url} alt="attachment" className="max-h-60 rounded-lg border border-border object-cover" />
                       </a>
                     )}
+                    {m.attachment_url && m.attachment_type === "roblox" && (
+                      <a href={m.attachment_url} target="_blank" rel="noreferrer noopener"
+                        className="mt-1 flex items-center gap-2 rounded-lg border border-border bg-surface/60 p-2 text-xs hover:bg-surface">
+                        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-emerald-500/15 text-emerald-400">
+                          <Gamepad2 className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Roblox</div>
+                          <div className="truncate text-foreground">{m.attachment_url.replace(/^https?:\/\//, "")}</div>
+                        </div>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </a>
+                    )}
                     {grouped.size > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {Array.from(grouped.entries()).map(([emoji, g]) => (
@@ -974,6 +1069,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground" disabled={!!muted}>
                 <ImageIcon className="h-4 w-4" />
               </button>
+              <button type="button" onClick={() => setShowRobloxShare(true)} aria-label="Share a Roblox game"
+                title="Share a Roblox game"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-emerald-400" disabled={!!muted || !canPostHere}>
+                <Gamepad2 className="h-4 w-4" />
+              </button>
               <EmojiPicker onPick={(em) => { setDraft((d) => d + em); inputRef.current?.focus(); }} />
               <EmotePicker onPick={(tok) => { setDraft((d) => d + (d && !d.endsWith(" ") ? " " : "") + tok + " "); inputRef.current?.focus(); }} />
               <textarea
@@ -1003,6 +1103,80 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
           {showSettings && <ChatSettingsPanel prefs={prefs} onChange={updatePrefs} onClose={() => setShowSettings(false)} />}
           {showMod && isAdmin && <ChatModerationPanel onClose={() => setShowMod(false)} onDeleteMessage={deleteMessage} />}
+
+          {showLogs && (
+            <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
+              <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+                <h2 className="flex items-center gap-2 text-sm font-bold">
+                  <FileText className="h-4 w-4 text-primary" /> Chat logs · #{activeChannel?.name ?? "general"}
+                </h2>
+                <button onClick={() => setShowLogs(false)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              </header>
+              <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  Showing {visibleMessages.length} message{visibleMessages.length === 1 ? "" : "s"} from this session. Messages are auto-cleared after 7 days.
+                </p>
+                <div className="space-y-1 font-mono text-[11px] leading-relaxed">
+                  {visibleMessages.map((m) => {
+                    const name = m.ephemeralBot ? "BloxBot" : authors.get(m.user_id)?.display_name ?? m.user_id.slice(0, 6);
+                    const t = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                    const extra = m.attachment_type === "image" ? " [image]" : m.attachment_type === "roblox" ? ` [roblox: ${m.attachment_url}]` : "";
+                    return (
+                      <div key={m.id} className="flex gap-2 border-b border-border/40 pb-1">
+                        <span className="shrink-0 text-muted-foreground">{t}</span>
+                        <span className="shrink-0 font-semibold text-primary">{name}:</span>
+                        <span className="break-words text-foreground">{m.content}{extra}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showRobloxShare && (
+            <div className="absolute inset-0 z-40 grid place-items-center bg-background/70 backdrop-blur-sm p-4" onClick={() => setShowRobloxShare(false)}>
+              <div className="w-full max-w-sm rounded-2xl border border-border bg-surface-elevated p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-400">
+                    <Gamepad2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold">Share a Roblox game</h3>
+                    <p className="text-[11px] text-muted-foreground">Paste a roblox.com game link.</p>
+                  </div>
+                </div>
+                <label className="text-[11px] font-semibold text-muted-foreground">Game URL</label>
+                <input
+                  type="url"
+                  value={robloxUrl}
+                  onChange={(e) => setRobloxUrl(e.target.value)}
+                  placeholder="https://www.roblox.com/games/..."
+                  className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                />
+                <label className="mt-2 block text-[11px] font-semibold text-muted-foreground">Caption (optional, no links)</label>
+                <input
+                  type="text"
+                  value={robloxCaption}
+                  onChange={(e) => setRobloxCaption(e.target.value.slice(0, 200))}
+                  placeholder="Check out my game!"
+                  className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <button onClick={() => { setShowRobloxShare(false); setRobloxUrl(""); setRobloxCaption(""); }}
+                    className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs hover:bg-surface-elevated">
+                    Cancel
+                  </button>
+                  <button onClick={shareRobloxGame} disabled={sending}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                    <Send className="h-3 w-3" /> Share
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </aside>
       )}
     </>
