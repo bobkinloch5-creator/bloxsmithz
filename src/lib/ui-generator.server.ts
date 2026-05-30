@@ -194,6 +194,13 @@ type GatewayChoice = { gw: (m: string) => any; modelName: string; providerName: 
 
 function listGateways(): GatewayChoice[] {
   const out: GatewayChoice[] = [];
+  // Prefer user-supplied Gemini key first when set (cheapest + user controls quota).
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    const gw = createProvider("google", geminiKey);
+    out.push({ gw, modelName: "gemini-2.5-flash", providerName: "google" });
+    out.push({ gw, modelName: "gemini-2.5-pro", providerName: "google" });
+  }
   const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
   if (neoKey) {
     out.push({ gw: createProvider("neokens", neoKey), modelName: "gpt-5", providerName: "neokens" });
@@ -210,6 +217,7 @@ function listGateways(): GatewayChoice[] {
   }
   return out;
 }
+
 
 // ---------------- Generate ----------------
 export async function generateUISpec(opts: {
