@@ -18,6 +18,7 @@ import { ClickRipple } from "@/components/ClickRipple";
 import { GlobalChat } from "@/components/GlobalChat";
 import { MfaSessionGuard } from "@/components/MfaSessionGuard";
 import { RobloxModelExplainer } from "@/components/RobloxModelExplainer";
+import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 
 function NotFoundComponent() {
   return (
@@ -270,6 +271,7 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <MfaSessionGuard />
+          <PresenceHeartbeat />
           <BetaBanner />
           <Outlet />
           <RobloxModelExplainer />
