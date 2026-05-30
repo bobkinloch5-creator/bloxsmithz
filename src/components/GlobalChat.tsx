@@ -959,6 +959,19 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                         <img src={m.attachment_url} alt="attachment" className="max-h-60 rounded-lg border border-border object-cover" />
                       </a>
                     )}
+                    {m.attachment_url && m.attachment_type === "roblox" && (
+                      <a href={m.attachment_url} target="_blank" rel="noreferrer noopener"
+                        className="mt-1 flex items-center gap-2 rounded-lg border border-border bg-surface/60 p-2 text-xs hover:bg-surface">
+                        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-emerald-500/15 text-emerald-400">
+                          <Gamepad2 className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Roblox</div>
+                          <div className="truncate text-foreground">{m.attachment_url.replace(/^https?:\/\//, "")}</div>
+                        </div>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </a>
+                    )}
                     {grouped.size > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {Array.from(grouped.entries()).map(([emoji, g]) => (
