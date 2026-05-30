@@ -61,8 +61,17 @@ function LoginPage() {
       /* ignore MFA check failure and continue to dashboard */
     }
     toast.success("Welcome back!");
-    nav({ to: "/dashboard" });
+    let dest = "/dashboard";
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const r = sp.get("redirect");
+      if (r && r.startsWith("/") && !r.startsWith("//")) dest = r;
+    } catch {
+      /* noop */
+    }
+    nav({ to: dest as any });
   };
+
 
 
   const handleEmail = async (e: React.FormEvent) => {
