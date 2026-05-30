@@ -863,7 +863,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   );
   const canPostHere = !activeChannel || activeChannel.post_role !== "admin" || isAdmin;
   const visibleMessages = useMemo(
-    () => messages.filter((m) => m.ephemeralBot || (m.channel_id ?? "general") === (activeChannel?.slug ?? "general")),
+    () => messages.filter((m) => {
+      const slug = activeChannel?.slug ?? "general";
+      if (m.ephemeralBot) return slug === "general";
+      return (m.channel_id ?? "general") === slug;
+    }),
     [messages, activeChannel?.slug],
   );
   const messagesById = useMemo(() => new Map(visibleMessages.map((m) => [m.id, m])), [visibleMessages]);
