@@ -66,7 +66,54 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
       if (v !== undefined) patch[k] = v;
     }
     if (Object.keys(patch).length === 0) return { ok: true };
-    const { error } = await (supabase as any).from("profiles").update(patch).eq("id", userId);
-    if (error) throw new Error(error.message);
+
+    const { data: row, error } = await (supabase as any)
+      .from("profiles")
+      .update(patch)
+      .eq("id", userId)
+      .select("profile_badges, profile_decoration")
+      .single();
+
+    if (error) {
+      console.error("[updateProfileCustomization] update failed", {
+        message: error.message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        code: (error as any).code,
+        sentBadges: patch.profile_badges,
+        sentDecoration: patch.profile_decoration,
+      });
+      throw new Error(error.message);
+    }
+
+    // If badges/decoration didn't actually persist, retry them in isolation
+    // so a single bad value on another field can't silently strip them.
+    const mismatch =
+      (patch.profile_badges !== undefined &&
+        JSON.stringify(row?.profile_badges ?? []) !==
+          JSON.stringify(patch.profile_badges)) ||
+      (patch.profile_decoration !== undefined &&
+        row?.profile_decoration !== patch.profile_decoration);
+
+    if (mismatch) {
+      console.warn("[updateProfileCustomization] persistence mismatch — retrying", {
+        sentBadges: patch.profile_badges,
+        gotBadges: row?.profile_badges,
+        sentDecoration: patch.profile_decoration,
+        gotDecoration: row?.profile_decoration,
+      });
+      const fb: Record<string, unknown> = {};
+      if (patch.profile_badges !== undefined) fb.profile_badges = patch.profile_badges;
+      if (patch.profile_decoration !== undefined) fb.profile_decoration = patch.profile_decoration;
+      const { error: e2 } = await (supabase as any)
+        .from("profiles")
+        .update(fb)
+        .eq("id", userId);
+      if (e2) {
+        console.error("[updateProfileCustomization] fallback failed", e2);
+        throw new Error(e2.message);
+      }
+    }
+
     return { ok: true };
   });
