@@ -432,6 +432,22 @@ function UIGeneratorPage() {
                   </button>
                 </div>
               )}
+              {tab === "image" && result && (
+                <button
+                  onClick={generateImage}
+                  disabled={imgBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-surface-elevated disabled:opacity-60"
+                >
+                  {imgBusy ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : imgSrc ? (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  {imgBusy ? "Rendering…" : imgSrc ? "Regenerate" : "Render image"}
+                </button>
+              )}
             </div>
 
             <div className="flex-1 min-h-0 overflow-auto">
