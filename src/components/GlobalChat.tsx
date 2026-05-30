@@ -3,7 +3,7 @@ import {
   MessagesSquare, Send, X, Loader2, Trash2, Volume2, VolumeX,
   ShieldAlert, Bot, MoreVertical, Reply, Pin, PinOff, Flag,
   Image as ImageIcon, Settings2, Shield, AtSign, Users, Hash, Megaphone, LifeBuoy,
-  LogIn, LogOut, FileText, Gamepad2, ExternalLink,
+  FileText, Gamepad2, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
