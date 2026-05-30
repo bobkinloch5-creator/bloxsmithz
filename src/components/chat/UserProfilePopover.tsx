@@ -294,7 +294,7 @@ export function UserProfilePopover({
             {/* Banner + avatar */}
             <div className="relative">
               <div
-                className="h-24 w-full bg-gradient-to-br from-primary/30 via-primary/15 to-transparent"
+                className="relative h-28 w-full overflow-hidden bg-gradient-to-br from-primary/30 via-primary/15 to-transparent"
                 style={
                   profile.banner_url
                     ? { backgroundImage: `url(${profile.banner_url})`, backgroundSize: "cover", backgroundPosition: "center" }
@@ -302,34 +302,48 @@ export function UserProfilePopover({
                       ? { background: `linear-gradient(135deg, ${profile.profile_accent}55, ${profile.profile_accent}11 60%, transparent)` }
                       : undefined
                 }
-              />
-              <ProfileEffect effect={profile.profile_effect} accent={profile.profile_accent} />
+              >
+                {!profile.banner_url && <ProfileBackground id={profile.profile_background ?? "none"} />}
+                <ProfileEffect effect={profile.profile_effect} accent={profile.profile_accent} />
+              </div>
               <div className="absolute -bottom-8 left-3">
-                <div
-                  className="grid h-16 w-16 place-items-center rounded-full border-4 border-surface-elevated bg-surface"
-                  style={
-                    profile.profile_accent
-                      ? { boxShadow: `0 0 0 2px ${profile.profile_accent}, 0 0 22px ${profile.profile_accent}88` }
-                      : undefined
-                  }
-                >
-                  {profile.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-                  ) : (
-                    <span className="text-lg font-bold text-muted-foreground">{displayName.slice(0, 1).toUpperCase()}</span>
-                  )}
+                <div className="relative">
+                  <PfpRing effect={profile.pfp_effect ?? "none"} size={64}>
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                    ) : (
+                      <span className="text-lg font-bold text-muted-foreground">{displayName.slice(0, 1).toUpperCase()}</span>
+                    )}
+                  </PfpRing>
+                  {(() => {
+                    const pr = presenceFromProfile({
+                      presence_enabled: profile.presence_enabled,
+                      presence_status: profile.presence_status,
+                      last_seen_at: profile.last_seen_at,
+                    });
+                    return (
+                      <span
+                        title={pr.label}
+                        className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-surface-elevated ${pr.dot}`}
+                      />
+                    );
+                  })()}
                 </div>
               </div>
             </div>
 
             <div className="space-y-3 px-3 pb-3 pt-10">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-lg font-bold" style={profile.profile_accent ? { color: profile.profile_accent, textShadow: `0 0 14px ${profile.profile_accent}66` } : undefined}>{displayName}</h3>
+                  {profile.pronouns && <span className="text-xs text-muted-foreground">· {profile.pronouns}</span>}
                   {profile.chat_nickname && profile.display_name && (
                     <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
                   )}
                 </div>
+                {profile.status_message && (
+                  <p className="mt-0.5 text-xs text-foreground/80 italic">"{profile.status_message}"</p>
+                )}
 
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                   <span><span className="font-semibold text-foreground">{followerCount}</span> follower{followerCount === 1 ? "" : "s"}</span>
