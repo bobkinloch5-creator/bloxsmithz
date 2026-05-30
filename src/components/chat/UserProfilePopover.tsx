@@ -20,7 +20,10 @@ type Profile = {
   roblox_avatar_url: string | null;
   banner_url: string | null;
   private_profile: boolean | null;
+  profile_accent: string | null;
+  profile_effect: string | null;
 };
+
 
 type FriendStatus = "none" | "pending_out" | "pending_in" | "friends";
 
