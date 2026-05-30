@@ -13,6 +13,8 @@ import {
   CHAT_ICON_MAP, gradientTextStyle, sanitizeGradient, sanitizeIcon, sanitizeFont, chatFontStyle,
 } from "@/lib/chat-customization";
 import { EmojiPicker, QUICK_REACTIONS } from "@/components/chat/EmojiPicker";
+import { EmotePicker } from "@/components/chat/EmotePicker";
+import { EMOTE_MAP } from "@/lib/emotes";
 import { ChatSettingsPanel } from "@/components/chat/ChatSettingsPanel";
 import { ChatModerationPanel } from "@/components/chat/ChatModerationPanel";
 import { useChatPrefs, fontSizeClass, densityClass, chatBackgroundStyle } from "@/lib/chat-prefs";
@@ -61,8 +63,8 @@ function formatTime(iso: string) {
 
 // Tiny safe markdown: **bold**, *italic*, `code`, links + @mentions
 function renderRich(text: string, currentUserName: string | null, accent?: string | null) {
-  const parts: Array<{ t: "text" | "b" | "i" | "code" | "link" | "mention"; v: string; href?: string }> = [];
-  const re = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|https?:\/\/\S+|@[A-Za-z0-9_]{2,32})/g;
+  const parts: Array<{ t: "text" | "b" | "i" | "code" | "link" | "mention" | "emote"; v: string; href?: string }> = [];
+  const re = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|https?:\/\/\S+|@[A-Za-z0-9_]{2,32}|:[a-z][a-z0-9_]{1,24}:)/g;
   let last = 0; let m;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) parts.push({ t: "text", v: text.slice(last, m.index) });
@@ -71,15 +73,38 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
     else if (tok.startsWith("`")) parts.push({ t: "code", v: tok.slice(1, -1) });
     else if (tok.startsWith("*")) parts.push({ t: "i", v: tok.slice(1, -1) });
     else if (tok.startsWith("@")) parts.push({ t: "mention", v: tok });
+    else if (tok.startsWith(":") && tok.endsWith(":")) {
+      const key = tok.slice(1, -1).toLowerCase();
+      if (EMOTE_MAP[key]) parts.push({ t: "emote", v: key });
+      else parts.push({ t: "text", v: tok });
+    }
     else parts.push({ t: "link", v: tok, href: tok });
     last = m.index + tok.length;
   }
   if (last < text.length) parts.push({ t: "text", v: text.slice(last) });
+  // If the entire message is just a single emote token, render it larger.
+  const onlyEmote = parts.length === 1 && parts[0].t === "emote";
   return parts.map((p, i) => {
     if (p.t === "b") return <strong key={i}>{p.v}</strong>;
     if (p.t === "i") return <em key={i}>{p.v}</em>;
     if (p.t === "code") return <code key={i} className="rounded bg-surface px-1 py-0.5 text-[0.85em] font-mono">{p.v}</code>;
     if (p.t === "link") return <a key={i} href={p.href} target="_blank" rel="noreferrer noopener" className="underline text-primary break-all">{p.v}</a>;
+    if (p.t === "emote") {
+      const e = EMOTE_MAP[p.v];
+      return (
+        <img
+          key={i}
+          src={e.src}
+          alt={`:${e.name}:`}
+          title={`:${e.name}:`}
+          loading="lazy"
+          className={cn(
+            "inline-block align-[-0.35em] object-contain select-none",
+            onlyEmote ? "h-16 w-16" : "h-6 w-6",
+          )}
+        />
+      );
+    }
     if (p.t === "mention") {
       const mine = currentUserName && p.v.slice(1).toLowerCase() === currentUserName.toLowerCase();
       return (
@@ -95,12 +120,12 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
   });
 }
 
-export function GlobalChat() {
+export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const { user, profile, isAdmin, roles, refresh } = useAuth();
   const { prefs, update: updatePrefs } = useChatPrefs();
   const moderate = useServerFn(moderateChatMessage);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(inline);
   const [messages, setMessages] = useState<RenderMessage[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
@@ -629,7 +654,7 @@ export function GlobalChat() {
 
   return (
     <>
-      {!open && (
+      {!open && !inline && (
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -650,7 +675,12 @@ export function GlobalChat() {
         <aside
           role="dialog"
           aria-label="Global chat"
-          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]"
+          className={cn(
+            "flex flex-col overflow-hidden border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl",
+            inline
+              ? "relative h-[min(80dvh,820px)] w-full rounded-2xl border"
+              : "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] rounded-2xl border md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]",
+          )}
           style={{
             ...(chatBackgroundStyle(prefs) ?? {}),
             ...(accent ? ({ ["--chat-accent" as any]: accent } as React.CSSProperties) : {}),
@@ -691,10 +721,12 @@ export function GlobalChat() {
                   <Shield className="h-4 w-4" />
                 </button>
               )}
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close chat"
-                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
+              {!inline && (
+                <button type="button" onClick={() => setOpen(false)} aria-label="Close chat"
+                  className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </header>
 
@@ -894,6 +926,7 @@ export function GlobalChat() {
                 <ImageIcon className="h-4 w-4" />
               </button>
               <EmojiPicker onPick={(em) => { setDraft((d) => d + em); inputRef.current?.focus(); }} />
+              <EmotePicker onPick={(tok) => { setDraft((d) => d + (d && !d.endsWith(" ") ? " " : "") + tok + " "); inputRef.current?.focus(); }} />
               <textarea
                 ref={inputRef}
                 value={draft}
