@@ -441,6 +441,35 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
+  // Realtime: incoming DMs → toast + unread badge
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel(realtimeTopic("bloxsmith-dms"))
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "direct_messages", filter: `recipient_id=eq.${user.id}` },
+        async (payload) => {
+          const row = payload.new as { sender_id: string; content: string };
+          if (!row?.sender_id) return;
+          await loadAuthors([row.sender_id]);
+          const a = authorsRef.current.get(row.sender_id);
+          const who = a?.display_name ?? "Someone";
+          // Only badge/toast if not actively viewing that DM
+          if (!(view === "friends" && activeDmRef.current === row.sender_id)) {
+            setDmUnread((n) => n + 1);
+            toast.info(`💬 ${who} sent you a DM`, {
+              description: row.content.slice(0, 140),
+              action: { label: "Open", onClick: () => { setOpen(true); setView("friends"); setActiveDm(row.sender_id); setDmUnread(0); } },
+            });
+            if (prefsRef.current.sound_enabled) playPing();
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id, loadAuthors]);
+
   // Prune stale typing entries
   useEffect(() => {
     const t = setInterval(() => {
