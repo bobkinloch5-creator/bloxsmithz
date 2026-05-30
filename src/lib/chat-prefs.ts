@@ -2,7 +2,23 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
-export type ChatBgStyle = "default" | "solid" | "gradient" | "mesh" | "dots" | "grid" | "aurora" | "stripes";
+export type ChatBgStyle =
+  | "default"
+  | "solid"
+  | "gradient"
+  | "mesh"
+  | "dots"
+  | "grid"
+  | "aurora"
+  | "stripes"
+  // animated / premium
+  | "aurora-anim"
+  | "stars"
+  | "matrix"
+  | "roblox-studio"
+  | "neon-city"
+  | "lava"
+  | "custom-image";
 
 export type ChatPrefs = {
   font_size: "sm" | "md" | "lg";
@@ -17,6 +33,7 @@ export type ChatPrefs = {
   bg_color: string;
   bg_color2: string;
   bg_opacity: number; // 0..1
+  bg_image_url: string | null; // for "custom-image"
 };
 
 export const DEFAULT_PREFS: ChatPrefs = {
@@ -31,6 +48,7 @@ export const DEFAULT_PREFS: ChatPrefs = {
   bg_color: "#0b1220",
   bg_color2: "#1e1b4b",
   bg_opacity: 0.98,
+  bg_image_url: null,
 };
 
 const LS_KEY = "bloxsmith.chatprefs.v1";
