@@ -43,9 +43,9 @@ const changelogItems = [
   {
     version: "v3.4.0",
     date: "May 30, 2026",
-    title: "UI Generator Reliability, Builder Polish & Chat Rules",
+    title: "UI Generator Reliability, Builder Polish & AI Replica Fixes",
     description:
-      "The Roblox UI Generator is faster, more reliable, and much better-looking. Generations now fall back to complete Roblox ScreenGui specs instead of empty output, the page has a cleaner builder workspace, generated templates now use more premium styling, and Global Chat now clearly explains community rules and consequences.",
+      "The Roblox UI Generator is faster, more reliable, and much better-looking. Generations now fall back to complete Roblox ScreenGui specs instead of empty output, the page has a cleaner builder workspace, generated templates now use more premium styling, Global Chat now explains rules and consequences, and image-based building replicas are more reliable.",
     updates: [
       {
         category: "Tools",
@@ -94,6 +94,14 @@ const changelogItems = [
         title: "Global Chat Rules Panel",
         detail:
           "Global Chat now has a dedicated rules panel and /rules command covering respect, spam, scams, unsafe links, privacy, staff directions, and what happens when rules are broken.",
+      },
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "Building Replica Reliability",
+        detail:
+          "Image-based building replica prompts now route through stronger vision handling, get longer generation time, and fall back to a complete Roblox-scale building model instead of an empty folder.",
       },
       {
         category: "Tools",

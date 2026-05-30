@@ -1096,10 +1096,17 @@ function ProjectEditor() {
     stopRequested.current = false;
     const controller = new AbortController();
     aiAbortRef.current = controller;
+    const imgs = opts?.images ?? [];
     // Watchdog: if the server call never resolves, don't let the input stay
     // locked forever (which makes every later prompt silently do nothing
-    // because of the `if (aiBusy) return` guard). Abort + unlock after 90s.
+    // because of the `if (aiBusy) return` guard). Image/replica builds get
+    // longer because they need vision analysis and richer Studio actions.
     let watchdogFired = false;
+    const heavyVisionBuild =
+      imgs.length > 0 ||
+      /\b(replica|replicate|recreate|1\s*:?\s*1|one[-\s]?to[-\s]?one|attached image|reference image|full game|entire game)\b/i.test(
+        userPrompt,
+      );
     const watchdog = setTimeout(() => {
       watchdogFired = true;
       try {
@@ -1107,8 +1114,7 @@ function ProjectEditor() {
       } catch {
         /* noop */
       }
-    }, 90_000);
-    const imgs = opts?.images ?? [];
+    }, heavyVisionBuild ? 150_000 : 90_000);
     if (!opts?.skipUserBubble) {
       const bubble = imgs.length
         ? `${userPrompt}\n\n_📎 attached ${imgs.length} image${imgs.length === 1 ? "" : "s"}_`
@@ -2656,7 +2662,10 @@ function ProjectEditor() {
                         type="button"
                         onClick={() => {
                           if (tpl === "1:1 building replica") {
-                            setPrompt("Generate a detailed 1-to-1 building replica matching my attached image.");
+                            setPrompt(
+                              "Generate a detailed 1-to-1 Roblox building replica from my attached image. Match the architecture, roof, colors, materials, windows, doors, trim, scale, and visible details. Build it as a complete Model under Workspace/Map/Buildings with ground, spawn, lighting, and many anchored parts.",
+                            );
+                            setThinking(true);
                             fileInputRef.current?.click();
                           } else {
                             setPrompt(tpl);

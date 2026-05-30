@@ -16,6 +16,11 @@
 - Updated `/rules` to open the rules panel and explain what happens after rule breaks.
 - Clarified moderation consequences including blocked/removed messages, warnings, timeouts/mutes, and account restrictions for serious abuse.
 
+### AI Building Replicas
+- Improved image-based 1-to-1 building replica prompts so they use stronger vision routing and a longer client wait window.
+- Added a complete Roblox-scale building replica fallback with floors, facade, roof, windows, trim, balcony, lights, spawn, and ground instead of an empty folder.
+- Broadened build intent and asset-tool detection so visual build requests get richer actions more consistently.
+
 ### Profile Fixes
 - Fixed profile settings not saving correctly.
 - Added a stronger fallback save system for display name, bio, and studio specialty.

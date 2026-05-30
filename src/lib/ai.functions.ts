@@ -62,7 +62,15 @@ function extractBuildJson(raw: string): { message?: string; files?: any[]; actio
 
 // Is this prompt clearly asking to build/edit something (vs a pure question)?
 function isBuildIntent(prompt: string): boolean {
-  return /\b(make|add|create|build|generate|spawn|insert|give me|need|want|put|place|design|set up|setup)\b/i.test(
+  return /\b(make|add|create|build|generate|spawn|insert|give me|need|want|put|place|design|set up|setup|recreate|replicate|replica|clone|copy|match|remake)\b/i.test(
+    prompt,
+  );
+}
+
+function isBuildingReplicaPrompt(prompt: string): boolean {
+  return /\b(1\s*:?\s*1|one[-\s]?to[-\s]?one|replica|replicate|recreate|clone|copy|match|reference|from (the )?(image|picture|photo)|attached image)\b[\s\S]{0,120}\b(building|house|home|tower|castle|temple|facade|structure|mansion|shop|store|base)\b/i.test(
+    prompt,
+  ) || /\b(building|house|home|tower|castle|temple|facade|structure|mansion|shop|store|base)\b[\s\S]{0,120}\b(1\s*:?\s*1|one[-\s]?to[-\s]?one|replica|replicate|recreate|clone|copy|match|reference|from (the )?(image|picture|photo)|attached image)\b/i.test(
     prompt,
   );
 }
@@ -76,6 +84,10 @@ function getBuildFallback(
 ): { message: string; files: GenFile[]; actions: GenAction[] } | null {
   if (!isBuildIntent(prompt)) return null;
   const p = prompt.toLowerCase();
+
+  if (isBuildingReplicaPrompt(prompt)) {
+    return getBuildingReplicaFallback(prompt);
+  }
 
   const screenGui = (name: string) => ({
     type: "create",
@@ -174,6 +186,203 @@ end
         properties: {},
       },
     ],
+  };
+}
+
+function getBuildingReplicaFallback(
+  prompt: string,
+): { message: string; files: GenFile[]; actions: GenAction[] } {
+  const actions: GenAction[] = [];
+  const v3 = (x: number, y: number, z: number) => ({ __t: "Vector3", x, y, z });
+  const color = (r: number, g: number, b: number) => ({ __t: "Color3", r, g, b });
+  const mat = (m: string) => ({ __t: "Enum", enum: "Material", value: m });
+  const cframe = (x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) => ({
+    __t: "CFrame",
+    x,
+    y,
+    z,
+    rx,
+    ry,
+    rz,
+  });
+
+  const medieval = /\b(castle|stone|medieval|tower|fort)\b/i.test(prompt);
+  const modern = /\b(modern|glass|city|office|skyscraper|store)\b/i.test(prompt);
+  const wallMaterial = medieval ? "Slate" : modern ? "Concrete" : "Brick";
+  const wallColor = medieval ? color(115, 118, 122) : modern ? color(205, 210, 215) : color(166, 92, 65);
+  const trimColor = medieval ? color(74, 75, 78) : modern ? color(36, 43, 54) : color(235, 220, 188);
+  const roofColor = medieval ? color(70, 70, 76) : modern ? color(32, 35, 44) : color(95, 42, 38);
+
+  actions.push({ type: "create", className: "Folder", name: "Map", parent: "Workspace", properties: {} });
+  actions.push({ type: "create", className: "Folder", name: "Buildings", parent: "Workspace/Map", properties: {} });
+  actions.push({
+    type: "create",
+    className: "Part",
+    name: "ReplicaGround",
+    parent: "Workspace/Map",
+    properties: {
+      Size: v3(160, 1, 120),
+      Position: v3(0, -0.5, 0),
+      Anchored: true,
+      Material: mat("Grass"),
+      Color: color(76, 120, 68),
+    },
+  });
+  actions.push({
+    type: "create",
+    className: "SpawnLocation",
+    name: "ReplicaSpawn",
+    parent: "Workspace/Map",
+    properties: {
+      Size: v3(10, 1, 10),
+      Position: v3(0, 1, 46),
+      Anchored: true,
+      Neutral: true,
+      Material: mat("Metal"),
+      Color: color(90, 170, 255),
+    },
+  });
+
+  actions.push({
+    type: "create",
+    className: "Model",
+    name: "ReferenceBuildingReplica",
+    parent: "Workspace/Map/Buildings",
+    properties: {},
+  });
+
+  const parent = "Workspace/Map/Buildings/ReferenceBuildingReplica";
+  const part = (name: string, size: any, pos: any, material: string, col: any, extra: Record<string, any> = {}) =>
+    actions.push({
+      type: "create",
+      className: "Part",
+      name,
+      parent,
+      properties: {
+        Size: size,
+        Position: pos,
+        Anchored: true,
+        Material: mat(material),
+        Color: col,
+        TopSurface: { __t: "Enum", enum: "SurfaceType", value: "Smooth" },
+        BottomSurface: { __t: "Enum", enum: "SurfaceType", value: "Smooth" },
+        ...extra,
+      },
+    });
+
+  part("Foundation", v3(54, 2, 38), v3(0, 1, 0), "Concrete", color(86, 86, 88));
+  part("FirstFloorCore", v3(50, 12, 34), v3(0, 8, 0), wallMaterial, wallColor);
+  part("SecondFloorCore", v3(44, 12, 30), v3(0, 20, -1), wallMaterial, wallColor);
+  part("FrontEntryProjection", v3(16, 16, 5), v3(0, 12, 19.5), wallMaterial, wallColor);
+  part("BackDepthBlock", v3(34, 9, 10), v3(0, 8.5, -21), wallMaterial, wallColor);
+  part("LeftWing", v3(14, 10, 24), v3(-34, 7, -2), wallMaterial, wallColor);
+  part("RightWing", v3(14, 10, 24), v3(34, 7, -2), wallMaterial, wallColor);
+
+  part("FrontDoor", v3(6, 8, 0.5), v3(0, 5, 22.25), "Wood", color(93, 52, 30));
+  part("DoorFrameTop", v3(8, 1, 0.6), v3(0, 9.4, 22.4), "Wood", trimColor);
+  part("DoorFrameLeft", v3(0.7, 9, 0.6), v3(-4.2, 5.3, 22.4), "Wood", trimColor);
+  part("DoorFrameRight", v3(0.7, 9, 0.6), v3(4.2, 5.3, 22.4), "Wood", trimColor);
+  part("DoorHandle", v3(0.45, 0.45, 0.45), v3(2.2, 5.3, 22.75), "Metal", color(245, 190, 80), {
+    Shape: { __t: "Enum", enum: "PartType", value: "Ball" },
+  });
+
+  const windowXs = [-18, -9, 9, 18];
+  for (const x of windowXs) {
+    for (const y of [8, 20]) {
+      part(`WindowGlass_${x}_${y}`, v3(5, 5, 0.35), v3(x, y, 17.25), "Glass", color(135, 210, 255), {
+        Transparency: 0.35,
+        Reflectance: 0.12,
+      });
+      part(`WindowTrimTop_${x}_${y}`, v3(6, 0.45, 0.45), v3(x, y + 2.75, 17.5), "Wood", trimColor);
+      part(`WindowTrimBottom_${x}_${y}`, v3(6, 0.45, 0.45), v3(x, y - 2.75, 17.5), "Wood", trimColor);
+      part(`WindowTrimLeft_${x}_${y}`, v3(0.45, 6, 0.45), v3(x - 2.75, y, 17.5), "Wood", trimColor);
+      part(`WindowTrimRight_${x}_${y}`, v3(0.45, 6, 0.45), v3(x + 2.75, y, 17.5), "Wood", trimColor);
+    }
+  }
+
+  for (const x of [-25, 25]) {
+    part(`Column_${x}_A`, v3(2.2, 16, 2.2), v3(x, 9, 20), "Marble", trimColor, {
+      Shape: { __t: "Enum", enum: "PartType", value: "Cylinder" },
+    });
+    part(`Column_${x}_B`, v3(2.2, 16, 2.2), v3(x * 0.72, 9, 21), "Marble", trimColor, {
+      Shape: { __t: "Enum", enum: "PartType", value: "Cylinder" },
+    });
+  }
+
+  part("BalconySlab", v3(20, 1, 6), v3(0, 15, 23.5), "Concrete", trimColor);
+  part("BalconyRailFront", v3(21, 2, 0.5), v3(0, 17, 26.5), "Metal", trimColor);
+  for (let x = -9; x <= 9; x += 3) part(`BalconyPost_${x}`, v3(0.45, 3, 0.45), v3(x, 16.5, 26.5), "Metal", trimColor);
+
+  actions.push({
+    type: "create",
+    className: "WedgePart",
+    name: "MainRoofLeftSlope",
+    parent,
+    properties: {
+      Size: v3(56, 10, 21),
+      CFrame: cframe(-14, 30, -1, 0, 0, 180),
+      Anchored: true,
+      Material: mat("Slate"),
+      Color: roofColor,
+    },
+  });
+  actions.push({
+    type: "create",
+    className: "WedgePart",
+    name: "MainRoofRightSlope",
+    parent,
+    properties: {
+      Size: v3(56, 10, 21),
+      CFrame: cframe(14, 30, -1, 0, 180, 180),
+      Anchored: true,
+      Material: mat("Slate"),
+      Color: roofColor,
+    },
+  });
+  part("RoofRidge", v3(58, 1, 2), v3(0, 35, -1), "Metal", trimColor);
+  part("EntryRoof", v3(19, 2, 8), v3(0, 22.5, 21.5), "Slate", roofColor);
+
+  for (const x of [-18, 18]) {
+    actions.push({
+      type: "create",
+      className: "Part",
+      name: `Sconce_${x}`,
+      parent,
+      properties: {
+        Size: v3(1, 1, 0.6),
+        Position: v3(x, 12, 22.4),
+        Anchored: true,
+        Material: mat("Neon"),
+        Color: color(255, 210, 120),
+      },
+      children: [
+        {
+          className: "PointLight",
+          name: "WarmGlow",
+          properties: { Brightness: 2, Range: 16, Color: color(255, 210, 140) },
+        },
+      ],
+    });
+  }
+
+  part("PathToReplica", v3(12, 0.35, 42), v3(0, 0.25, 42), "Slate", color(88, 88, 94));
+  actions.push({
+    type: "lighting",
+    properties: {
+      ClockTime: 17.2,
+      Brightness: 2.4,
+      Ambient: color(80, 82, 92),
+      OutdoorAmbient: color(130, 128, 122),
+      ShadowSoftness: 0.35,
+    },
+  });
+  actions.push({ type: "select", path: "Workspace.Map.Buildings.ReferenceBuildingReplica" });
+
+  return {
+    message:
+      "Queued a complete Roblox-scale building replica fallback under Workspace/Map/Buildings/ReferenceBuildingReplica with floors, facade, roof slopes, glass windows, trim, balcony, lights, ground, path, and spawn. If the image model times out, this still gives Studio a real detailed structure instead of an empty folder.",
+    files: [],
+    actions,
   };
 }
 
@@ -473,7 +682,7 @@ function pickGenerationTools(
     add("fetch_url");
   }
   if (
-    /\b(toolbox|creator store|free model|asset|model id|insert model|use a model|marketplace|skybox|music|sound|decal|image id|thumbnail|icon|logo|banner|loading screen)\b/i.test(
+    /\b(toolbox|creator store|free model|asset|model id|insert model|use a model|marketplace|skybox|music|sound|decal|image id|thumbnail|icon|logo|banner|loading screen|map|world|city|town|village|lobby|arena|castle|tower|building|house|shop|weapon|sword|npc|enemy|vehicle|pet|tree|forest|props?)\b/i.test(
       lower,
     )
   ) {
@@ -530,7 +739,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
 
     const { generateText, Output, stepCountIs } = await import("ai");
     const { SYSTEM_PROMPT, SLIM_SYSTEM_PROMPT } = await import("./ai-gateway.server");
-    const { getModelProfile, resolveAiGateway, createProvider } = await import(
+    const { getModelProfile, resolveAiGateway, createProvider, resolveBuiltInGateway } = await import(
       "./ai-providers.server"
     );
     const { NEOKENS_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
@@ -543,8 +752,12 @@ export const generateWithAI = createServerFn({ method: "POST" })
     // tier even in generate mode. Big/complex asks keep the deeper model.
     const promptLen = prompt.trim().length;
     const complexKeywords =
-      /(system|datastore|leaderboard|tycoon|simulator|obby|admin|gamepass|multiple|all|whole|full game|entire|refactor|rewrite|architecture)/i;
-    const isComplex = mode === "generate" && (promptLen > 400 || complexKeywords.test(prompt));
+      /(system|datastore|leaderboard|tycoon|simulator|obby|admin|gamepass|multiple|all|whole|full game|entire|refactor|rewrite|architecture|replica|replicate|recreate|reference image|attached image|building|house|tower|castle|facade|structure)/i;
+    const wantsReplica = isBuildingReplicaPrompt(prompt);
+    const isVisionBuild = !!imageDataUrl && mode === "generate";
+    const isComplex =
+      mode === "generate" &&
+      (promptLen > 400 || complexKeywords.test(prompt) || wantsReplica || isVisionBuild);
     const routingKind: "build" | "fast" = mode === "generate" && isComplex ? "build" : "fast";
 
     let resolved;
@@ -578,11 +791,34 @@ export const generateWithAI = createServerFn({ method: "POST" })
     }
     cost = totalCost;
 
-    const model = resolved.model;
-    const profile = getModelProfile(resolved.provider, resolved.modelName, {
+    let profile = getModelProfile(resolved.provider, resolved.modelName, {
       thinking,
       heavyBuild: isComplex,
     });
+
+    if (imageDataUrl && !profile.supportsVision) {
+      try {
+        const visionResolved = resolveBuiltInGateway({ kind: "build", thinking: true });
+        const visionProfile = getModelProfile(visionResolved.provider, visionResolved.modelName, {
+          thinking: true,
+          heavyBuild: true,
+        });
+        if (visionProfile.supportsVision) {
+          console.warn(
+            `[generateWithAI] selected model ${resolved.modelName} does not support vision; routing image build to ${visionResolved.modelName}.`,
+          );
+          resolved = visionResolved;
+          profile = visionProfile;
+        }
+      } catch (e) {
+        console.warn(
+          "[generateWithAI] no vision fallback available:",
+          e instanceof Error ? e.message : e,
+        );
+      }
+    }
+
+    const model = resolved.model;
 
     // The full SYSTEM_PROMPT is very large. Small/fast models (e.g.
     // gemini-3-flash, haiku) have a tight input budget — pairing the full
@@ -679,9 +915,13 @@ export const generateWithAI = createServerFn({ method: "POST" })
     let recovered = false;
     let fullPrompt = "";
     let timeoutMs = 16_000;
+    const replicaInstruction = wantsReplica
+      ? `\n\nREFERENCE BUILDING REPLICA MODE:\n- A reference image may be attached. Analyze the visible architecture before emitting actions: silhouette, floor count, roof shape, facade colors, materials, windows, door placement, trim, stairs, balconies, pillars, signs, lights, and landscaping.\n- Return a complete Roblox-scale Model under Workspace/Map/Buildings/<DescriptiveName>, not a single block and not an empty folder.\n- Minimum action quality: create Workspace/Map and Workspace/Map/Buildings, one Model, ground/spawn/path, 20+ anchored visible Part/WedgePart/MeshPart details, glass windows, door, trim, roof, and a select action on the Model.\n- Prefer procedural parts for the reference structure so it resembles the image; only use toolbox assets for supporting props/landscaping.\n- If some image details are unclear, infer a polished matching building and say what you inferred in the message.\n`
+      : "";
     try {
       fullPrompt = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${studioErrorBlock ? `${studioErrorBlock}\n\n` : ""}${liveBlock}\n\nFULL PROJECT FILE MAP (${(allFiles ?? []).length} files - every file your project has, by location):\n${projectMap || "  (no files yet)"}\n\nRelevant project files (with content preview):\n${filesBlock || "(none indexed)"}\n\nUser request:\n${prompt}\n\nRules:\n- You have FULL AWARENESS of the project above. Reference real files by path. NEVER duplicate something that already exists - MODIFY it.\n- Use PROJECT MEMORY for durable preferences, naming, genre, and recent context. If memory conflicts with live files or the user's latest request, obey the latest request and live project state.
 - Organize new files into clean subfolders by feature (e.g. ServerScriptService/Combat/HitService, ReplicatedStorage/Modules/Config, StarterPlayerScripts/UI/Hud). Do NOT dump everything at the root of a service.\n- Place server Scripts in ServerScriptService, LocalScripts in StarterPlayerScripts or StarterGui, GUIs in StarterGui, RemoteEvents/RemoteFunctions in ReplicatedStorage/Remotes, ModuleScripts in ReplicatedStorage/Modules (shared) or ServerStorage/Modules (server-only), Tools in StarterPack, physical/world objects in Workspace.\n- For ground/landscape requests (grass, sand, snow, water, hills, islands), use real Roblox Terrain via the \`terrainFill\` action. NEVER spawn hundreds of thin Parts.\n- Do NOT claim success - phrase as "Queued for Studio...".\n- If the request is a casual question (no code changes), reply naturally in 'message' with empty 'files' and 'actions'.\n- Use tools (web_search, roblox_asset_*, fetch_url) ONLY when you genuinely need fresh info - every tool call slows you down.\n\nReturn the JSON object as specified.`;
+      fullPrompt += replicaInstruction;
       const { generateTextWithToolFallback } = await import("./ai-retry.server");
       const builtInTools = pickGenerationTools(
         prompt,
@@ -713,7 +953,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
         {
           model,
           system: activeSystemPrompt,
-          ...(imageDataUrl
+          ...(imageDataUrl && profile.supportsVision
             ? {
                 messages: [
                   {
@@ -725,7 +965,13 @@ export const generateWithAI = createServerFn({ method: "POST" })
                   },
                 ],
               }
-            : { prompt: fullPrompt }),
+            : {
+                prompt:
+                  fullPrompt +
+                  (imageDataUrl
+                    ? "\n\nNOTE: An image was attached, but the selected provider could not accept image input. Build a polished inferred replica from the user's text and mention that exact image vision was unavailable."
+                    : ""),
+              }),
           ...(Object.keys(tools).length > 0
             ? {
                 tools: tools as any,
@@ -798,7 +1044,19 @@ export const generateWithAI = createServerFn({ method: "POST" })
               {
                 model: fallbackModel(NEOKENS_SAFE_FALLBACK_MODEL),
                 system: SLIM_SYSTEM_PROMPT,
-                prompt: fullPrompt,
+                ...(imageDataUrl
+                  ? {
+                      messages: [
+                        {
+                          role: "user",
+                          content: [
+                            { type: "text", text: fullPrompt },
+                            { type: "image", image: imageDataUrl },
+                          ],
+                        },
+                      ],
+                    }
+                  : { prompt: fullPrompt }),
                 maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 8000 : 4500),
                 maxRetries: 0,
                 timeout: { totalMs: 35_000, stepMs: 35_000, chunkMs: 20_000 },
