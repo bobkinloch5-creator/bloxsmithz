@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RequireAuth } from "@/components/RequireAuth";
 import { Header, Footer } from "@/components/layout";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,7 +9,7 @@ import { useState } from "react";
 import { getTrendingShowcase } from "@/lib/showcase.functions";
 
 export const Route = createFileRoute("/showcase")({
-  component: ShowcasePage,
+  component: () => (<RequireAuth><ShowcasePage /></RequireAuth>),
   head: () => ({
     meta: [
       { title: "Showcase — Community Roblox Projects Built with BloxSmith" },

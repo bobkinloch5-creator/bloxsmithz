@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequireAuth } from "@/components/RequireAuth";
 import { useState, useRef, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -9,7 +10,7 @@ import { Shirt, Upload, Sparkles, Download, ImageIcon, Loader2, X, Box } from "l
 import { ClothingPreview3D } from "@/components/ClothingPreview3D";
 
 export const Route = createFileRoute("/clothing")({
-  component: ClothingStudio,
+  component: () => (<RequireAuth><ClothingStudio /></RequireAuth>),
   head: () => ({
     meta: [
       { title: "AI Roblox Clothing Generator — Make Shirts & Pants | BloxSmith" },

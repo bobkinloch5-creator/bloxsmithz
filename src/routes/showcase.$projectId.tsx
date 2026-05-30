@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { RequireAuth } from "@/components/RequireAuth";
 import { Header, Footer } from "@/components/layout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -9,7 +10,7 @@ import { Heart, GitFork, Sparkles, Loader2, ArrowLeft, Share2 } from "lucide-rea
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/showcase/$projectId")({
-  component: ShowcaseDetail,
+  component: () => (<RequireAuth><ShowcaseDetail /></RequireAuth>),
   head: () => ({
     meta: [
       { title: "Roblox Project Showcase Details | BloxSmith" },

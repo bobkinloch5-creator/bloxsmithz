@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { RequireAuth } from "@/components/RequireAuth";
 import { Header } from "@/components/layout";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
@@ -12,7 +13,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 
 export const Route = createFileRoute("/ideas")({
-  component: IdeasPage,
+  component: () => (<RequireAuth><IdeasPage /></RequireAuth>),
   head: () => ({
     meta: [
       { title: "Game Idea Generator — BloxSmith" },

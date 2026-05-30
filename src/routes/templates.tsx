@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { RequireAuth } from "@/components/RequireAuth";
 import { Header } from "@/components/layout";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -9,7 +10,7 @@ import { toast } from "sonner";
 import { useState, useMemo } from "react";
 
 export const Route = createFileRoute("/templates")({
-  component: TemplatesPage,
+  component: () => (<RequireAuth><TemplatesPage /></RequireAuth>),
   head: () => ({
     meta: [
       { title: "Template Store — BloxSmith" },
