@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Header, Footer } from "@/components/layout";
 import { CREDIT_PACKS } from "@/lib/credits";
+import { CreditCostBreakdown } from "@/components/CreditCostBreakdown";
 
 export const Route = createFileRoute("/pricing")({
   component: Pricing,
@@ -136,6 +137,10 @@ function Pricing() {
           >
             Buy custom
           </Link>
+        </div>
+
+        <div className="mt-10">
+          <CreditCostBreakdown />
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
