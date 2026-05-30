@@ -7,10 +7,14 @@ import { CLOTHING_KNOWLEDGE_PROMPT } from "./roblox-clothing";
 //   "messages.N: property 'reasoning_content' is unsupported"
 // The Vercel AI SDK echoes prior assistant turns back verbatim during
 // multi-step tool calling, so we strip the field on every outbound request.
-const sanitizingFetch: typeof fetch = async (input, init) => {
+// We also convert max_tokens to max_completion_tokens for reasoning/gpt-5 models
+// since they reject max_tokens and throw errors.
+export const sanitizingFetch: typeof fetch = async (input, init) => {
   if (init?.body && typeof init.body === "string") {
     try {
       const parsed = JSON.parse(init.body);
+      
+      // Clean messages
       if (Array.isArray(parsed?.messages)) {
         parsed.messages = parsed.messages.map((m: any) => {
           if (!m || typeof m !== "object") return m;
@@ -18,8 +22,23 @@ const sanitizingFetch: typeof fetch = async (input, init) => {
           const { reasoning_content, reasoning, ...rest } = m;
           return rest;
         });
-        init = { ...init, body: JSON.stringify(parsed) };
       }
+
+      // Convert max_tokens to max_completion_tokens for reasoning / gpt-5 / o-series models
+      const modelName = String(parsed?.model || "").toLowerCase();
+      const needsCompletionTokens =
+        modelName.startsWith("o1") ||
+        modelName.startsWith("o3") ||
+        modelName.includes("gpt-5") ||
+        modelName.includes("thinking") ||
+        parsed?.thinking === true;
+
+      if (needsCompletionTokens && typeof parsed.max_tokens === "number") {
+        parsed.max_completion_tokens = parsed.max_tokens;
+        delete parsed.max_tokens;
+      }
+
+      init = { ...init, body: JSON.stringify(parsed) };
     } catch {
       // not JSON — leave body untouched
     }

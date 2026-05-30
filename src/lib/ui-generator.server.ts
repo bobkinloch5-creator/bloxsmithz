@@ -7,6 +7,7 @@ import { createProvider } from "@/lib/ai-providers.server";
 import {
   createGroqProvider,
   BLOXSMITH_THINK_MODEL,
+  sanitizingFetch,
 } from "@/lib/ai-gateway.server";
 
 function createLovableProvider(apiKey: string) {
@@ -17,6 +18,7 @@ function createLovableProvider(apiKey: string) {
       "Lovable-API-Key": apiKey,
       "X-Lovable-AIG-SDK": "vercel-ai-sdk",
     },
+    fetch: sanitizingFetch,
   });
 }
 

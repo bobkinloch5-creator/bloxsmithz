@@ -6,6 +6,7 @@ import {
   BLOXSMITH_FAST_MODEL,
   BLOXSMITH_LARGE_MODEL,
   createGroqProvider,
+  sanitizingFetch,
 } from "./ai-gateway.server";
 import { SITE_PROVIDER_DEFAULT_MODEL, SITE_PROVIDER_MODELS } from "./ai-models";
 
@@ -204,7 +205,8 @@ const NEOKENS_MODEL_BY_KIND: Record<ModelKind, string> = {
   large: "gemini-3.1-pro",
 };
 
-const sanitizingFetch: typeof fetch = async (input, init) => {
+/*
+const oldSanitizingFetch: typeof fetch = async (input, init) => {
   if (init?.body && typeof init.body === "string") {
     try {
       const parsed = JSON.parse(init.body);
@@ -222,6 +224,7 @@ const sanitizingFetch: typeof fetch = async (input, init) => {
   }
   return fetch(input as any, init);
 };
+*/
 
 function providerEndpoint(provider: ProviderId): { name: string; baseURL: string } {
   switch (provider) {

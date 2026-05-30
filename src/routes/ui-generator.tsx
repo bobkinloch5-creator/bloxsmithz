@@ -451,7 +451,9 @@ function UIGeneratorPage() {
             </div>
 
             <div className="flex-1 min-h-0 overflow-auto">
-              {!result ? (
+              {busy ? (
+                <UILoadingScreen styleName={style} categoryName={category} />
+              ) : !result ? (
                 <div className="h-full min-h-[480px] flex flex-col items-center justify-center text-center px-8 rounded-xl border border-dashed border-border/60 bg-background/30">
                   <div className="relative mb-4">
                     <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
@@ -555,5 +557,105 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
         />
       </div>
     </label>
+  );
+}
+
+interface UILoadingScreenProps {
+  styleName: string;
+  categoryName: string;
+}
+
+function UILoadingScreen({ styleName, categoryName }: UILoadingScreenProps) {
+  const [progress, setProgress] = useState(0);
+  const [statusIdx, setStatusIdx] = useState(0);
+
+  const statuses = [
+    "Contacting AI model proxy...",
+    `Initializing Roblox GUI structure for '${categoryName}'...`,
+    `Applying '${styleName}' theme variables and color palettes...`,
+    "Constructing element positioning tree (UDim2 frames)...",
+    "Composing Roblox stroke borders, gradients, and rounded corners...",
+    "Generating Luau LocalScript controller for button events...",
+    "Synthesizing ServerScript and registering RemoteEvents...",
+    "Validating complete ScreenGui schema output...",
+    "Polishing layout constraints...",
+  ];
+
+  const totalDuration = 18000;
+  const updateInterval = 100;
+
+  useEffect(() => {
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const computedProgress = Math.min(96, Math.floor((elapsed / totalDuration) * 100));
+      setProgress(computedProgress);
+
+      const newIdx = Math.min(
+        statuses.length - 1,
+        Math.floor((computedProgress / 100) * statuses.length)
+      );
+      setStatusIdx(newIdx);
+    }, updateInterval);
+
+    return () => clearInterval(timer);
+  }, [categoryName, styleName]);
+
+  const secondsLeft = Math.max(1, Math.ceil(((100 - progress) * totalDuration) / 100000));
+
+  return (
+    <div className="h-full min-h-[480px] flex flex-col items-center justify-center p-8 rounded-xl border border-border/80 bg-background/50 backdrop-blur relative overflow-hidden">
+      {/* Background glow effects */}
+      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse" />
+
+      {/* Main Glass Panel */}
+      <div className="relative z-10 flex flex-col items-center text-center max-w-md w-full space-y-6">
+        {/* Animated Visual Loader */}
+        <div className="relative">
+          {/* Outer rotating ring */}
+          <div className="w-24 h-24 rounded-full border-4 border-dashed border-primary/30 animate-[spin_10s_linear_infinite]" />
+
+          {/* Inner pulsing & rotating ring */}
+          <div className="absolute inset-2 rounded-full border-4 border-t-primary border-r-transparent border-b-accent border-l-transparent animate-spin" />
+
+          {/* Center glowing orb */}
+          <div className="absolute inset-5 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary),0.5)]">
+            <Sparkles className="w-6 h-6 text-white animate-pulse" />
+          </div>
+
+          {/* Floating diagnostic sparkles */}
+          <div className="absolute -top-1 -left-1 w-3 h-3 bg-primary rounded-full animate-ping" />
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-accent rounded-full animate-ping" style={{ animationDelay: "0.5s" }} />
+        </div>
+
+        {/* Text Details */}
+        <div className="space-y-2">
+          <h3 className="text-lg font-bold text-foreground tracking-tight">Generating Roblox UI</h3>
+          <p className="text-xs text-muted-foreground bg-surface-elevated/40 border border-border/40 px-3 py-1.5 rounded-full inline-block font-mono animate-pulse">
+            {statuses[statusIdx]}
+          </p>
+        </div>
+
+        {/* Custom Progress Bar */}
+        <div className="w-full space-y-2">
+          <div className="flex items-center justify-between text-xs font-mono text-muted-foreground">
+            <span>Progress: {progress}%</span>
+            <span>ETA: ~{secondsLeft}s</span>
+          </div>
+          <div className="h-2 w-full bg-surface rounded-full overflow-hidden border border-border/40">
+            <div
+              className="h-full bg-gradient-to-r from-primary via-accent to-primary rounded-full transition-all duration-100 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Subtitle/Details */}
+        <p className="text-[11px] text-muted-foreground/80 max-w-xs">
+          BloxSmith is building and styling a <strong>{styleName}</strong> themed <strong>{categoryName}</strong>. Once complete, it will render in the preview frame below.
+        </p>
+      </div>
+    </div>
   );
 }
