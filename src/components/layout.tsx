@@ -255,7 +255,7 @@ export function Header() {
                 >
                   <ProfileAvatar src={avatarUrl} fallback={fallbackAvatar} />
                   <span className="hidden 2xl:inline min-w-0 max-w-[7rem] truncate">
-                    {profile?.display_name || profile?.email?.split("@")[0]}
+                    {profile?.display_name || "Builder"}
                   </span>
                   <ChevronDown
                     className={`h-3 w-3 shrink-0 text-muted-foreground transition ${profileOpen ? "rotate-180" : ""}`}
