@@ -908,6 +908,15 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               </div>
             </div>
             <div className="flex items-center gap-0.5">
+              <button type="button" onClick={() => { setView("friends"); setDmUnread(0); }} aria-label="Friends & DMs"
+                className="relative grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
+                <UserPlus className="h-4 w-4" />
+                {dmUnread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                    {dmUnread > 9 ? "9+" : dmUnread}
+                  </span>
+                )}
+              </button>
               <button type="button" onClick={() => setShowLogs(true)} aria-label="Chat logs"
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
                 <FileText className="h-4 w-4" />
