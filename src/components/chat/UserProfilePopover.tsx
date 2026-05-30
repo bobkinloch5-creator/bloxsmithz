@@ -221,6 +221,9 @@ export function UserProfilePopover({
                     <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
                   )}
                 </div>
+                <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span><span className="font-semibold text-foreground">{followerCount}</span> follower{followerCount === 1 ? "" : "s"}</span>
+                </div>
                 {profile.bio && <p className="mt-1 text-xs text-muted-foreground">{profile.bio}</p>}
               </div>
 
