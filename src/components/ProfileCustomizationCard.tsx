@@ -80,6 +80,7 @@ export function ProfileCustomizationCard() {
       show_activity: q.show_activity !== false,
       presence_status: q.presence_status ?? s.presence_status,
       profile_badges: Array.isArray(q.profile_badges) ? q.profile_badges : s.profile_badges,
+      profile_decoration: q.profile_decoration ?? s.profile_decoration,
     }));
   }, [profile]);
 
