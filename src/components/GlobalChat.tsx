@@ -184,7 +184,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   // Hydrate authors
   const loadAuthors = useCallback(async (ids: string[]) => {
-    const need = ids.filter((id) => id && !authors.has(id));
+    const current = authorsRef.current;
+    const need = ids.filter((id) => id && !current.has(id));
     if (!need.length) return;
     const [{ data: profs }, { data: rs }, { data: badges }] = await Promise.all([
       supabase.from("profiles").select(
@@ -223,7 +224,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       });
       return next;
     });
-  }, [authors]);
+  }, []);
 
   // Initial fetch
   useEffect(() => {
