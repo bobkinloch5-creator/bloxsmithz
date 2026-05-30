@@ -59,7 +59,7 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
       if (v !== undefined) patch[k] = v;
     }
     if (Object.keys(patch).length === 0) return { ok: true };
-    const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+    const { error } = await (supabase as any).from("profiles").update(patch).eq("id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
