@@ -3,8 +3,10 @@ import {
   MessagesSquare, Send, X, Loader2, Trash2, Volume2, VolumeX,
   ShieldAlert, Bot, MoreVertical, Reply, Pin, PinOff, Flag,
   Image as ImageIcon, Settings2, Shield, AtSign, Users, Hash, Megaphone, LifeBuoy,
-  FileText, Gamepad2, ExternalLink, UserPlus,
+  FileText, Gamepad2, ExternalLink, UserPlus, Languages,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { translateChatMessage } from "@/lib/chat-translate.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { RoleBadges, type Role } from "@/components/RoleBadge";
