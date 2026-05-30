@@ -135,6 +135,41 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const moderate = useServerFn(moderateChatMessage);
 
   const [open, setOpen] = useState(inline);
+  const [size, setSize] = useState<{ w: number; h: number }>(() => {
+    if (typeof window === "undefined") return { w: 480, h: 720 };
+    try {
+      const raw = localStorage.getItem("globalChat:size");
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (typeof p?.w === "number" && typeof p?.h === "number") return p;
+      }
+    } catch {}
+    return { w: 480, h: 720 };
+  });
+  useEffect(() => {
+    try { localStorage.setItem("globalChat:size", JSON.stringify(size)); } catch {}
+  }, [size]);
+  const startResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = size.w;
+    const startH = size.h;
+    const onMove = (ev: PointerEvent) => {
+      const maxW = Math.max(360, window.innerWidth - 40);
+      const maxH = Math.max(420, window.innerHeight - 60);
+      // Anchored bottom-left: drag right grows width, drag up grows height
+      const nextW = Math.min(maxW, Math.max(360, startW + (ev.clientX - startX)));
+      const nextH = Math.min(maxH, Math.max(420, startH - (ev.clientY - startY)));
+      setSize({ w: nextW, h: nextH });
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, [size.w, size.h]);
   const [messages, setMessages] = useState<RenderMessage[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
