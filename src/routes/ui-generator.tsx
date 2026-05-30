@@ -63,7 +63,7 @@ function UIGeneratorPage() {
   const [bg, setBg] = useState("#0f172a");
 
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<"preview" | "luau" | "spec">("preview");
+  const [tab, setTab] = useState<"preview" | "image" | "luau" | "spec">("preview");
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [result, setResult] = useState<{
     id: string | null;
@@ -71,6 +71,13 @@ function UIGeneratorPage() {
     actions: any[];
     files: any[];
   } | null>(null);
+
+  // Image preview state
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [imgFinal, setImgFinal] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState<string | null>(null);
+  const imgAbortRef = useRef<AbortController | null>(null);
 
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [projectId, setProjectId] = useState<string>("");
