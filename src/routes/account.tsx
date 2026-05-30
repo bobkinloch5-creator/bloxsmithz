@@ -31,6 +31,7 @@ import { PromoteAndEarn } from "@/components/PromoteAndEarn";
 import { AccountSecurity } from "@/components/AccountSecurity";
 import { ProfileMediaSettings } from "@/components/ProfileMediaSettings";
 import { RobloxAccountLink } from "@/components/RobloxAccountLink";
+import { ChatStyleCard } from "@/components/ChatStyleCard";
 import { RoleBadges } from "@/components/RoleBadge";
 import { formatCreditBalance } from "@/lib/credit-display";
 import {
