@@ -190,6 +190,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [robloxCaption, setRobloxCaption] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
+  const [chatBubbles, setChatBubbles] = useState<{ id: string; userId: string; name: string; color: string | null; avatar: string | null; content: string }[]>([]);
   const [typingUsers, setTypingUsers] = useState<Map<string, number>>(new Map());
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<{ id: string; reason: string | null }[]>([]);
