@@ -112,6 +112,14 @@ function SignupPage() {
     if (res.error) toast.error(res.error.message ?? "Sign up failed");
   };
 
+  const handleApple = async () => {
+    const res = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin + "/auth/callback",
+    });
+    if (res.error) toast.error(res.error.message ?? "Sign up failed");
+  };
+
+
   return (
     <div className="min-h-screen grid place-items-center px-4">
       <div className="w-full max-w-md glass-strong rounded-2xl p-8">
