@@ -190,18 +190,25 @@ LUAU RULES
 DO NOT include markdown, prose, or explanations — JSON only.`;
 
 // ---------------- AI gateway pick (mirrors help-chat) ----------------
-function pickGateway() {
+type GatewayChoice = { gw: (m: string) => any; modelName: string; providerName: string };
+
+function listGateways(): GatewayChoice[] {
+  const out: GatewayChoice[] = [];
   const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
   if (neoKey) {
-    const gw = createProvider("neokens", neoKey);
-    return { gw, modelName: "gpt-5", providerName: "neokens" as const };
+    out.push({ gw: createProvider("neokens", neoKey), modelName: "gpt-5", providerName: "neokens" });
   }
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
-    const gw = createGroqProvider(groqKey);
-    return { gw, modelName: BLOXSMITH_THINK_MODEL, providerName: "groq" as const };
+    out.push({ gw: createGroqProvider(groqKey), modelName: BLOXSMITH_THINK_MODEL, providerName: "groq" });
   }
-  return null;
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  if (lovableKey) {
+    const gw = createLovableProvider(lovableKey);
+    out.push({ gw, modelName: "google/gemini-3-flash-preview", providerName: "lovable" });
+    out.push({ gw, modelName: "openai/gpt-5-mini", providerName: "lovable" });
+  }
+  return out;
 }
 
 // ---------------- Generate ----------------
@@ -214,8 +221,8 @@ export async function generateUISpec(opts: {
   bgColor?: { r: number; g: number; b: number };
   title?: string;
 }): Promise<UISpec> {
-  const gateway = pickGateway();
-  if (!gateway) throw new Error("AI provider not configured. Contact support.");
+  const gateways = listGateways();
+  if (gateways.length === 0) throw new Error("AI provider not configured. Contact support.");
 
   const styleHint = STYLE_HINTS[opts.style];
   const palette = [
@@ -234,18 +241,27 @@ ${opts.prompt}
 
 Produce a polished, fully populated UISpec for this Roblox UI. Include working LocalScript and (where it makes sense) a ServerScript with RemoteEvents for purchase/reward validation. Be specific and complete.`;
 
-  const { output } = await generateText({
-    model: gateway.gw(gateway.modelName) as any,
-    system: UI_SYSTEM_PROMPT,
-    prompt: userPrompt,
-    output: Output.object({ schema: UISpecSchema as any }),
-    maxOutputTokens: 6000,
-    temperature: 0.6,
-    maxRetries: 1,
-    abortSignal: AbortSignal.timeout(90_000),
-  });
-
-  return UISpecSchema.parse(output);
+  let lastErr: any = null;
+  for (const gateway of gateways) {
+    try {
+      const { output } = await generateText({
+        model: gateway.gw(gateway.modelName) as any,
+        system: UI_SYSTEM_PROMPT,
+        prompt: userPrompt,
+        output: Output.object({ schema: UISpecSchema as any }),
+        maxOutputTokens: 6000,
+        temperature: 0.6,
+        maxRetries: 1,
+        abortSignal: AbortSignal.timeout(90_000),
+      });
+      return UISpecSchema.parse(output);
+    } catch (err: any) {
+      lastErr = err;
+      console.warn(`[ui-gen] ${gateway.providerName}/${gateway.modelName} failed:`, err?.message || err);
+      continue;
+    }
+  }
+  throw new Error(lastErr?.message || "UI generation failed across all providers.");
 }
 
 // ---------------- Spec -> plugin actions + files ----------------
