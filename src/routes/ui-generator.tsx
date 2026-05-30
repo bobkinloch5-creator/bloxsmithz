@@ -137,6 +137,9 @@ function UIGeneratorPage() {
         },
       });
       setResult({ id: res.id, spec: res.spec, actions: res.actions, files: res.files });
+      setImgSrc(null);
+      setImgFinal(false);
+      setImgError(null);
       setTab("preview");
       toast.success(`UI generated — charged ${res.creditsCharged} credits.`);
       refreshLibrary();
