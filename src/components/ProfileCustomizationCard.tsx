@@ -401,6 +401,46 @@ export function ProfileCustomizationCard() {
         </div>
       </Section>
 
+      {/* BADGES */}
+      <Section icon={<Award className="h-4 w-4" />} title={`Badges (${state.profile_badges.length}/12)`}>
+        <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+          Pick up to 12 badges to show off on your profile. Click to toggle.
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          {PROFILE_BADGES.map((b) => {
+            const active = state.profile_badges.includes(b.id);
+            const atLimit = !active && state.profile_badges.length >= 12;
+            return (
+              <button
+                key={b.id}
+                type="button"
+                disabled={atLimit}
+                onClick={() =>
+                  setState((s) => ({
+                    ...s,
+                    profile_badges: active
+                      ? s.profile_badges.filter((x) => x !== b.id)
+                      : [...s.profile_badges, b.id],
+                  }))
+                }
+                className={`group flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition disabled:opacity-40 ${
+                  active
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/60 bg-background/40 hover:border-border"
+                }`}
+                title={b.description}
+              >
+                <ProfileBadgeIcon id={b.id} size={30} />
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">{b.label}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{b.description}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
       {/* PRIVACY + PRESENCE */}
       <Section icon={<Lock className="h-4 w-4" />} title="Privacy & Presence">
         <div className="grid gap-3 sm:grid-cols-2">
