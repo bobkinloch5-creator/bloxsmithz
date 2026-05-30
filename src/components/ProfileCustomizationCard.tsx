@@ -143,7 +143,7 @@ export function ProfileCustomizationCard() {
       {/* LIVE PREVIEW */}
       <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-background/40">
         <div className="relative h-40 w-full overflow-hidden">
-          <ProfileBackground id={state.profile_background} />
+          <ProfileBackground id={state.profile_background} customUrl={state.custom_background_url} />
           <ProfileEffect effect={state.profile_effect} accent={state.profile_accent} />
           {state.profile_background === "none" && (
             <div
