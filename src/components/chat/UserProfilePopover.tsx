@@ -35,6 +35,7 @@ type Profile = {
   last_seen_at: string | null;
   show_activity: boolean | null;
   current_activity: any;
+  profile_badges: string[] | null;
 };
 
 
