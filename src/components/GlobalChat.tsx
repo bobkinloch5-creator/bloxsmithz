@@ -16,6 +16,12 @@ import { useAuth } from "@/lib/auth-context";
 import { RoleBadges, type Role } from "@/components/RoleBadge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  CHAT_ICON_MAP,
+  gradientTextStyle,
+  sanitizeGradient,
+  sanitizeIcon,
+} from "@/lib/chat-customization";
 
 type DbMessage = {
   id: string;
@@ -29,6 +35,9 @@ type Author = {
   display_name: string | null;
   avatar_url: string | null;
   roles: Role[];
+  chat_name_gradient: string[] | null;
+  chat_text_gradient: string[] | null;
+  chat_icon: string | null;
 };
 
 type RenderMessage = DbMessage & { ephemeralBot?: boolean };
@@ -74,7 +83,12 @@ export function GlobalChat() {
     const need = ids.filter((id) => id && !authors.has(id));
     if (!need.length) return;
     const [{ data: profs }, { data: rs }] = await Promise.all([
-      supabase.from("profiles").select("id,display_name,avatar_url").in("id", need),
+      supabase
+        .from("profiles")
+        .select(
+          "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon",
+        )
+        .in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
     ]);
     const rolesByUser = new Map<string, Role[]>();
@@ -90,6 +104,9 @@ export function GlobalChat() {
           display_name: p.display_name,
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
+          chat_name_gradient: sanitizeGradient(p.chat_name_gradient),
+          chat_text_gradient: sanitizeGradient(p.chat_text_gradient),
+          chat_icon: sanitizeIcon(p.chat_icon),
         });
       });
       return next;
@@ -418,7 +435,25 @@ export function GlobalChat() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-xs font-semibold">{name}</span>
+                      {!isBot && author?.chat_icon && CHAT_ICON_MAP[author.chat_icon] ? (
+                        (() => {
+                          const Ico = CHAT_ICON_MAP[author.chat_icon!];
+                          const stops = author.chat_name_gradient;
+                          return (
+                            <Ico
+                              className="h-3.5 w-3.5 shrink-0"
+                              style={stops?.length ? { color: stops[0] } : undefined}
+                              aria-hidden
+                            />
+                          );
+                        })()
+                      ) : null}
+                      <span
+                        className="truncate text-xs font-semibold"
+                        style={!isBot ? gradientTextStyle(author?.chat_name_gradient) : undefined}
+                      >
+                        {name}
+                      </span>
                       {isBot ? (
                         <span className="rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
                           BOT
@@ -441,7 +476,10 @@ export function GlobalChat() {
                         />
                       )}
                     </div>
-                    <div className="mt-0.5 break-words text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                    <div
+                      className="mt-0.5 break-words text-sm leading-relaxed whitespace-pre-wrap text-foreground"
+                      style={!isBot ? gradientTextStyle(author?.chat_text_gradient) : undefined}
+                    >
                       {m.content}
                     </div>
                   </div>

@@ -31,6 +31,7 @@ import { PromoteAndEarn } from "@/components/PromoteAndEarn";
 import { AccountSecurity } from "@/components/AccountSecurity";
 import { ProfileMediaSettings } from "@/components/ProfileMediaSettings";
 import { RobloxAccountLink } from "@/components/RobloxAccountLink";
+import { ChatStyleCard } from "@/components/ChatStyleCard";
 import { RoleBadges } from "@/components/RoleBadge";
 import { formatCreditBalance } from "@/lib/credit-display";
 import {
@@ -743,6 +744,11 @@ function Account() {
                 </button>
               </div>
             </section>
+
+            {/* Chat style customization */}
+            <ChatStyleCard />
+
+
 
             {/* Plugin token manager */}
             <section className="rounded-2xl border border-border/50 bg-surface/20 p-6 space-y-4">
