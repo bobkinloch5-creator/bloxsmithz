@@ -58,6 +58,13 @@ type RenderMessage = DbMessage & { ephemeralBot?: boolean };
 
 const OPEN_KEY = "bloxsmith.globalchat.open";
 
+function realtimeTopic(prefix: string) {
+  const id = typeof globalThis.crypto?.randomUUID === "function"
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${id}`;
+}
+
 function formatTime(iso: string) {
   try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
   catch { return ""; }
@@ -262,7 +269,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   // Realtime: messages + reactions + settings + presence + typing
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel(`global_chat_v2_${user.id}_${Math.random().toString(36).slice(2)}`, { config: { presence: { key: user.id } } })
+    const channel = supabase.channel(realtimeTopic("bloxsmith-chat"), { config: { presence: { key: user.id } } })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chat_messages" }, async (payload) => {
         const row = payload.new as DbMessage;
         if (row.deleted_at) return;
@@ -358,7 +365,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   useEffect(() => {
     if (!user) return;
     const ch = supabase
-      .channel(`achievement_unlocks_${user.id}_${Math.random().toString(36).slice(2)}`)
+      .channel(realtimeTopic("bloxsmith-achievements"))
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "user_achievements" },
