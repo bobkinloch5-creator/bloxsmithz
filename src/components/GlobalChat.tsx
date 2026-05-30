@@ -10,7 +10,7 @@ import { RoleBadges, type Role } from "@/components/RoleBadge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
-  CHAT_ICON_MAP, gradientTextStyle, sanitizeGradient, sanitizeIcon,
+  CHAT_ICON_MAP, gradientTextStyle, sanitizeGradient, sanitizeIcon, sanitizeFont, chatFontStyle,
 } from "@/lib/chat-customization";
 import { EmojiPicker, QUICK_REACTIONS } from "@/components/chat/EmojiPicker";
 import { ChatSettingsPanel } from "@/components/chat/ChatSettingsPanel";
@@ -40,6 +40,8 @@ type Author = {
   chat_name_gradient: string[] | null;
   chat_text_gradient: string[] | null;
   chat_icon: string | null;
+  chat_nickname: string | null;
+  chat_font: string | null;
 };
 
 type Reaction = { id: string; message_id: string; user_id: string; emoji: string };
@@ -136,7 +138,7 @@ export function GlobalChat() {
     if (!need.length) return;
     const [{ data: profs }, { data: rs }, { data: badges }] = await Promise.all([
       supabase.from("profiles").select(
-        "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon",
+        "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
       ).in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
       (supabase as any).from("user_badges").select("user_id,badge").in("user_id", need),
@@ -156,14 +158,17 @@ export function GlobalChat() {
     setAuthors((prev) => {
       const next = new Map(prev);
       (profs ?? []).forEach((p: any) => {
+        const nick = typeof p.chat_nickname === "string" && p.chat_nickname.trim() ? p.chat_nickname.trim() : null;
         next.set(p.id, {
-          display_name: p.display_name,
+          display_name: nick ?? p.display_name,
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
           badges: badgesByUser.get(p.id) ?? [],
           chat_name_gradient: sanitizeGradient(p.chat_name_gradient),
           chat_text_gradient: sanitizeGradient(p.chat_text_gradient),
           chat_icon: sanitizeIcon(p.chat_icon),
+          chat_nickname: nick,
+          chat_font: sanitizeFont(p.chat_font),
         });
       });
       return next;
