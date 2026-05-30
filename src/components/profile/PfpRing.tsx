@@ -73,7 +73,13 @@ export function PfpRing({
   className?: string;
 }) {
   const id = (effect ?? "none") as PfpEffectId;
-  if (id === "none") return <div className={className}>{children}</div>;
+  if (id === "none") {
+    return (
+      <div className={`grid place-items-center rounded-full ${className}`} style={{ width: size, height: size }}>
+        {children}
+      </div>
+    );
+  }
   const style = RING_STYLE[id];
   return (
     <div

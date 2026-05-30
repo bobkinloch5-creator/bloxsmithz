@@ -27,6 +27,11 @@ import { ChannelSidebar, type Channel } from "@/components/chat/ChannelSidebar";
 import { FriendsPanel } from "@/components/chat/FriendsPanel";
 import { UserProfilePopover } from "@/components/chat/UserProfilePopover";
 import bloxbotAvatar from "@/assets/bloxbot-avatar.png";
+import { ProfileEffect } from "@/components/chat/ProfileEffect";
+import { PfpRing } from "@/components/profile/PfpRing";
+import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
+import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
+import { presenceFromProfile } from "@/lib/presence";
 
 type DbMessage = {
   id: string;
@@ -47,6 +52,15 @@ type Author = {
   avatar_url: string | null;
   roles: Role[];
   badges: string[];
+  profile_badges: string[];
+  profile_accent: string | null;
+  profile_effect: string | null;
+  profile_background: string | null;
+  pfp_effect: string | null;
+  profile_decoration: string | null;
+  presence_enabled: boolean | null;
+  presence_status: string | null;
+  last_seen_at: string | null;
   chat_name_gradient: string[] | null;
   chat_text_gradient: string[] | null;
   chat_icon: string | null;
@@ -246,6 +260,36 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   useEffect(() => { openRef.current = open; }, [open]);
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
+  const mergeAuthorProfile = useCallback((p: any) => {
+    if (!p?.id) return;
+    setAuthors((prev) => {
+      const existing = prev.get(p.id);
+      if (!existing) return prev;
+      const nick = typeof p.chat_nickname === "string" && p.chat_nickname.trim() ? p.chat_nickname.trim() : null;
+      const next = new Map(prev);
+      next.set(p.id, {
+        ...existing,
+        display_name: nick ?? p.display_name ?? existing.display_name,
+        avatar_url: p.avatar_url ?? existing.avatar_url,
+        profile_badges: Array.isArray(p.profile_badges) ? p.profile_badges : existing.profile_badges,
+        profile_accent: typeof p.profile_accent === "string" ? p.profile_accent : existing.profile_accent,
+        profile_effect: typeof p.profile_effect === "string" ? p.profile_effect : existing.profile_effect,
+        profile_background: typeof p.profile_background === "string" ? p.profile_background : existing.profile_background,
+        pfp_effect: typeof p.pfp_effect === "string" ? p.pfp_effect : existing.pfp_effect,
+        profile_decoration: typeof p.profile_decoration === "string" ? p.profile_decoration : existing.profile_decoration,
+        presence_enabled: p.presence_enabled ?? existing.presence_enabled,
+        presence_status: typeof p.presence_status === "string" ? p.presence_status : existing.presence_status,
+        last_seen_at: typeof p.last_seen_at === "string" ? p.last_seen_at : existing.last_seen_at,
+        chat_name_gradient: sanitizeGradient(p.chat_name_gradient) ?? existing.chat_name_gradient,
+        chat_text_gradient: sanitizeGradient(p.chat_text_gradient) ?? existing.chat_text_gradient,
+        chat_icon: sanitizeIcon(p.chat_icon) ?? existing.chat_icon,
+        chat_nickname: nick ?? existing.chat_nickname,
+        chat_font: sanitizeFont(p.chat_font) ?? existing.chat_font,
+      });
+      return next;
+    });
+  }, []);
+
   // Open state
   useEffect(() => {
     if (inline) { setOpen(true); return; }
@@ -264,7 +308,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     if (!need.length) return;
     const [{ data: profs }, { data: rs }, { data: badges }] = await Promise.all([
       supabase.from("profiles").select(
-        "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
+        "id,display_name,avatar_url,profile_badges,profile_accent,profile_effect,profile_background,pfp_effect,profile_decoration,presence_enabled,presence_status,last_seen_at,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
       ).in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
       (supabase as any).from("user_badges").select("user_id,badge").in("user_id", need),
@@ -290,6 +334,15 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
           badges: badgesByUser.get(p.id) ?? [],
+          profile_badges: Array.isArray(p.profile_badges) ? p.profile_badges : [],
+          profile_accent: typeof p.profile_accent === "string" ? p.profile_accent : null,
+          profile_effect: typeof p.profile_effect === "string" ? p.profile_effect : null,
+          profile_background: typeof p.profile_background === "string" ? p.profile_background : null,
+          pfp_effect: typeof p.pfp_effect === "string" ? p.pfp_effect : null,
+          profile_decoration: typeof p.profile_decoration === "string" ? p.profile_decoration : null,
+          presence_enabled: p.presence_enabled ?? null,
+          presence_status: typeof p.presence_status === "string" ? p.presence_status : null,
+          last_seen_at: typeof p.last_seen_at === "string" ? p.last_seen_at : null,
           chat_name_gradient: sanitizeGradient(p.chat_name_gradient),
           chat_text_gradient: sanitizeGradient(p.chat_text_gradient),
           chat_icon: sanitizeIcon(p.chat_icon),
@@ -300,6 +353,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    if (profile && user?.id) mergeAuthorProfile({ ...(profile as any), id: user.id });
+  }, [profile, user?.id, mergeAuthorProfile]);
 
   // Initial fetch
   useEffect(() => {
@@ -397,6 +454,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "global_chat_settings" }, (payload) => {
         setSlow(((payload.new as any).slow_mode_seconds as number) ?? 0);
       })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
+        mergeAuthorProfile(payload.new as any);
+      })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chat_reactions" }, (payload) => {
         setReactions((prev) => [...prev, payload.new as Reaction]);
       })
@@ -462,7 +522,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     });
     presenceChanRef.current = channel;
     return () => { supabase.removeChannel(channel); presenceChanRef.current = null; };
-  }, [user?.id, loadAuthors]);
+  }, [user?.id, loadAuthors, mergeAuthorProfile]);
 
   // Realtime: achievement unlocks → pop into global chat for everyone
   useEffect(() => {
@@ -1206,19 +1266,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               }
               return (
                 <div key={m.id} className="group flex gap-2">
-                  <button
-                    type="button"
+                  <ChatAvatar
+                    isBot={!!isBot}
+                    author={author ?? null}
+                    name={name}
                     onClick={() => !isBot && setProfileUid(m.user_id)}
-                    disabled={isBot}
-                    className={cn(
-                      "grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-bold transition",
-                      isBot ? "bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40 cursor-default" : "bg-surface text-muted-foreground hover:ring-2 hover:ring-primary/40",
-                    )}
-                  >
-                    {isBot ? <img src={bloxbotAvatar} alt="BloxBot" className="h-8 w-8 rounded-full object-cover" />
-                      : author?.avatar_url ? <img src={author.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
-                      : name.slice(0, 1).toUpperCase()}
-                  </button>
+                  />
                   <div className="min-w-0 flex-1">
                     {replyTarget && (
                       <div className="mb-1 flex items-center gap-1 rounded-md border-l-2 border-primary/50 bg-surface/40 px-2 py-0.5 text-[11px] text-muted-foreground">
@@ -1248,6 +1301,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                       {isBot ? (
                         <span className="rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">BOT</span>
                       ) : (author && <RoleBadges roles={author.roles} size="sm" showLabel={false} />)}
+                      {!isBot && author?.profile_badges?.length ? (
+                        <ProfileBadgeRow ids={author.profile_badges} size={16} max={4} className="shrink-0" />
+                      ) : null}
                       <span className="text-[10px] text-muted-foreground">{formatTime(m.created_at)}</span>
                       {m.pinned_at && <Pin className="h-2.5 w-2.5 text-primary" />}
                       {isBot && <span className="text-[10px] text-muted-foreground">· only you see this</span>}
@@ -1525,6 +1581,59 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 }
 
 function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+function ChatAvatar({
+  isBot,
+  author,
+  name,
+  onClick,
+}: {
+  isBot: boolean;
+  author: Author | null;
+  name: string;
+  onClick: () => void;
+}) {
+  if (isBot) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="grid h-9 w-9 shrink-0 cursor-default place-items-center rounded-full bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40"
+      >
+        <img src={bloxbotAvatar} alt="BloxBot" className="h-9 w-9 rounded-full object-cover" />
+      </button>
+    );
+  }
+
+  const pr = presenceFromProfile({
+    presence_enabled: author?.presence_enabled,
+    presence_status: author?.presence_status,
+    last_seen_at: author?.last_seen_at,
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative h-10 w-10 shrink-0 overflow-visible text-[11px] font-bold text-muted-foreground transition hover:scale-105"
+      title={name}
+    >
+      <span className="absolute inset-0 overflow-hidden rounded-full opacity-80">
+        <ProfileEffect effect={author?.profile_effect} accent={author?.profile_accent} />
+      </span>
+      <AvatarDecoration id={author?.profile_decoration} size={40}>
+        <PfpRing effect={author?.pfp_effect ?? "none"} size={34} className="relative z-10">
+          {author?.avatar_url ? (
+            <img src={author.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+          ) : (
+            <span>{name.slice(0, 1).toUpperCase()}</span>
+          )}
+        </PfpRing>
+      </AvatarDecoration>
+      <span className={`absolute bottom-0 right-0 z-20 h-3 w-3 rounded-full border-2 border-surface-elevated ${pr.dot}`} title={pr.label} />
+    </button>
+  );
+}
 
 function MsgActions({
   isAdmin, isSelf, pinned,
