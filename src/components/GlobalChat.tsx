@@ -797,11 +797,37 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             </div>
           )}
 
+          {visibleChannels.length > 0 && (
+            <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-background/40 px-2 py-1.5">
+              {visibleChannels.map((c) => {
+                const Ico = c.icon === "megaphone" ? Megaphone : c.icon === "life-buoy" ? LifeBuoy : c.icon === "shield" ? Shield : Hash;
+                const active = (activeChannel?.slug ?? "general") === c.slug;
+                return (
+                  <button
+                    key={c.slug}
+                    type="button"
+                    onClick={() => setCurrentChannel(c.slug)}
+                    title={c.description ?? c.name}
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition",
+                      active
+                        ? "border-primary/60 bg-primary/15 text-primary"
+                        : "border-border bg-surface/40 text-muted-foreground hover:bg-surface hover:text-foreground",
+                    )}
+                  >
+                    <Ico className="h-3 w-3" />
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <div ref={scrollRef} className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain px-3", densityClass(prefs.density))}>
-            {messages.length === 0 && (
-              <p className="text-xs text-muted-foreground">No messages yet — say hi!</p>
+            {visibleMessages.length === 0 && (
+              <p className="text-xs text-muted-foreground">No messages in #{activeChannel?.name ?? "general"} yet — say hi!</p>
             )}
-            {messages.map((m) => {
+            {visibleMessages.map((m) => {
               const isMe = m.user_id === user.id;
               const isBot = m.ephemeralBot;
               const author = !isBot ? authors.get(m.user_id) : null;
