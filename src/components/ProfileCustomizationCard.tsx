@@ -353,6 +353,40 @@ export function ProfileCustomizationCard() {
         </div>
       </Section>
 
+      {/* AVATAR DECORATION */}
+      <Section icon={<Sparkles className="h-4 w-4" />} title="Avatar decoration">
+        <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+          Add a hat, halo, wings, or other overlay around your avatar.
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          {PROFILE_DECORATIONS.map((d) => {
+            const active = state.profile_decoration === d.id;
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => set("profile_decoration", d.id)}
+                className={`flex flex-col items-center justify-end gap-1 rounded-xl border px-2 pb-2 pt-5 transition ${
+                  active
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/60 bg-background/40 hover:border-border"
+                }`}
+                title={d.label}
+              >
+                <div className="h-12 grid place-items-center">
+                  <AvatarDecoration id={d.id} size={36}>
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 grid place-items-center text-[10px] text-muted-foreground">
+                      {initial}
+                    </div>
+                  </AvatarDecoration>
+                </div>
+                <span className="text-[10px] text-muted-foreground">{d.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
       {/* ACCENT + ANIMATED EFFECT */}
       <Section icon={<Wand2 className="h-4 w-4" />} title="Accent + animated effect">
         <div className="flex flex-wrap items-center gap-2 mb-3">
