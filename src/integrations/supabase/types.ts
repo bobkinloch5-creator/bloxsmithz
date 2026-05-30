@@ -2167,15 +2167,26 @@ export type Database = {
       }
       send_friend_request: { Args: { _target: string }; Returns: string }
       send_global_chat_message: { Args: { _content: string }; Returns: string }
-      send_global_chat_message_v2: {
-        Args: {
-          _attachment_type?: string
-          _attachment_url?: string
-          _content: string
-          _reply_to_id?: string
-        }
-        Returns: string
-      }
+      send_global_chat_message_v2:
+        | {
+            Args: {
+              _attachment_type?: string
+              _attachment_url?: string
+              _content: string
+              _reply_to_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _attachment_type?: string
+              _attachment_url?: string
+              _channel_id?: string
+              _content: string
+              _reply_to_id?: string
+            }
+            Returns: string
+          }
       spend_credits_atomic: { Args: { _amount: number }; Returns: number }
     }
     Enums: {
