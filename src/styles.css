@@ -1295,3 +1295,26 @@ summary:active {
   pointer-events: none; animation: none; opacity: 0; }
   button:active, a:active, [role="button"]:active { transform: none; }
 }
+
+/* Profile effects */
+@keyframes pe-aurora {
+  0% { transform: translate3d(0,0,0) scale(1); filter: hue-rotate(0deg); }
+  100% { transform: translate3d(0,-6%,0) scale(1.05); filter: hue-rotate(40deg); }
+}
+@keyframes pe-neon {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
+@keyframes pe-holo {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+@keyframes pe-twinkle {
+  0%, 100% { transform: scale(0.6); opacity: 0.2; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+@keyframes pe-fall {
+  0% { transform: translateY(-20%) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(120%) rotate(360deg); opacity: 0; }
+}
