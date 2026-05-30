@@ -175,7 +175,7 @@ export function GlobalChat() {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes] = await Promise.all([
+      const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes] = await Promise.all([
         supabase.from("global_chat_messages")
           .select("id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged")
           .is("deleted_at", null).order("created_at", { ascending: true }).limit(100),
@@ -184,6 +184,7 @@ export function GlobalChat() {
         (supabase as any).from("global_chat_reactions").select("id,message_id,user_id,emoji").limit(500),
         (supabase as any).from("global_chat_blocked_words").select("word"),
         (supabase as any).from("global_chat_warnings").select("id,reason").eq("user_id", user.id).is("acknowledged_at", null),
+        (supabase as any).from("user_chat_local_mutes").select("muted_user_id").eq("user_id", user.id),
       ]);
       if (cancelled) return;
       const rows = (msgRes.data ?? []) as DbMessage[];
@@ -194,6 +195,7 @@ export function GlobalChat() {
       setReactions((reactRes.data ?? []) as Reaction[]);
       setBlockedWords(((wordsRes.data ?? []) as any[]).map((w) => String(w.word).toLowerCase()));
       setWarnings((warnRes.data ?? []) as any);
+      setLocalMuted(new Set(((localMuteRes.data ?? []) as any[]).map((r) => String(r.muted_user_id))));
       await loadAuthors(Array.from(new Set(rows.map((r) => r.user_id))));
     })();
     return () => { cancelled = true; };
