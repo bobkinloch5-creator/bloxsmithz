@@ -105,6 +105,63 @@ export async function generateImageFromPrompt(opts: {
     console.warn(`[image-gen] ComfyUI failed (${comfy.reason}) — falling back to cloud provider`);
   }
 
+  // 2. Lovable AI Gateway (no per-user key needed — uses LOVABLE_API_KEY auto-provisioned by Lovable).
+  //    This is the default cloud path so the feature works out-of-the-box.
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  if (lovableKey) {
+    try {
+      const content: Array<Record<string, unknown>> = [{ type: "text", text: fullPrompt }];
+      if (opts.referenceImageBase64) {
+        content.push({
+          type: "image_url",
+          image_url: {
+            url: `data:${opts.referenceMime || "image/png"};base64,${opts.referenceImageBase64}`,
+          },
+        });
+      }
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${lovableKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content }],
+          modalities: ["image", "text"],
+        }),
+        signal: AbortSignal.timeout(90_000),
+      });
+      if (r.ok) {
+        const j: any = await r.json();
+        const images = j?.choices?.[0]?.message?.images ?? [];
+        const dataUrl = images[0]?.image_url?.url || images[0]?.url;
+        if (dataUrl && dataUrl.startsWith("data:")) {
+          const comma = dataUrl.indexOf(",");
+          const mime = dataUrl.slice(5, dataUrl.indexOf(";"));
+          const base64 = dataUrl.slice(comma + 1);
+          return await saveImage(
+            opts.userId,
+            Buffer.from(base64, "base64"),
+            mime || "image/png",
+            opts.altText ?? opts.prompt,
+            "lovable/gemini-2.5-flash-image",
+          );
+        }
+        console.warn("[image-gen] Lovable AI returned no image, falling back");
+      } else if (r.status === 429) {
+        return { error: "Image generation is rate-limited. Try again in a moment." };
+      } else if (r.status === 402) {
+        return { error: "Lovable AI credits exhausted. Add credits in Settings → Workspace → Usage." };
+      } else {
+        const txt = await r.text().catch(() => "");
+        console.warn(`[image-gen] Lovable AI gateway HTTP ${r.status}: ${txt.slice(0, 200)} — falling back`);
+      }
+    } catch (e: any) {
+      console.warn("[image-gen] Lovable AI gateway error, falling back:", e?.message || e);
+    }
+  }
+
   const neokensKey =
     process.env.NEOKENS_API_KEY ||
     process.env.NEOKENS_KEY;
@@ -180,7 +237,7 @@ export async function generateImageFromPrompt(opts: {
   if (!geminiKey) {
     return {
       error:
-        "Image generation is unavailable — set GEMINI_API_KEY (your Google Gemini key) or NEOKENS_KEY on the server to enable clothing/texture generation.",
+        "Image generation is unavailable. Lovable AI credits may be exhausted — add credits in Settings → Workspace → Usage, or set GEMINI_API_KEY on the server to use your own Google Gemini key.",
     };
   }
 
