@@ -36,6 +36,7 @@ export const PROFILE_BACKGROUNDS: { id: ProfileBackgroundId; label: string; prev
 
 const STYLES: Record<ProfileBackgroundId, React.CSSProperties> = {
   none: {},
+  custom: {},
   studio: {
     background:
       "radial-gradient(120% 90% at 20% 0%, #0ea5e9 0%, transparent 55%), radial-gradient(120% 90% at 100% 100%, #1e293b 0%, transparent 60%), linear-gradient(135deg,#0b1220,#1e293b)",
