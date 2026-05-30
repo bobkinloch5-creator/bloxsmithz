@@ -323,6 +323,25 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           if (p.sound_enabled && (p.notify_mode === "all" || (p.notify_mode === "mentions" && mentioned))) {
             playPing();
           }
+          // Floating chat bubble popup
+          if (p.show_bubbles && !row.deleted_at && row.content?.trim()) {
+            const a = authorsRef.current.get(row.user_id);
+            const bubbleId = `${row.id}-${Date.now()}`;
+            setChatBubbles((prev) => [
+              ...prev.slice(-3),
+              {
+                id: bubbleId,
+                userId: row.user_id,
+                name: a?.chat_nickname ?? a?.display_name ?? "Someone",
+                color: a?.chat_name_gradient?.[0] ?? null,
+                avatar: a?.avatar_url ?? null,
+                content: row.content.slice(0, 140),
+              },
+            ]);
+            setTimeout(() => {
+              setChatBubbles((prev) => prev.filter((b) => b.id !== bubbleId));
+            }, 5000);
+          }
           if (mentioned && p.notify_mode !== "off") {
             const a = authorsRef.current.get(row.user_id);
             const who = a?.display_name ?? "Someone";
