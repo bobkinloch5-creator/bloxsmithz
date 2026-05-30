@@ -15,6 +15,10 @@ import {
   sanitizeGradient,
   sanitizeIcon,
 } from "@/lib/chat-customization";
+import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
+
+const ACCENT_PRESETS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
+
 
 const NICK_RE = /^[A-Za-z0-9 _.\-]{0,24}$/;
 
@@ -33,15 +37,21 @@ export function ChatStyleCard() {
   const [icon, setIcon] = useState<string | null>(null);
   const [nickname, setNickname] = useState<string>("");
   const [font, setFont] = useState<string>("default");
+  const [accent, setAccent] = useState<string>("");
+  const [effect, setEffect] = useState<ProfileEffectId>("none");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const p = profile as any;
     setNameStops(sanitizeGradient(profile?.chat_name_gradient) ?? []);
     setTextStops(sanitizeGradient(profile?.chat_text_gradient) ?? []);
     setIcon(sanitizeIcon(profile?.chat_icon));
     setNickname(profile?.chat_nickname ?? "");
     setFont(sanitizeFont(profile?.chat_font) ?? "default");
-  }, [profile?.chat_name_gradient, profile?.chat_text_gradient, profile?.chat_icon, profile?.chat_nickname, profile?.chat_font]);
+    setAccent(typeof p?.profile_accent === "string" ? p.profile_accent : "");
+    setEffect((p?.profile_effect as ProfileEffectId) ?? "none");
+  }, [profile]);
+
 
   const displayName = (nickname.trim() || profile?.display_name || user?.email?.split("@")[0] || "You");
   const Icon = icon ? CHAT_ICON_MAP[icon] : null;
@@ -62,6 +72,8 @@ export function ChatStyleCard() {
       if (trimmedNick && !NICK_RE.test(trimmedNick)) {
         throw new Error("Nickname must be 1-24 chars: letters, numbers, space . _ -");
       }
+      const cleanAccent = HEX_RE.test(accent) ? accent : null;
+      const cleanEffect = PROFILE_EFFECTS.some((e) => e.id === effect) ? effect : "none";
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -70,10 +82,13 @@ export function ChatStyleCard() {
           chat_icon: cleanIcon,
           chat_nickname: trimmedNick || null,
           chat_font: cleanFont,
+          profile_accent: cleanAccent,
+          profile_effect: cleanEffect,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", user.id);
       if (error) throw error;
+
       await refresh();
       toast.success("Chat style saved");
     } catch (e: any) {
@@ -89,7 +104,10 @@ export function ChatStyleCard() {
     setIcon(null);
     setNickname("");
     setFont("default");
+    setAccent("");
+    setEffect("none");
   };
+
 
   return (
     <div className="glass rounded-2xl p-5 space-y-5">
@@ -277,7 +295,88 @@ export function ChatStyleCard() {
         </div>
       </div>
 
+      {/* Profile flair: accent color + animated effect */}
+      <div className="space-y-3">
+        <div>
+          <div className="text-sm font-medium">Profile flair</div>
+          <div className="text-[11px] text-muted-foreground">
+            Pick an accent color and an animated effect for your profile card. Visible to everyone who opens your profile.
+          </div>
+        </div>
+
+        {/* Live preview */}
+        <div className="relative h-24 overflow-hidden rounded-xl border border-border bg-background/40"
+          style={accent ? { background: `linear-gradient(135deg, ${accent}55, ${accent}11 60%, transparent)` } : undefined}
+        >
+          <ProfileEffect effect={effect} accent={accent || undefined} />
+          <div className="absolute inset-0 grid place-items-center">
+            <span className="text-sm font-bold" style={accent ? { color: accent, textShadow: `0 0 14px ${accent}66` } : undefined}>
+              {displayName}
+            </span>
+          </div>
+        </div>
+
+        {/* Accent color */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] text-muted-foreground mr-1">Accent</span>
+          {ACCENT_PRESETS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setAccent(c)}
+              title={c}
+              className={`h-6 w-6 rounded-full border-2 transition ${accent.toLowerCase() === c.toLowerCase() ? "border-foreground scale-110" : "border-border hover:scale-105"}`}
+              style={{ background: c }}
+            />
+          ))}
+          <input
+            type="color"
+            value={HEX_RE.test(accent) ? accent : "#7c3cff"}
+            onChange={(e) => setAccent(e.target.value)}
+            className="h-6 w-8 cursor-pointer rounded border-0 bg-transparent"
+          />
+          <input
+            type="text"
+            value={accent}
+            placeholder="#7c3cff"
+            maxLength={7}
+            onChange={(e) => setAccent(e.target.value)}
+            className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-xs outline-none focus:border-primary"
+          />
+          {accent && (
+            <button
+              onClick={() => setAccent("")}
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] hover:bg-surface-elevated"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Effect */}
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+          {PROFILE_EFFECTS.map((e) => {
+            const active = effect === e.id;
+            return (
+              <button
+                key={e.id}
+                type="button"
+                onClick={() => setEffect(e.id)}
+                className={`rounded-lg border px-2 py-2 text-xs transition ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-surface text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                }`}
+              >
+                {e.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex justify-end">
+
         <button
           onClick={save}
           disabled={saving}

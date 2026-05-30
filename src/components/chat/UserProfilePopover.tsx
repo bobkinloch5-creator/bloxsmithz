@@ -4,7 +4,10 @@ import { useAuth } from "@/lib/auth-context";
 import { useServerFn } from "@tanstack/react-start";
 import { getRobloxPresence } from "@/lib/roblox-presence.functions";
 import { toast } from "sonner";
-import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown, Heart, HeartOff, Flag, Trophy } from "lucide-react";
+import * as Icons from "lucide-react";
+import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown, Heart, HeartOff, Flag, Trophy, Award } from "lucide-react";
+import { ProfileEffect } from "./ProfileEffect";
+
 
 type Profile = {
   id: string;
@@ -17,7 +20,10 @@ type Profile = {
   roblox_avatar_url: string | null;
   banner_url: string | null;
   private_profile: boolean | null;
+  profile_accent: string | null;
+  profile_effect: string | null;
 };
+
 
 type FriendStatus = "none" | "pending_out" | "pending_in" | "friends";
 
@@ -53,9 +59,10 @@ export function UserProfilePopover({
       const [{ data: p }, { data: fr }] = await Promise.all([
         (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect")
           .eq("id", userId)
           .maybeSingle(),
+
         user
           ? (supabase as any)
               .from("friend_requests")
@@ -90,27 +97,37 @@ export function UserProfilePopover({
         setFollowerCount(fc ?? 0);
         setIsFollowing(!!myFollow);
       }
-      // Load achievements + level
-      const [{ data: ua }, { data: lv }] = await Promise.all([
+      // Load achievements + level (no FK between user_achievements.achievement_key
+      // and achievements.key, so do two queries and merge by key)
+      const [{ data: ua }, { data: lv }, { data: defs }] = await Promise.all([
         (supabase as any)
           .from("user_achievements")
-          .select("achievement_key, unlocked_at, achievements:achievement_key(name,icon,xp_reward)")
+          .select("achievement_key, unlocked_at")
           .eq("user_id", userId)
           .order("unlocked_at", { ascending: false })
           .limit(50),
         (supabase as any).from("user_levels").select("level,xp").eq("user_id", userId).maybeSingle(),
+        (supabase as any).from("achievements").select("key,name,icon,xp_reward"),
       ]);
       if (!cancel) {
-        const list = ((ua ?? []) as any[]).map((r) => ({
-          key: r.achievement_key as string,
-          name: (r.achievements?.name as string) ?? r.achievement_key,
-          icon: (r.achievements?.icon as string | null) ?? null,
-          xp_reward: (r.achievements?.xp_reward as number | null) ?? null,
-          unlocked_at: r.unlocked_at as string,
-        }));
+        const defMap = new Map<string, { name: string; icon: string | null; xp_reward: number | null }>();
+        ((defs ?? []) as any[]).forEach((d) =>
+          defMap.set(d.key, { name: d.name, icon: d.icon, xp_reward: d.xp_reward }),
+        );
+        const list = ((ua ?? []) as any[]).map((r) => {
+          const def = defMap.get(r.achievement_key);
+          return {
+            key: r.achievement_key as string,
+            name: def?.name ?? r.achievement_key,
+            icon: def?.icon ?? null,
+            xp_reward: def?.xp_reward ?? null,
+            unlocked_at: r.unlocked_at as string,
+          };
+        });
         setAchievements(list);
         setLevel(lv ? { level: (lv as any).level ?? 1, xp: (lv as any).xp ?? 0 } : null);
       }
+
       setLoading(false);
     })();
     return () => {
@@ -265,10 +282,24 @@ export function UserProfilePopover({
             <div className="relative">
               <div
                 className="h-24 w-full bg-gradient-to-br from-primary/30 via-primary/15 to-transparent"
-                style={profile.banner_url ? { backgroundImage: `url(${profile.banner_url})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+                style={
+                  profile.banner_url
+                    ? { backgroundImage: `url(${profile.banner_url})`, backgroundSize: "cover", backgroundPosition: "center" }
+                    : profile.profile_accent
+                      ? { background: `linear-gradient(135deg, ${profile.profile_accent}55, ${profile.profile_accent}11 60%, transparent)` }
+                      : undefined
+                }
               />
+              <ProfileEffect effect={profile.profile_effect} accent={profile.profile_accent} />
               <div className="absolute -bottom-8 left-3">
-                <div className="grid h-16 w-16 place-items-center rounded-full border-4 border-surface-elevated bg-surface">
+                <div
+                  className="grid h-16 w-16 place-items-center rounded-full border-4 border-surface-elevated bg-surface"
+                  style={
+                    profile.profile_accent
+                      ? { boxShadow: `0 0 0 2px ${profile.profile_accent}, 0 0 22px ${profile.profile_accent}88` }
+                      : undefined
+                  }
+                >
                   {profile.avatar_url ? (
                     <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
                   ) : (
@@ -281,11 +312,12 @@ export function UserProfilePopover({
             <div className="space-y-3 px-3 pb-3 pt-10">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold">{displayName}</h3>
+                  <h3 className="text-lg font-bold" style={profile.profile_accent ? { color: profile.profile_accent, textShadow: `0 0 14px ${profile.profile_accent}66` } : undefined}>{displayName}</h3>
                   {profile.chat_nickname && profile.display_name && (
                     <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
                   )}
                 </div>
+
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                   <span><span className="font-semibold text-foreground">{followerCount}</span> follower{followerCount === 1 ? "" : "s"}</span>
                   {level && (
@@ -443,16 +475,20 @@ export function UserProfilePopover({
                   <p className="text-xs text-muted-foreground">No achievements unlocked yet.</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-1.5">
-                    {achievements.slice(0, 12).map((a) => (
-                      <div
-                        key={a.key}
-                        title={`${a.name}${a.xp_reward ? ` · +${a.xp_reward} XP` : ""} · ${new Date(a.unlocked_at).toLocaleDateString()}`}
-                        className="flex items-center gap-1.5 rounded-md border border-border/60 bg-surface/60 px-2 py-1.5"
-                      >
-                        <span className="text-base leading-none">{a.icon || "🏆"}</span>
-                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{a.name}</span>
-                      </div>
-                    ))}
+                    {achievements.slice(0, 12).map((a) => {
+                      const Ico = (a.icon && (Icons as any)[a.icon]) || Award;
+                      return (
+                        <div
+                          key={a.key}
+                          title={`${a.name}${a.xp_reward ? ` · +${a.xp_reward} XP` : ""} · ${new Date(a.unlocked_at).toLocaleDateString()}`}
+                          className="flex items-center gap-1.5 rounded-md border border-border/60 bg-surface/60 px-2 py-1.5"
+                        >
+                          <Ico className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                          <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{a.name}</span>
+                        </div>
+                      );
+                    })}
+
                     {achievements.length > 12 && (
                       <div className="col-span-2 text-center text-[10px] text-muted-foreground">
                         +{achievements.length - 12} more

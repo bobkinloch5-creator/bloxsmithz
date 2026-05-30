@@ -1162,6 +1162,8 @@ export type Database = {
           id: string
           manual_sync_only: boolean
           private_profile: boolean
+          profile_accent: string | null
+          profile_effect: string | null
           referral_code: string | null
           referred_by: string | null
           roblox_avatar_url: string | null
@@ -1196,6 +1198,8 @@ export type Database = {
           id: string
           manual_sync_only?: boolean
           private_profile?: boolean
+          profile_accent?: string | null
+          profile_effect?: string | null
           referral_code?: string | null
           referred_by?: string | null
           roblox_avatar_url?: string | null
@@ -1230,6 +1234,8 @@ export type Database = {
           id?: string
           manual_sync_only?: boolean
           private_profile?: boolean
+          profile_accent?: string | null
+          profile_effect?: string | null
           referral_code?: string | null
           referred_by?: string | null
           roblox_avatar_url?: string | null
