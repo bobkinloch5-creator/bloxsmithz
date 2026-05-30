@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { extractAIText } from "@/lib/ai-gateway.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -201,7 +202,10 @@ Action shapes:
             );
           }
           const data = await res.json();
-          const content = data?.choices?.[0]?.message?.content ?? "{}";
+          const content = extractAIText(data) || "{}";
+          if (content === "{}") {
+            console.error("AI returned no visible text in organize.ts. Raw response:", JSON.stringify(data, null, 2));
+          }
           aiJson = JSON.parse(content);
         } catch (e: any) {
           return new Response(

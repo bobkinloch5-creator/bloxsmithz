@@ -2649,12 +2649,19 @@ function ProjectEditor() {
                       "Add a leaderstats system",
                       "Build a simple shop GUI",
                       "Make a loading screen",
-                      "Add a daily reward",
+                      "1:1 building replica",
                     ].map((tpl) => (
                       <button
                         key={tpl}
                         type="button"
-                        onClick={() => setPrompt(tpl)}
+                        onClick={() => {
+                          if (tpl === "1:1 building replica") {
+                            setPrompt("Generate a detailed 1-to-1 building replica matching my attached image.");
+                            fileInputRef.current?.click();
+                          } else {
+                            setPrompt(tpl);
+                          }
+                        }}
                         className="rounded-full border border-border bg-surface/60 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition"
                       >
                         {tpl}
@@ -2688,8 +2695,8 @@ function ProjectEditor() {
                     chatMode
                       ? "Ask anything, or attach a screenshot of your game/Studio — the AI will analyze it."
                       : planMode
-                        ? "Describe the Roblox system you want planned..."
-                        : "Type any command: build a map, add UI, create scripts, insert assets, fix bugs..."
+                        ? "Describe the Roblox system or attach a building picture you want planned..."
+                        : "Type any command: build a map, add UI, recreate a building from reference image, fix bugs..."
                   }
                   className="min-h-20 w-full resize-none bg-transparent px-1 py-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none"
                 />

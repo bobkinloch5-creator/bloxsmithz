@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { extractAIText } from "@/lib/ai-gateway.server";
 
 /**
  * AI moderation for Global Chat messages.
@@ -44,7 +45,10 @@ export const moderateChatMessage = createServerFn({ method: "POST" })
         return { allow: true, severity: "ok", reason: null };
       }
       const j: any = await res.json();
-      const raw: string = j?.choices?.[0]?.message?.content ?? "";
+      const raw: string = extractAIText(j);
+      if (!raw) {
+        console.error("Moderation AI returned no visible text. Raw response:", JSON.stringify(j, null, 2));
+      }
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) return { allow: true, severity: "ok", reason: null };
       const parsed = JSON.parse(match[0]);

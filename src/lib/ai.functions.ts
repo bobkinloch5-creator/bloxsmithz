@@ -713,7 +713,19 @@ export const generateWithAI = createServerFn({ method: "POST" })
         {
           model,
           system: activeSystemPrompt,
-          prompt: fullPrompt,
+          ...(imageDataUrl
+            ? {
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      { type: "text", text: fullPrompt },
+                      { type: "image", image: imageDataUrl },
+                    ],
+                  },
+                ],
+              }
+            : { prompt: fullPrompt }),
           ...(Object.keys(tools).length > 0
             ? {
                 tools: tools as any,

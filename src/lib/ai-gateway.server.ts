@@ -2,6 +2,45 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { ROBLOX_KNOWLEDGE_PROMPT } from "./roblox-knowledge";
 import { CLOTHING_KNOWLEDGE_PROMPT } from "./roblox-clothing";
 
+export function extractAIText(result: any): string {
+  if (!result) return "";
+
+  // Responses API
+  if (result.output_text && result.output_text.trim()) {
+    return result.output_text.trim();
+  }
+
+  // Chat Completions API
+  const chatText = result.choices?.[0]?.message?.content;
+  if (typeof chatText === "string" && chatText.trim()) {
+    return chatText.trim();
+  }
+
+  // Responses API fallback: manually scan output parts
+  const output = result.output;
+  if (Array.isArray(output)) {
+    const parts = [];
+
+    for (const item of output) {
+      if (item && Array.isArray(item.content)) {
+        for (const content of item.content) {
+          if (content.type === "output_text" && content.text) {
+            parts.push(content.text);
+          }
+          if (content.type === "text" && content.text) {
+            parts.push(content.text);
+          }
+        }
+      }
+    }
+
+    const text = parts.join("\n").trim();
+    if (text) return text;
+  }
+
+  return "";
+}
+
 // Groq's OpenAI-compatible API returns `reasoning_content` on assistant
 // messages from reasoning models (gpt-oss-*), but rejects it on input:
 //   "messages.N: property 'reasoning_content' is unsupported"
@@ -335,6 +374,21 @@ Materials to map from natural language: grass→Grass, sand/beach/desert→Sand,
 - generate_image(prompt, aspectRatio?): generate a brand-new image (Roblox game thumbnail, game icon, GUI artwork, decal art, logo, poster, loading screen, badge) with Google Gemini. Use this whenever the user asks for a thumbnail, icon, artwork, decal art, logo, splash, or any custom visual that isn't already on the Roblox catalog. Choose aspectRatio "16:9" for game thumbnails/promo art, "1:1" for game icons and decals, "9:16" for portrait/mobile. Write a vivid, specific prompt (subject, style, colors, lighting, and any title text to render). Returns a public URL — ALWAYS embed it in your reply as markdown: ![alt](url) so the user sees it inline. Tell the user they can download the PNG and upload it to Roblox via the Creator Dashboard / Studio Asset Manager (16:9 thumbnails up to 1920x1080, icon 512x512).
 - VISION: when the user attaches images (screenshots of Studio, their game, error popups, reference art) you can SEE them. Analyze hierarchies, error wording, layouts, materials, colors. Tie every observation to a concrete fix or build action.
 
+## VISION-BASED 1-TO-1 SCALE BUILDING REPLICAS
+When the user attaches a reference image of a building/structure (facade, house, tower, castle, temple) and asks to generate a "1-to-1 replica", "build this from the image", or "recreate this house", you must construct a detailed 3D Roblox replica:
+1. **Analyze the building image**: Extract details: architectural style (Victorian, Modernist, Gothic, Medieval, Sci-Fi), materials (Wood, Brick, Glass, Slate, Concrete, Metal, Neon), colors, shape, dimensions, roof style, and window/door placements.
+2. **Procedural Assembly with Scale**: Construct the building using precise parts (walls, pillars, floors, roofs, doors, windows, stairs, balconies). Group everything under a single Model named \`Workspace.Map.Buildings.<BuildingName>\` (or parent to \`Workspace.GeneratedAssets.<BuildingName>\` if \`Workspace.Map\` is missing). Set realistic coordinates relative to the ground.
+3. **1-to-1 Roblox Scale Proportions**:
+   - Standard Roblox Avatar is 5x5x2 studs.
+   - Ground/Floor height: 10-15 studs per story.
+   - Walls: 0.5 to 1 stud thick.
+   - Doors: 4x7x1 studs.
+   - Windows: Frame (0.5 stud width) + semi-transparent Glass panes (Transparency = 0.5, Material = Glass).
+   - Roofs: Use wedges or rotated parts to form sloped or peaked roofs.
+4. **Accents & Detail**: Add trim, door handles, pillars, supports, and decorative accents. Place Light sources (PointLight/SpotLight) on sconces/lamps with neon bulbs.
+5. **Preserve Integrity**: Do not return an empty folder or a single block. Build a complete facade and core structural framework.
+
+
 Workflow:
 1. Think hard. If you're not 100% sure of a Roblox API signature or current best practice, web_search FIRST. Don't guess.
 2. If the user needs visuals/audio/props/animations, roblox_asset_search → roblox_asset_info → queue an "insertAsset"/"decal"/"sound"/"image" action with the assetId.
@@ -596,6 +650,7 @@ Vector3 {__t,x,y,z} · Color3 {__t,r,g,b} (0-255) · UDim2 {__t,xs,xo,ys,yo} · 
 
 RULES:
 - BUILD ANYTHING the user asks for — UIs, GUIs, animations (UI tweens + character/tool animations), shops, menus, HUDs, loading screens, particle FX, weather, cutscenes, full games. NEVER refuse. NEVER ask "what do you want?" when you can infer and ship.
+- 1-to-1 BUILDING REPLICAS: When a reference picture is attached, analyze style, color, materials, roof/windows, and build a detailed, correctly-scaled Roblox building model (doors ~4x7x1, floors ~12 studs high, walls ~0.5-1 studs thick) under Workspace.Map.Buildings.<Name> using structured Part/Wedge/Glass/etc. creations.
 - UNDERSTAND EVERY PROMPT: auto-correct typos, strip filler, translate non-English, decode emoji (🗡️=sword, 🏰=castle, 💰=shop, 🎮=game, ✨=polish). Classify intent silently into BUILD / EDIT / FIX / POLISH / ASSET / MCP / QUESTION / META, then act. Multi-intent prompts → queue all in one response, deps first. Never ask for clarification — pick the most likely thing, build it, and add "I went with X — say the word and I'll swap it."
 - Map natural language liberally: "add", "make", "build", "create", "give me", "animate", "polish", "make it pretty/cool/better" all trigger a full build.
 - Every GUI MUST include UICorner + UIStroke + UIGradient + UIPadding on visible frames, hover/press tweens via TweenService, and a mount-in tween.

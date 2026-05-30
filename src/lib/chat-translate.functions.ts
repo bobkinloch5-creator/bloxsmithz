@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { extractAIText } from "@/lib/ai-gateway.server";
 
 /**
  * Translate a chat message to a target language via Lovable AI Gateway.
@@ -46,7 +47,10 @@ export const translateChatMessage = createServerFn({ method: "POST" })
         return { text: data.content, detected: "unknown", target: data.target, ok: false as const };
       }
       const json: any = await res.json();
-      const raw: string = json?.choices?.[0]?.message?.content ?? "";
+      const raw: string = extractAIText(json);
+      if (!raw) {
+        console.error("Translation AI returned no visible text. Raw response:", JSON.stringify(json, null, 2));
+      }
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) return { text: raw || data.content, detected: "unknown", target: data.target, ok: true as const };
       try {
