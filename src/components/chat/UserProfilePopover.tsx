@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import * as Icons from "lucide-react";
 import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown, Heart, HeartOff, Flag, Trophy, Award } from "lucide-react";
 import { ProfileEffect } from "./ProfileEffect";
+import { ProfileBackground } from "@/components/profile/ProfileBackground";
+import { PfpRing } from "@/components/profile/PfpRing";
+import { presenceFromProfile } from "@/lib/presence";
 
 
 type Profile = {
@@ -22,6 +25,16 @@ type Profile = {
   private_profile: boolean | null;
   profile_accent: string | null;
   profile_effect: string | null;
+  profile_background: string | null;
+  pfp_effect: string | null;
+  status_message: string | null;
+  pronouns: string | null;
+  location: string | null;
+  presence_enabled: boolean | null;
+  presence_status: string | null;
+  last_seen_at: string | null;
+  show_activity: boolean | null;
+  current_activity: any;
 };
 
 
@@ -59,7 +72,7 @@ export function UserProfilePopover({
       const [{ data: p }, { data: fr }] = await Promise.all([
         (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect,profile_background,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity")
           .eq("id", userId)
           .maybeSingle(),
 
