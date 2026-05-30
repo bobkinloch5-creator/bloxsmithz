@@ -216,10 +216,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes] = await Promise.all([
+      const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes, chanRes] = await Promise.all([
         supabase.from("global_chat_messages")
-          .select("id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged")
-          .is("deleted_at", null).order("created_at", { ascending: true }).limit(100),
+          .select("id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id")
+          .is("deleted_at", null).order("created_at", { ascending: true }).limit(200),
         supabase.from("global_chat_settings").select("slow_mode_seconds").eq("id", 1).maybeSingle(),
         (supabase as any).from("global_chat_mutes").select("muted_until").eq("user_id", user.id).maybeSingle(),
         (supabase as any).from("global_chat_reactions").select("id,message_id,user_id,emoji").limit(500),
