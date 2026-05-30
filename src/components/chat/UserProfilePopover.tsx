@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useServerFn } from "@tanstack/react-start";
 import { getRobloxPresence } from "@/lib/roblox-presence.functions";
 import { toast } from "sonner";
-import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown } from "lucide-react";
+import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown, Heart, HeartOff, Flag } from "lucide-react";
 
 type Profile = {
   id: string;
@@ -33,6 +33,11 @@ export function UserProfilePopover({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [friend, setFriend] = useState<{ status: FriendStatus; requestId: string | null }>({ status: "none", requestId: null });
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reportReason, setReportReason] = useState("");
   const [presence, setPresence] = useState<Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getRobloxPresence>>>> | null>(null);
   const [presenceLoading, setPresenceLoading] = useState(false);
   const isSelf = user?.id === userId;
@@ -70,6 +75,17 @@ export function UserProfilePopover({
         setFriend({ status, requestId: fr.id });
       } else {
         setFriend({ status: "none", requestId: null });
+      }
+      // Load follow stats
+      const [{ count: fc }, { data: myFollow }] = await Promise.all([
+        (supabase as any).from("user_follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
+        user
+          ? (supabase as any).from("user_follows").select("follower_id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      if (!cancel) {
+        setFollowerCount(fc ?? 0);
+        setIsFollowing(!!myFollow);
       }
       setLoading(false);
     })();
@@ -118,6 +134,30 @@ export function UserProfilePopover({
     if (error) return toast.error(error.message);
     setFriend({ status: "none", requestId: null });
     toast.success("Friend removed");
+  }
+  async function toggleFollow() {
+    if (!user || followBusy) return;
+    setFollowBusy(true);
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setFollowerCount((c) => c + (wasFollowing ? -1 : 1));
+    const { error } = await (supabase as any).rpc(wasFollowing ? "unfollow_user" : "follow_user", { _target: userId });
+    setFollowBusy(false);
+    if (error) {
+      setIsFollowing(wasFollowing);
+      setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
+      return toast.error(error.message);
+    }
+    toast.success(wasFollowing ? "Unfollowed" : "Following");
+  }
+  async function submitReport() {
+    const reason = reportReason.trim();
+    if (!reason) return toast.error("Please describe what's wrong");
+    const { error } = await (supabase as any).rpc("report_user", { _target: userId, _reason: reason, _context: null });
+    if (error) return toast.error(error.message);
+    toast.success("Report sent to moderators. Thank you.");
+    setReporting(false);
+    setReportReason("");
   }
 
   const presenceLabel = useMemo(() => {
@@ -181,6 +221,9 @@ export function UserProfilePopover({
                     <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
                   )}
                 </div>
+                <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span><span className="font-semibold text-foreground">{followerCount}</span> follower{followerCount === 1 ? "" : "s"}</span>
+                </div>
                 {profile.bio && <p className="mt-1 text-xs text-muted-foreground">{profile.bio}</p>}
               </div>
 
@@ -216,6 +259,39 @@ export function UserProfilePopover({
                       </button>
                     </>
                   )}
+                  <button
+                    onClick={toggleFollow}
+                    disabled={followBusy}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${isFollowing ? "border border-border bg-surface hover:bg-surface-elevated" : "bg-pink-600 text-white hover:opacity-90"}`}
+                  >
+                    {isFollowing ? <><HeartOff className="h-3.5 w-3.5" /> Unfollow</> : <><Heart className="h-3.5 w-3.5" /> Follow</>}
+                  </button>
+                  <button
+                    onClick={() => setReporting(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Flag className="h-3.5 w-3.5" /> Report
+                  </button>
+                </div>
+              )}
+
+              {reporting && !isSelf && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+                  <div className="text-xs font-semibold text-destructive flex items-center gap-1.5">
+                    <Flag className="h-3.5 w-3.5" /> Report {displayName}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Tell us what's wrong. Moderators will review.</p>
+                  <textarea
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value.slice(0, 200))}
+                    placeholder="Spam, harassment, inappropriate content…"
+                    rows={3}
+                    className="w-full resize-none rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                  />
+                  <div className="flex justify-end gap-1.5">
+                    <button onClick={() => { setReporting(false); setReportReason(""); }} className="rounded-md border border-border bg-surface px-2.5 py-1 text-[11px] hover:bg-surface-elevated">Cancel</button>
+                    <button onClick={submitReport} className="rounded-md bg-destructive px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90">Send report</button>
+                  </div>
                 </div>
               )}
 

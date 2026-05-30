@@ -330,6 +330,65 @@ export type Database = {
         }
         Relationships: []
       }
+      gallery_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gallery_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gallery_posts: {
+        Row: {
+          caption: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          flagged: boolean
+          id: string
+          image_url: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          flagged?: boolean
+          id?: string
+          image_url: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          flagged?: boolean
+          id?: string
+          image_url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       generations: {
         Row: {
           created_at: string
@@ -2008,6 +2067,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_reports: {
+        Row: {
+          context: string | null
+          created_at: string
+          id: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -2113,6 +2208,7 @@ export type Database = {
       claim_daily_credits: { Args: never; Returns: Json }
       claim_discord_credits: { Args: never; Returns: Json }
       ensure_my_profile: { Args: never; Returns: undefined }
+      follow_user: { Args: { _target: string }; Returns: undefined }
       get_ai_usage: { Args: never; Returns: Json }
       grant_credits_service: {
         Args: { _amount: number; _reason: string; _user_id: string }
@@ -2161,6 +2257,10 @@ export type Database = {
         Args: { _reason: string; _reported_user_id: string }
         Returns: string
       }
+      report_user: {
+        Args: { _context?: string; _reason: string; _target: string }
+        Returns: string
+      }
       respond_friend_request: {
         Args: { _accept: boolean; _id: string }
         Returns: undefined
@@ -2178,6 +2278,8 @@ export type Database = {
         Returns: string
       }
       spend_credits_atomic: { Args: { _amount: number }; Returns: number }
+      toggle_gallery_like: { Args: { _post: string }; Returns: boolean }
+      unfollow_user: { Args: { _target: string }; Returns: undefined }
     }
     Enums: {
       app_role: "owner" | "admin" | "user"

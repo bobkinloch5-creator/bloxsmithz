@@ -26,6 +26,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as ImageGeneratorRouteImport } from './routes/image-generator'
 import { Route as IdeasRouteImport } from './routes/ideas'
+import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as ExecuteRouteImport } from './routes/execute'
 import { Route as DocsRouteImport } from './routes/docs'
@@ -144,6 +145,11 @@ const ImageGeneratorRoute = ImageGeneratorRouteImport.update({
 const IdeasRoute = IdeasRouteImport.update({
   id: '/ideas',
   path: '/ideas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaqRoute = FaqRouteImport.update({
@@ -331,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/docs': typeof DocsRoute
   '/execute': typeof ExecuteRoute
   '/faq': typeof FaqRoute
+  '/gallery': typeof GalleryRoute
   '/ideas': typeof IdeasRoute
   '/image-generator': typeof ImageGeneratorRoute
   '/legal': typeof LegalRoute
@@ -384,6 +391,7 @@ export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
   '/execute': typeof ExecuteRoute
   '/faq': typeof FaqRoute
+  '/gallery': typeof GalleryRoute
   '/ideas': typeof IdeasRoute
   '/image-generator': typeof ImageGeneratorRoute
   '/legal': typeof LegalRoute
@@ -438,6 +446,7 @@ export interface FileRoutesById {
   '/docs': typeof DocsRoute
   '/execute': typeof ExecuteRoute
   '/faq': typeof FaqRoute
+  '/gallery': typeof GalleryRoute
   '/ideas': typeof IdeasRoute
   '/image-generator': typeof ImageGeneratorRoute
   '/legal': typeof LegalRoute
@@ -493,6 +502,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/execute'
     | '/faq'
+    | '/gallery'
     | '/ideas'
     | '/image-generator'
     | '/legal'
@@ -546,6 +556,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/execute'
     | '/faq'
+    | '/gallery'
     | '/ideas'
     | '/image-generator'
     | '/legal'
@@ -599,6 +610,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/execute'
     | '/faq'
+    | '/gallery'
     | '/ideas'
     | '/image-generator'
     | '/legal'
@@ -653,6 +665,7 @@ export interface RootRouteChildren {
   DocsRoute: typeof DocsRoute
   ExecuteRoute: typeof ExecuteRoute
   FaqRoute: typeof FaqRoute
+  GalleryRoute: typeof GalleryRoute
   IdeasRoute: typeof IdeasRoute
   ImageGeneratorRoute: typeof ImageGeneratorRoute
   LegalRoute: typeof LegalRoute
@@ -813,6 +826,13 @@ declare module '@tanstack/react-router' {
       path: '/ideas'
       fullPath: '/ideas'
       preLoaderRoute: typeof IdeasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/faq': {
@@ -1080,6 +1100,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsRoute: DocsRoute,
   ExecuteRoute: ExecuteRoute,
   FaqRoute: FaqRoute,
+  GalleryRoute: GalleryRoute,
   IdeasRoute: IdeasRoute,
   ImageGeneratorRoute: ImageGeneratorRoute,
   LegalRoute: LegalRoute,

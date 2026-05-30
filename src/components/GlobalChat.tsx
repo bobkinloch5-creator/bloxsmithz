@@ -404,6 +404,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
     setSending(true);
     try {
+      // Block links client-side too (kept clean + friendly)
+      if (/(https?:\/\/|www\.[a-z0-9-]+\.[a-z]{2,}|[a-z0-9-]+\.(com|net|org|io|gg|xyz|co|me|app|dev|tv|live|link)(\/|\s|$))/i.test(trimmed)) {
+        toast.error("Links aren't allowed in chat — keep it clean and friendly 💙");
+        setSending(false); return;
+      }
       // Profanity
       const bad = checkBlocked(trimmed);
       if (bad) { toast.error(`Blocked word: "${bad}"`); setSending(false); return; }
@@ -443,6 +448,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         else if (m.includes("muted")) toast.error("You're muted");
         else if (m.includes("duplicate")) toast.error("That looks like a duplicate");
         else if (m.includes("too_long")) toast.error("Message is too long");
+        else if (m.includes("links_not_allowed")) toast.error("Links aren't allowed in chat — keep it clean and friendly 💙");
         else toast.error(m);
         setDraft(trimmed);
       } else {

@@ -48,6 +48,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/ui-generator", label: "UI Generator" },
   { to: "/showcase", label: "Showcase" },
   { to: "/browse", label: "Community Chat" },
+  { to: "/gallery", label: "Gallery" },
   { to: "/ideas", label: "Ideas" },
   { to: "/pricing", label: "Pricing" },
   { to: "/docs", label: "Docs" },
