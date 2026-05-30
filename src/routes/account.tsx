@@ -438,56 +438,73 @@ function Account() {
         </div>
 
         {/* Usage Analytics Dashboard */}
-        <section className="rounded-2xl border border-border/50 bg-surface/20 p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary-glow" /> AI Usage & Spend Analytics
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Monitor model consumption, credits used, and estimated spend based on your developer
-                activity.
-              </p>
+        <section className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-surface/40 via-surface/20 to-surface/10 p-6 space-y-6">
+          <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+          <div className="relative flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/15 text-primary-glow ring-1 ring-primary/20">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">AI Usage &amp; Spend</h2>
+                <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
+                  Track credits, models, and spend in real time.
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2 text-xs">
-              <span className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 font-medium text-foreground">
-                Pricing Tier: <span className="text-primary-glow font-bold">$0.05 / credit</span>
-              </span>
-            </div>
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary/10 border border-primary/30 px-3 py-1 text-[11px] font-semibold text-primary-glow">
+              <Sparkles className="h-3 w-3" /> $0.05 / credit
+            </span>
           </div>
 
           {/* Metric Sub-cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl border border-border/40 bg-surface-elevated/20 p-4">
-              <div className="text-xs text-muted-foreground">Total Credits Used</div>
-              <div className="text-2xl font-black mt-1 text-primary-glow">
-                {totalCreditsUsed.toLocaleString()}{" "}
-                <span className="text-xs font-normal text-muted-foreground">credits</span>
+          <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              {
+                icon: <Coins className="h-4 w-4" />,
+                label: "Credits used",
+                value: totalCreditsUsed.toLocaleString(),
+                suffix: "cr",
+                hint: "Code tasks + chat runs",
+                tint: "from-violet-500/20 to-violet-500/0 text-violet-300",
+              },
+              {
+                icon: <DollarSign className="h-4 w-4" />,
+                label: "Total spend",
+                value: `$${totalSpendUsd.toFixed(2)}`,
+                suffix: "USD",
+                hint: "Based on credit value",
+                tint: "from-emerald-500/20 to-emerald-500/0 text-emerald-300",
+              },
+              {
+                icon: <Zap className="h-4 w-4" />,
+                label: "Top model",
+                value: mostActiveModel === "None" ? "—" : mostActiveModel,
+                suffix: "",
+                hint: "Highest execution count",
+                tint: "from-amber-500/20 to-amber-500/0 text-amber-300",
+              },
+            ].map((m) => (
+              <div
+                key={m.label}
+                className={`relative overflow-hidden rounded-xl border border-border/40 bg-surface-elevated/30 p-4 group hover:border-border/70 transition`}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${m.tint} opacity-60 pointer-events-none`} />
+                <div className="relative flex items-center gap-2 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+                  <span className="grid h-6 w-6 place-items-center rounded-md bg-background/40">{m.icon}</span>
+                  {m.label}
+                </div>
+                <div className="relative mt-3 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-foreground truncate" title={m.value}>
+                    {m.value}
+                  </span>
+                  {m.suffix && <span className="text-[10px] font-medium text-muted-foreground">{m.suffix}</span>}
+                </div>
+                <div className="relative text-[10px] text-muted-foreground mt-1">{m.hint}</div>
               </div>
-              <div className="text-[10px] text-muted-foreground mt-1">
-                Sum of all code tasks & chat runs
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border/40 bg-surface-elevated/20 p-4">
-              <div className="text-xs text-muted-foreground">Estimated Total Spend</div>
-              <div className="text-2xl font-black mt-1 text-success">
-                ${totalSpendUsd.toFixed(2)}{" "}
-                <span className="text-xs font-normal text-muted-foreground">USD</span>
-              </div>
-              <div className="text-[10px] text-muted-foreground mt-1">
-                Based on credit cash value
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border/40 bg-surface-elevated/20 p-4">
-              <div className="text-xs text-muted-foreground">Most Active Model</div>
-              <div className="text-2xl font-black mt-1 text-accent truncate">{mostActiveModel}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">
-                Model with the highest execution count
-              </div>
-            </div>
+            ))}
           </div>
+
 
           {/* Interactive Chart Panel */}
           {mounted && spendTxs.length > 0 ? (
