@@ -443,6 +443,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         else if (m.includes("muted")) toast.error("You're muted");
         else if (m.includes("duplicate")) toast.error("That looks like a duplicate");
         else if (m.includes("too_long")) toast.error("Message is too long");
+        else if (m.includes("links_not_allowed")) toast.error("Links aren't allowed in chat — keep it clean and friendly 💙");
         else toast.error(m);
         setDraft(trimmed);
       } else {
