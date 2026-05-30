@@ -1,20 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Header, Footer } from "@/components/layout";
 import {
+  Award,
   Bot,
   CheckCircle,
   CreditCard,
   FileCode,
+  Flag,
+  Gift,
   Globe2,
+  Image as ImageIcon,
   Languages,
   LayoutDashboard,
+  Link2Off,
   Menu,
+  MessageSquare,
   Palette,
   Play,
   Server,
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Trash2,
+  Users,
   Wrench,
   Zap,
 } from "lucide-react";
