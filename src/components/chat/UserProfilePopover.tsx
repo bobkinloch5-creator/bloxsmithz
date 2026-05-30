@@ -4,7 +4,10 @@ import { useAuth } from "@/lib/auth-context";
 import { useServerFn } from "@tanstack/react-start";
 import { getRobloxPresence } from "@/lib/roblox-presence.functions";
 import { toast } from "sonner";
-import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown, Heart, HeartOff, Flag, Trophy } from "lucide-react";
+import * as Icons from "lucide-react";
+import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown, Heart, HeartOff, Flag, Trophy, Award } from "lucide-react";
+import { ProfileEffect } from "./ProfileEffect";
+
 
 type Profile = {
   id: string;
