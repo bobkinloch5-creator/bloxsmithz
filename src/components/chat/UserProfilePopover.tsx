@@ -51,9 +51,9 @@ export function UserProfilePopover({
     (async () => {
       setLoading(true);
       const [{ data: p }, { data: fr }] = await Promise.all([
-        supabase
+        (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile")
           .eq("id", userId)
           .maybeSingle(),
         user
