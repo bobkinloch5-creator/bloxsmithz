@@ -267,18 +267,19 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         const row = payload.new as DbMessage;
         if (row.deleted_at) return;
         setMessages((prev) => prev.some((m) => m.id === row.id) ? prev : [...prev, row]);
-        if (!open && row.user_id !== user.id) setUnread((u) => u + 1);
+        if (!openRef.current && row.user_id !== user.id) setUnread((u) => u + 1);
         await loadAuthors([row.user_id]);
         // Sound + notification
         if (row.user_id !== user.id) {
-          const mentioned = mentionsMe(row.content, authors.get(user.id)?.display_name);
-          if (prefs.sound_enabled && (prefs.notify_mode === "all" || (prefs.notify_mode === "mentions" && mentioned))) {
+          const p = prefsRef.current;
+          const mentioned = mentionsMe(row.content, authorsRef.current.get(user.id)?.display_name);
+          if (p.sound_enabled && (p.notify_mode === "all" || (p.notify_mode === "mentions" && mentioned))) {
             playPing();
           }
-          if (prefs.notify_mode !== "off" && document.hidden && typeof Notification !== "undefined" && Notification.permission === "granted") {
-            if (prefs.notify_mode === "all" || mentioned) {
-              const a = authors.get(row.user_id);
-              new Notification(a?.display_name ?? "New message", { body: row.content.slice(0, 140), silent: !prefs.sound_enabled });
+          if (p.notify_mode !== "off" && document.hidden && typeof Notification !== "undefined" && Notification.permission === "granted") {
+            if (p.notify_mode === "all" || mentioned) {
+              const a = authorsRef.current.get(row.user_id);
+              new Notification(a?.display_name ?? "New message", { body: row.content.slice(0, 140), silent: !p.sound_enabled });
             }
           }
         }
