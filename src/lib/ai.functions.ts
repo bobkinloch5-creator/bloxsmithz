@@ -1250,7 +1250,27 @@ const ImprovePromptSchema = z.object({
 export const improvePrompt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ImprovePromptSchema.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const isOwner = (roles ?? []).some(
+      (r: { role: string }) => r.role === "owner" || r.role === "admin",
+    );
+    const COST = 1;
+    if (!isOwner) {
+      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", { _amount: COST });
+      if (spendErr) {
+        const msg = (spendErr.message || "").toLowerCase();
+        if (msg.includes("insufficient") || msg.includes("not enough")) {
+          throw new Error(`Not enough credits — improve costs ${COST} credit.`);
+        }
+        throw new Error(spendErr.message || "Could not charge credit.");
+      }
+    }
+
     const { generateText } = await import("ai");
     const { resolveBuiltInGateway } = await import("./ai-providers.server");
     const model = resolveBuiltInGateway({ kind: "fast" }).model;
@@ -1274,8 +1294,13 @@ Rules:
         timeout: { totalMs: 8_000 },
       });
       const cleaned = text.trim().replace(/^["']|["']$/g, "");
-      return { prompt: cleaned || data.prompt };
+      return { prompt: cleaned || data.prompt, creditsCharged: isOwner ? 0 : COST };
     } catch (err: any) {
+      if (!isOwner) {
+        try {
+          await supabase.rpc("refund_credits", { _amount: COST, _reason: "improve_prompt_failed" });
+        } catch {}
+      }
       const msg = String(err?.message ?? err);
       if (msg.includes("429")) throw new Error("AI rate limit. Try again in a moment.");
       throw new Error("Improve failed: " + msg);
