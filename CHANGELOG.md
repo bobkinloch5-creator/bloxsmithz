@@ -2,6 +2,14 @@
 
 ## Latest Updates
 
+### UI Generator Reliability & Polish
+- Fixed the UI Generator getting stuck and ending with "No output generated."
+- Added a complete deterministic ScreenGui fallback so slow or empty AI responses still return usable Roblox UI.
+- Shortened the visible generation wait so the page feels faster.
+- Polished the `/ui-generator` page with a cleaner builder header, compact stats, better template tiles, stronger style controls, and an upgraded preview frame.
+- Made generated UI templates fancier with layered panels, gradients, header glow, badges, thicker strokes, stronger buttons, and clearer Roblox-style hierarchy.
+- Upgraded Spin Wheel output into a more circular premium wheel with glow, reward badges, pointer marker, prize panel, spin button, RemoteEvent, LocalScript, and ServerScript.
+
 ### Profile Fixes
 - Fixed profile settings not saving correctly.
 - Added a stronger fallback save system for display name, bio, and studio specialty.

@@ -39,6 +39,55 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.4.0",
+    date: "May 30, 2026",
+    title: "UI Generator Reliability, Builder Polish & Fancy Output",
+    description:
+      "The Roblox UI Generator is faster, more reliable, and much better-looking. Generations now fall back to complete Roblox ScreenGui specs instead of empty output, the page has a cleaner builder workspace, and generated templates now use more premium panels, gradients, badges, strokes, and buttons.",
+    updates: [
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Zap,
+        title: "No More Empty UI Output",
+        detail:
+          "Fixed the generator path that could sit on loading and then show \"No output generated.\" Slow or empty AI responses now fall back to a complete deterministic ScreenGui so users still get a usable Roblox UI.",
+      },
+      {
+        category: "Performance",
+        tagColor: tagStyles.backend,
+        icon: Zap,
+        title: "Faster UI Generation",
+        detail:
+          "Replaced long 90-second AI waits with a short timeout and reduced the loading animation timing, so the generator responds faster and fails over cleanly instead of feeling stuck.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: LayoutDashboard,
+        title: "Cleaner Generator Workspace",
+        detail:
+          "The /ui-generator page now has a compact builder header, generation stats, cleaner template tiles, stronger style controls, a better preview toolbar, and a grid-backed device preview frame.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Sparkles,
+        title: "Fancier Generated Roblox UIs",
+        detail:
+          "Generated fallback templates now look more premium with layered panels, header glow, status badges, gradients, stronger action buttons, thicker strokes, and clearer hierarchy.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Palette,
+        title: "Spin Wheel Template Upgrade",
+        detail:
+          "Spin Wheel output now renders as a more circular layered wheel with glow, reward badges, pointer marker, prize panel, upgraded spin button, RemoteEvent, LocalScript, and ServerScript.",
+      },
+    ],
+  },
+  {
     version: "v3.3.0",
     date: "May 30, 2026",
     title: "Achievements, Perks, Gallery & Community Polish",
