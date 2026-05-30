@@ -1,58 +1,63 @@
-## Goal
-Ship a real Roblox UI/GUI Generator to Bloxsmith: AI-generated UI + Luau, live preview (desktop & mobile), credit-gated, one-click insert via the existing Studio plugin channel, with a template browser and saved generations. Plus polish the HelpChat and add a Toolbox asset picker inside chat.
+This is a sizable feature. Here's how I'd ship it cleanly. Reply with anything you want changed, otherwise I'll build it end-to-end.
 
-## Scope (this batch)
+## 1. Fix the broken "Private profile" toggle (quick win)
+The current `<input type="checkbox">` uses a plain HTML control with `className="rounded border-border"` which renders invisibly on the dark theme — no checkmark, no fill. Replace with the existing themed `<Checkbox>` (shadcn) + label, with an explicit on/off pill so users can see the state.
 
-### 1. UI Generator page — `/ui-generator`
-- Template browser: 20 presets (Gamepass Shop, Dev Product Shop, Coin/Gem Shop, Main Menu, Loading Screen, Settings, Inventory, Pet Inventory, Trading, Daily Rewards, Spin Wheel, Codes, Quest, Teleport, Upgrade, Rebirth, Leaderboard, Admin Panel, Mobile Controls, HUDs) plus **Custom prompt**.
-- Style presets: Modern / Neon / Minimal / Cartoon / Glass / Anime. Color picker for primary/accent/bg, title text, button labels (editable list), corner radius, font.
-- AI generation: server fn `generateRobloxUI` using `google/gemini-3-flash-preview` with `Output.object` schema. Returns a typed `UISpec` (ScreenGui → Frames → children: TextLabel/TextButton/ImageButton/UIStroke/UICorner/UIGradient/UIList/UIGridLayout + LocalScripts + optional ServerScripts/RemoteEvents) AND ready-to-insert `actions[]` matching the existing plugin protocol used in `execute.ts` (`create` actions with `properties`, plus `file` writes for ServerScriptService / ReplicatedStorage).
-- Credit cost: **5 credits** shown up-front, charged via existing `charge_credits` RPC, refunded on failure (mirrors `ai.functions.ts` pattern).
+## 2. Database — extend `profiles` with the missing fields
+Single migration adds (existing columns kept untouched):
+- `banner_url`, `banner_color` (already have `banner_url`), `profile_background` (preset key: `studio`, `neon-city`, `obby`, `forest`, `space`, `lava`, `clouds`, `void`, etc.)
+- `profile_layout` (`classic` | `card` | `cinematic` | `compact`)
+- `pfp_effect` (ring effect: `none` | `gold` | `rainbow` | `flame` | `electric` | `ice` | `galaxy`)
+- `badges` (text[] — earned badge keys, server-controlled)
+- `status_message` (text, 80 chars)
+- `pronouns`, `location` (optional public fields)
+- `presence_enabled` (bool, default true), `presence_status` (`online`|`idle`|`dnd`|`invisible`), `last_seen_at` (timestamptz)
+- `show_activity` (bool — whether to show "working on X project")
+- `current_activity` (jsonb — `{ kind: "project"|"chat"|"idle", label, project_id? }`)
 
-### 2. Dual-device live preview
-- Pure React renderer that walks the returned `UISpec` and draws it inside a Roblox-screen viewport (1920×1080 desktop frame and 932×430 mobile frame, both scaled). Renders absolute-positioned divs styled from UDim2/Color3/UICorner/UIGradient/UIStroke. Toggle Desktop ↔ Mobile.
-- Per-element click selects → side panel shows properties (text/color) for quick tweaks before insert.
-- Tabs: **Preview · Luau Code · JSON Spec**.
+All with proper CHECK constraints + RLS:
+- public read of safe columns via a `profiles_public` view (excluding email, ban fields, verification codes) — gated by `private_profile`: if private, only friends + self + admins can read full data; others see only display_name, avatar, banner, badges, level.
+- existing GRANTs preserved.
 
-### 3. Insert into Studio
-- "Insert into Roblox Studio" button → calls existing plugin command channel (`api/public/plugin/*`) by enqueuing the `actions[]` + `files[]` against the active project (same path the AI builder already uses).
-- UI shows "Queued" until plugin posts back success/error; surfaces the actual plugin response (no fake success). Re-uses `PluginStatus` connection state.
+## 3. Profile customization page (account.tsx)
+New "Profile" tab with sections:
+- **Identity**: display name, bio, pronouns, location, status message
+- **Avatar & Banner**: upload to `avatars`/`banners` storage buckets (already exist) with live preview, plus a "Banner color" fallback
+- **Background theme**: 8 Roblox-themed animated SVG/gradient backgrounds in a grid picker with live preview
+- **Layout**: 4 layout previews (Classic / Card / Cinematic / Compact)
+- **PFP ring effect**: 7 animated ring presets shown on a live avatar
+- **Accent + animated effect**: keep existing `profile_accent` + `profile_effect` (sparkle/aurora/neon/holo/confetti/stars)
+- **Privacy**: fixed visible toggle for `private_profile` + `hide_email` + `presence_enabled` + `show_activity`
+- **Presence status**: online / idle / dnd / invisible selector
 
-### 4. Generations library
-- New table `ui_generations` (id, user_id, project_id, title, category, spec jsonb, actions jsonb, files jsonb, thumbnail_url, created_at) with RLS (owner read/write, service_role all) + GRANTs.
-- "My UI Library" tab on the generator page — list, re-open, re-insert, delete.
+Everything saves via a single `updateProfileCustomization` server function (createServerFn + requireSupabaseAuth + Zod validation). Optimistic UI + toast confirmation. All settings load from `profiles` on mount and persist across devices.
 
-### 5. HelpChat fixes
-- Keep the draggable button + panel but rebuild internals: smaller floating button (48px), cleaner header, fixed mobile bottom-sheet, proper close animation, markdown rendering via `react-markdown` (already in repo if available; otherwise add), better error handling for 429/402.
-- Wire a **Toolbox tool** into the help chat backend: when the user asks for assets (`/api/public/help-chat.ts`), the model can call a `searchToolbox` tool that returns up to 12 assets with thumbnail+id+name. The chat UI renders these as a clickable grid; each card has **Copy ID** and **Insert into Studio** (uses existing `insert_toolbox_asset` action). No fake confirmations.
+## 4. Public profile view (overhaul `UserProfilePopover` + new `/u/$userId` route)
+- Banner with parallax + animated background theme
+- Avatar with PFP ring effect + presence dot (green/yellow/red/gray)
+- Display name, pronouns, status message, role badges, custom badges
+- Stat row: followers · following · level/XP · achievements · projects shipped
+- Action buttons: Add friend / Message / Report (already exist) + Follow
+- Animated entry, mobile-friendly (full-screen sheet on mobile, dialog on desktop)
+- Respects `private_profile`: shows minimal card + "This profile is private" if not friends
 
-### 6. Navigation
-- Add "UI Generator" link to the main header nav and dashboard quick actions.
+## 5. Presence system
+- On app mount: heartbeat updates `last_seen_at` every 60s + sets `presence_status` (respects user choice; "invisible" never broadcasts online)
+- On unmount/visibility hidden: best-effort update to idle after 5min
+- `current_activity` updated when entering project editor / chat (debounced)
+- Toggle in settings: "Show my online status" + "Show what I'm working on"
+- Displayed as colored dot + label on avatar everywhere (chat, friends panel, profile)
 
-## Technical Details
+## 6. Badges
+Server-awarded keys mapped to icon + label + color in a `BADGES` registry (similar to current `RoleBadge`):
+- `early-adopter`, `top-creator`, `bug-hunter`, `first-publish`, `community-helper`, `mvp`, `verified-roblox`, etc.
+- Awarded by triggers/RPC on milestones; displayed on profile.
 
-**Files to create**
-- `src/lib/ui-generator.server.ts` — UISpec schema (Zod), system prompt, `generateUI()` calling `streamText`/`generateText` with `Output.object`, conversion `spec → plugin actions[] + files[]`.
-- `src/lib/ui-generator.functions.ts` — `generateRobloxUIFn`, `listUIGenerationsFn`, `getUIGenerationFn`, `deleteUIGenerationFn`, `insertUIGenerationFn` (enqueues to plugin).
-- `src/routes/ui-generator.tsx` — page with template browser, customizer, preview canvas, code/spec tabs, library.
-- `src/components/ui-generator/UIPreview.tsx` — recursive spec renderer.
-- `src/components/ui-generator/TemplateGrid.tsx` — preset cards.
-- `src/components/ui-generator/DevicePreviewFrame.tsx` — desktop/mobile frames.
-- `src/components/help-chat/ToolboxResults.tsx` — asset grid renderer for chat.
-- Migration: `ui_generations` table + RLS + GRANTs.
+## Technical notes
+- All new server logic via `createServerFn` (no edge functions).
+- Zod-validated input on every write.
+- Backgrounds rendered as CSS-only animated gradients or inline SVG (no extra assets to download).
+- Mobile-first responsive layout, semantic tokens from `src/styles.css`.
+- All `profiles` columns added in one migration with GRANTs, RLS policies, and the public view.
 
-**Files to edit**
-- `src/components/HelpChat.tsx` — internal rewrite (keep external API: still draggable, still localStorage position).
-- `src/routes/api/public/help-chat.ts` — add `searchToolbox` tool.
-- `src/components/layout.tsx` — add UI Generator nav link.
-- `src/routeTree.gen.ts` — auto-regen.
-
-**Out of scope (next batch, if you want)**
-- Server-side gamepass / dev product purchase validation beyond a generated template script (templates ship working stub code, but live MarketplaceService wiring is the user's to configure with their actual asset IDs).
-- 3D in-game preview / live-fire test inside Studio (preview is a faithful 2D render, not a Roblox runtime).
-- Editing inserted UIs back from Studio (one-way insert).
-
-## Confirm before I build
-- OK with **5 credits** per UI generation?
-- OK that preview is a faithful 2D React render (not a real Roblox runtime — that's not possible in the browser)?
-- OK to ship 20 presets now and add more later as you request them?
+Want me to proceed with all of this, or trim anything (e.g. skip badges, skip backgrounds)?
