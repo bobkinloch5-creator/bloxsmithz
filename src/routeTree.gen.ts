@@ -36,6 +36,7 @@ import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as AuthorizeRouteImport } from './routes/authorize'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShowcaseProjectIdRouteImport } from './routes/showcase.$projectId'
@@ -197,6 +198,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AchievementsRoute = AchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -328,6 +334,7 @@ const ApiPublicOauthRegisterRoute = ApiPublicOauthRegisterRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
   '/authorize': typeof AuthorizeRoute
   '/browse': typeof BrowseRoute
@@ -382,6 +389,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
   '/authorize': typeof AuthorizeRoute
   '/browse': typeof BrowseRoute
@@ -437,6 +445,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/achievements': typeof AchievementsRoute
   '/admin': typeof AdminRoute
   '/authorize': typeof AuthorizeRoute
   '/browse': typeof BrowseRoute
@@ -493,6 +502,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/achievements'
     | '/admin'
     | '/authorize'
     | '/browse'
@@ -547,6 +557,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/achievements'
     | '/admin'
     | '/authorize'
     | '/browse'
@@ -601,6 +612,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/achievements'
     | '/admin'
     | '/authorize'
     | '/browse'
@@ -656,6 +668,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  AchievementsRoute: typeof AchievementsRoute
   AdminRoute: typeof AdminRoute
   AuthorizeRoute: typeof AuthorizeRoute
   BrowseRoute: typeof BrowseRoute
@@ -898,6 +911,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/achievements': {
+      id: '/achievements'
+      path: '/achievements'
+      fullPath: '/achievements'
+      preLoaderRoute: typeof AchievementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account': {
       id: '/account'
       path: '/account'
@@ -1091,6 +1111,7 @@ const ShowcaseRouteWithChildren = ShowcaseRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  AchievementsRoute: AchievementsRoute,
   AdminRoute: AdminRoute,
   AuthorizeRoute: AuthorizeRoute,
   BrowseRoute: BrowseRoute,
