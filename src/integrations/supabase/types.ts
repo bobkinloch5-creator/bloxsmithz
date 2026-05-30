@@ -1272,15 +1272,24 @@ export type Database = {
           chat_text_gradient: string[] | null
           created_at: string
           credits: number
+          current_activity: Json | null
           discord_claimed: boolean
           display_name: string | null
           email: string
           hide_email: boolean
           id: string
+          last_seen_at: string | null
+          location: string | null
           manual_sync_only: boolean
+          pfp_effect: string
+          presence_enabled: boolean
+          presence_status: string
           private_profile: boolean
           profile_accent: string | null
+          profile_background: string | null
           profile_effect: string | null
+          profile_layout: string
+          pronouns: string | null
           referral_code: string | null
           referred_by: string | null
           roblox_avatar_url: string | null
@@ -1290,7 +1299,9 @@ export type Database = {
           roblox_verification_code: string | null
           roblox_verification_expires_at: string | null
           roblox_verified_at: string | null
+          show_activity: boolean
           specialization: string | null
+          status_message: string | null
           theme: string | null
           updated_at: string
         }
@@ -1308,15 +1319,24 @@ export type Database = {
           chat_text_gradient?: string[] | null
           created_at?: string
           credits?: number
+          current_activity?: Json | null
           discord_claimed?: boolean
           display_name?: string | null
           email: string
           hide_email?: boolean
           id: string
+          last_seen_at?: string | null
+          location?: string | null
           manual_sync_only?: boolean
+          pfp_effect?: string
+          presence_enabled?: boolean
+          presence_status?: string
           private_profile?: boolean
           profile_accent?: string | null
+          profile_background?: string | null
           profile_effect?: string | null
+          profile_layout?: string
+          pronouns?: string | null
           referral_code?: string | null
           referred_by?: string | null
           roblox_avatar_url?: string | null
@@ -1326,7 +1346,9 @@ export type Database = {
           roblox_verification_code?: string | null
           roblox_verification_expires_at?: string | null
           roblox_verified_at?: string | null
+          show_activity?: boolean
           specialization?: string | null
+          status_message?: string | null
           theme?: string | null
           updated_at?: string
         }
@@ -1344,15 +1366,24 @@ export type Database = {
           chat_text_gradient?: string[] | null
           created_at?: string
           credits?: number
+          current_activity?: Json | null
           discord_claimed?: boolean
           display_name?: string | null
           email?: string
           hide_email?: boolean
           id?: string
+          last_seen_at?: string | null
+          location?: string | null
           manual_sync_only?: boolean
+          pfp_effect?: string
+          presence_enabled?: boolean
+          presence_status?: string
           private_profile?: boolean
           profile_accent?: string | null
+          profile_background?: string | null
           profile_effect?: string | null
+          profile_layout?: string
+          pronouns?: string | null
           referral_code?: string | null
           referred_by?: string | null
           roblox_avatar_url?: string | null
@@ -1362,7 +1393,9 @@ export type Database = {
           roblox_verification_code?: string | null
           roblox_verification_expires_at?: string | null
           roblox_verified_at?: string | null
+          show_activity?: boolean
           specialization?: string | null
+          status_message?: string | null
           theme?: string | null
           updated_at?: string
         }
@@ -2543,6 +2576,10 @@ export type Database = {
       unlock_achievement: {
         Args: { _key: string; _user_id: string }
         Returns: boolean
+      }
+      update_presence: {
+        Args: { _activity?: Json; _status?: string }
+        Returns: undefined
       }
     }
     Enums: {
