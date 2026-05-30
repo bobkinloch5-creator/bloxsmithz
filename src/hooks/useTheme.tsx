@@ -302,8 +302,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         // ignore
       }
     }
-    supabase.auth.getUser().then(({ data }) => {
-      const uid = data.user?.id;
+    // Use getSession (cached, no network) instead of getUser to avoid
+    // 401 spam on /auth/v1/user when logged out or when the token is stale.
+    supabase.auth.getSession().then(({ data }) => {
+      const uid = data.session?.user?.id;
       if (uid) loadFromProfile(uid);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
