@@ -312,13 +312,15 @@ export function UserProfilePopover({
               </div>
               <div className="absolute -bottom-8 left-3">
                 <div className="relative">
-                  <PfpRing effect={profile.pfp_effect ?? "none"} size={64}>
-                    {profile.avatar_url ? (
-                      <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-                    ) : (
-                      <span className="text-lg font-bold text-muted-foreground">{displayName.slice(0, 1).toUpperCase()}</span>
-                    )}
-                  </PfpRing>
+                  <AvatarDecoration id={profile.profile_decoration} size={70}>
+                    <PfpRing effect={profile.pfp_effect ?? "none"} size={64}>
+                      {profile.avatar_url ? (
+                        <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-lg font-bold text-muted-foreground">{displayName.slice(0, 1).toUpperCase()}</span>
+                      )}
+                    </PfpRing>
+                  </AvatarDecoration>
                   {(() => {
                     const pr = presenceFromProfile({
                       presence_enabled: profile.presence_enabled,
