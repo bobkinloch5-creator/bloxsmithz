@@ -1,5 +1,9 @@
-import { Settings2, Volume2, VolumeX, Bell, BellOff, AtSign, X, Image as ImageIcon } from "lucide-react";
+import { useRef } from "react";
+import { Settings2, Volume2, VolumeX, Bell, BellOff, AtSign, X, Image as ImageIcon, Upload, Trash2 } from "lucide-react";
 import { type ChatPrefs, type ChatBgStyle, chatBackgroundStyle } from "@/lib/chat-prefs";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const BG_STYLES: { v: ChatBgStyle; l: string }[] = [
   { v: "default", l: "Default" },
@@ -7,9 +11,16 @@ const BG_STYLES: { v: ChatBgStyle; l: string }[] = [
   { v: "gradient", l: "Gradient" },
   { v: "mesh", l: "Mesh" },
   { v: "aurora", l: "Aurora" },
+  { v: "aurora-anim", l: "Aurora ✨" },
+  { v: "stars", l: "Stars ✨" },
+  { v: "matrix", l: "Matrix ✨" },
+  { v: "roblox-studio", l: "Studio" },
+  { v: "neon-city", l: "Neon City ✨" },
+  { v: "lava", l: "Lava ✨" },
   { v: "dots", l: "Dots" },
   { v: "grid", l: "Grid" },
   { v: "stripes", l: "Stripes" },
+  { v: "custom-image", l: "Custom Image" },
 ];
 
 const PRESETS: { name: string; patch: Partial<ChatPrefs> }[] = [
@@ -17,9 +28,13 @@ const PRESETS: { name: string; patch: Partial<ChatPrefs> }[] = [
   { name: "Sunset", patch: { bg_style: "gradient", bg_color: "#7c2d12", bg_color2: "#db2777" } },
   { name: "Ocean", patch: { bg_style: "mesh", bg_color: "#0ea5e9", bg_color2: "#6366f1" } },
   { name: "Forest", patch: { bg_style: "mesh", bg_color: "#064e3b", bg_color2: "#84cc16" } },
-  { name: "Neon", patch: { bg_style: "aurora", bg_color: "#a855f7", bg_color2: "#22d3ee" } },
+  { name: "Neon", patch: { bg_style: "aurora-anim", bg_color: "#a855f7", bg_color2: "#22d3ee" } },
+  { name: "Studio", patch: { bg_style: "roblox-studio", bg_color: "#0e1726", bg_color2: "#1a2a4a" } },
+  { name: "Cyber", patch: { bg_style: "neon-city", bg_color: "#ec4899", bg_color2: "#06b6d4" } },
+  { name: "Lava", patch: { bg_style: "lava", bg_color: "#f97316", bg_color2: "#dc2626" } },
+  { name: "Stars", patch: { bg_style: "stars", bg_color: "#03040a", bg_color2: "#ffffff" } },
+  { name: "Matrix", patch: { bg_style: "matrix", bg_color: "#22c55e", bg_color2: "#22c55e" } },
   { name: "Carbon", patch: { bg_style: "dots", bg_color: "#0a0a0a", bg_color2: "#525252" } },
-  { name: "Graph", patch: { bg_style: "grid", bg_color: "#0f172a", bg_color2: "#3b82f6" } },
   { name: "Candy", patch: { bg_style: "stripes", bg_color: "#fb7185", bg_color2: "#f472b6" } },
 ];
 
@@ -152,7 +167,16 @@ export function ChatSettingsPanel({
           </div>
         </Row>
 
-        {prefs.bg_style !== "default" && (
+        {prefs.bg_style === "custom-image" && (
+          <Row label="Custom image">
+            <ChatBgImageUploader
+              url={prefs.bg_image_url}
+              onChange={(url) => onChange({ bg_image_url: url })}
+            />
+          </Row>
+        )}
+
+        {prefs.bg_style !== "default" && prefs.bg_style !== "custom-image" && (
           <>
             <Row label="Background colors">
               <div className="flex items-center gap-3">
@@ -179,15 +203,18 @@ export function ChatSettingsPanel({
                 })}
               </div>
             </Row>
-
-            <Row label="Live preview">
-              <div
-                className="h-16 w-full rounded-lg border border-border"
-                style={chatBackgroundStyle(prefs)}
-              />
-            </Row>
           </>
         )}
+
+        {prefs.bg_style !== "default" && (
+          <Row label="Live preview">
+            <div
+              className="h-16 w-full rounded-lg border border-border"
+              style={chatBackgroundStyle(prefs)}
+            />
+          </Row>
+        )}
+
 
         <p className="pt-2 text-[11px] text-muted-foreground">
           Name color, message gradient, and icon are set in your profile.
