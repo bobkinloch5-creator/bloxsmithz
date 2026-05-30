@@ -203,7 +203,9 @@ function listGateways(): GatewayChoice[] {
   }
   const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
   if (neoKey) {
-    out.push({ gw: createProvider("neokens", neoKey), modelName: "gpt-5", providerName: "neokens" });
+    const gw = createProvider("neokens", neoKey);
+    out.push({ gw, modelName: "gpt-5.5", providerName: "neokens" });
+    out.push({ gw, modelName: "gemini-3-flash", providerName: "neokens" });
   }
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
