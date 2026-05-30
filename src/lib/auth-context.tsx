@@ -26,6 +26,21 @@ type Profile = {
   chat_icon?: string | null;
   chat_nickname?: string | null;
   chat_font?: string | null;
+  // Profile customization fields
+  profile_accent?: string | null;
+  profile_effect?: string | null;
+  profile_background?: string | null;
+  custom_background_url?: string | null;
+  profile_layout?: string | null;
+  pfp_effect?: string | null;
+  status_message?: string | null;
+  pronouns?: string | null;
+  location?: string | null;
+  private_profile?: boolean;
+  presence_enabled?: boolean;
+  presence_status?: string | null;
+  show_activity?: boolean;
+  last_seen_at?: string | null;
 };
 
 type Role = "owner" | "admin" | "user";
@@ -77,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase
           .from("profiles")
           .select(
-            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
+            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at",
           )
           .eq("id", uid)
           .maybeSingle(),
