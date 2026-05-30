@@ -678,7 +678,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           className={cn(
             "flex flex-col overflow-hidden border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl",
             inline
-              ? "relative h-[calc(100dvh-9rem)] min-h-[480px] w-full rounded-2xl border"
+              ? "relative h-[min(720px,calc(100dvh-14rem))] min-h-[420px] w-full rounded-2xl border"
               : "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] rounded-2xl border md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]",
           )}
           style={{
