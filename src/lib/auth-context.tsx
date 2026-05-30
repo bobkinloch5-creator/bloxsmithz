@@ -17,6 +17,9 @@ type Profile = {
   referral_code?: string | null;
   referred_by?: string | null;
   hide_email?: boolean;
+  chat_name_gradient?: string[] | null;
+  chat_text_gradient?: string[] | null;
+  chat_icon?: string | null;
 };
 
 type Role = "owner" | "admin" | "user";
