@@ -142,6 +142,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [showSettings, setShowSettings] = useState(false);
   const [showMod, setShowMod] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  const [showRobloxShare, setShowRobloxShare] = useState(false);
+  const [robloxUrl, setRobloxUrl] = useState("");
+  const [robloxCaption, setRobloxCaption] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Map<string, number>>(new Map());
@@ -153,6 +157,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [activeDm, setActiveDm] = useState<string | null>(null);
   const [profileUid, setProfileUid] = useState<string | null>(null);
   const [dmUnread, setDmUnread] = useState(0);
+  const presenceSyncedRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
