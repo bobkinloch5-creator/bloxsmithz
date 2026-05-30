@@ -919,6 +919,7 @@ export function GlobalChat() {
                 <ImageIcon className="h-4 w-4" />
               </button>
               <EmojiPicker onPick={(em) => { setDraft((d) => d + em); inputRef.current?.focus(); }} />
+              <EmotePicker onPick={(tok) => { setDraft((d) => d + (d && !d.endsWith(" ") ? " " : "") + tok + " "); inputRef.current?.focus(); }} />
               <textarea
                 ref={inputRef}
                 value={draft}
