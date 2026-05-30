@@ -1,33 +1,8 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
-
-type Block = { type: "text"; content: string } | { type: "code"; lang: string; content: string };
-
-function parseMarkdown(input: string): Block[] {
-  const blocks: Block[] = [];
-  const re = /```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(input)) !== null) {
-    if (m.index > last) {
-      const text = input.slice(last, m.index);
-      if (text.trim()) blocks.push({ type: "text", content: text });
-    }
-    blocks.push({
-      type: "code",
-      lang: (m[1] || "lua").toLowerCase(),
-      content: m[2].replace(/\n$/, ""),
-    });
-    last = re.lastIndex;
-  }
-  if (last < input.length) {
-    const text = input.slice(last);
-    if (text.trim()) blocks.push({ type: "text", content: text });
-  }
-  if (blocks.length === 0) blocks.push({ type: "text", content: input });
-  return blocks;
-}
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 function CodeBlock({ lang, content }: { lang: string; content: string }) {
   const [copied, setCopied] = useState(false);
@@ -61,53 +36,57 @@ function CodeBlock({ lang, content }: { lang: string; content: string }) {
   );
 }
 
-function InlineText({ content }: { content: string }) {
-  // Very light markdown: **bold**, `inline code`, preserve newlines.
-  const parts = content.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
-  return (
-    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-      {parts.map((p, i) => {
-        if (p.startsWith("`") && p.endsWith("`")) {
-          return (
-            <code
-              key={i}
-              className="rounded bg-surface-elevated px-1 py-0.5 font-mono text-[12px] text-foreground"
-            >
-              {p.slice(1, -1)}
-            </code>
-          );
-        }
-        if (p.startsWith("**") && p.endsWith("**")) {
-          return (
-            <strong key={i} className="font-semibold text-foreground">
-              {p.slice(2, -2)}
-            </strong>
-          );
-        }
-        return <span key={i}>{p}</span>;
-      })}
-    </div>
-  );
-}
-
-// Memoized so that re-renders of the parent chat component (which happen on
-// every keystroke in the prompt box, every status-poll tick, and the running
-// "elapsed" timer) do NOT re-parse and re-render every prior message. With the
-// default shallow prop compare, a message whose `content` string is unchanged
-// is skipped entirely — turning per-keystroke work from O(all messages) into
-// O(only the message that actually changed). This was a real source of typing
-// lag in long conversations.
 export const AssistantMessage = memo(function AssistantMessage({ content }: { content: string }) {
-  const blocks = useMemo(() => parseMarkdown(content), [content]);
   return (
-    <div className="space-y-1">
-      {blocks.map((b, i) =>
-        b.type === "code" ? (
-          <CodeBlock key={i} lang={b.lang} content={b.content} />
-        ) : (
-          <InlineText key={i} content={b.content} />
-        ),
-      )}
+    <div className="text-sm leading-relaxed break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          p: ({ children }) => <p className="my-2 whitespace-pre-wrap">{children}</p>,
+          h1: ({ children }) => <h3 className="mt-3 mb-1 text-base font-semibold">{children}</h3>,
+          h2: ({ children }) => <h3 className="mt-3 mb-1 text-sm font-semibold">{children}</h3>,
+          h3: ({ children }) => <h4 className="mt-2 mb-1 text-sm font-semibold">{children}</h4>,
+          ul: ({ children }) => <ul className="my-2 list-disc pl-5 space-y-1">{children}</ul>,
+          ol: ({ children }) => <ol className="my-2 list-decimal pl-5 space-y-1">{children}</ol>,
+          li: ({ children }) => <li className="leading-snug">{children}</li>,
+          a: ({ href, children }) => (
+            <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2 hover:opacity-80">
+              {children}
+            </a>
+          ),
+          strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+          blockquote: ({ children }) => (
+            <blockquote className="my-2 border-l-2 border-border pl-3 italic text-muted-foreground">{children}</blockquote>
+          ),
+          hr: () => <hr className="my-3 border-border" />,
+          table: ({ children }) => (
+            <div className="my-2 overflow-x-auto">
+              <table className="w-full border-collapse text-xs">{children}</table>
+            </div>
+          ),
+          th: ({ children }) => <th className="border border-border bg-surface/40 px-2 py-1 text-left font-semibold">{children}</th>,
+          td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
+          code: ({ inline, className, children }: any) => {
+            const text = String(children ?? "").replace(/\n$/, "");
+            if (!inline && /language-/.test(className ?? "")) {
+              const lang = (className ?? "").replace("language-", "").toLowerCase() || "lua";
+              return <CodeBlock lang={lang} content={text} />;
+            }
+            if (!inline && text.includes("\n")) {
+              return <CodeBlock lang="text" content={text} />;
+            }
+            return (
+              <code className="rounded bg-surface-elevated px-1 py-0.5 font-mono text-[12px] text-foreground">
+                {children}
+              </code>
+            );
+          },
+          pre: ({ children }) => <>{children}</>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
 });
