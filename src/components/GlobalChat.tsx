@@ -780,7 +780,7 @@ export function GlobalChat() {
                         const stops = author.chat_name_gradient;
                         return <Ico className="h-3.5 w-3.5 shrink-0" style={stops?.length ? { color: stops[0] } : undefined} aria-hidden />;
                       })() : null}
-                      <span className="truncate text-xs font-semibold" style={!isBot ? gradientTextStyle(author?.chat_name_gradient) : undefined}>
+                      <span className="truncate text-xs font-semibold" style={!isBot ? { ...gradientTextStyle(author?.chat_name_gradient), ...chatFontStyle(author?.chat_font) } : undefined}>
                         {name}
                       </span>
                       {isBot ? (
@@ -807,7 +807,7 @@ export function GlobalChat() {
                     </div>
                     {m.content && (
                       <div className={cn("mt-0.5 break-words leading-relaxed whitespace-pre-wrap text-foreground", fontSizeClass(prefs.font_size))}
-                        style={!isBot ? gradientTextStyle(author?.chat_text_gradient) : undefined}>
+                        style={!isBot ? { ...gradientTextStyle(author?.chat_text_gradient), ...chatFontStyle(author?.chat_font) } : undefined}>
                         {renderRich(m.content, myName, accent)}
                       </div>
                     )}
