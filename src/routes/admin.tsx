@@ -75,7 +75,7 @@ type Activity = {
 };
 
 function Admin() {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, isOwner, loading } = useAuth();
   const nav = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [q, setQ] = useState("");
@@ -185,6 +185,10 @@ function Admin() {
   };
 
   const toggleAdmin = async (r: Row) => {
+    if (!isOwner) {
+      toast.error("Only the owner can manage admin roles.");
+      return;
+    }
     const isAdminRow = r.roles.includes("admin");
     if (!confirm(`${isAdminRow ? "Remove admin from" : "Make admin"} ${r.email}?`)) return;
     const { error } = await supabase.rpc("admin_set_role", {
@@ -576,7 +580,7 @@ function Admin() {
               </thead>
               <tbody>
                 {filtered.map((r) => {
-                  const isOwner = r.roles.includes("owner");
+                  const isOwnerRow = r.roles.includes("owner");
                   const isAdminRow = r.roles.includes("admin");
                   return (
                     <tr
@@ -602,7 +606,7 @@ function Admin() {
                         </div>
                       </td>
                       <td>
-                        {isOwner ? (
+                        {isOwnerRow ? (
                           <span className="text-[10px] uppercase rounded bg-primary/20 text-primary px-1.5 py-0.5">
                             Owner
                           </span>
@@ -639,11 +643,11 @@ function Admin() {
                         <button
                           onClick={() => resetCredits(r)}
                           className="text-xs rounded-md border border-border px-2 py-1 mr-1"
-                          disabled={isOwner}
+                          disabled={isOwnerRow}
                         >
                           Reset
                         </button>
-                        {!isOwner && (
+                        {isOwner && !isOwnerRow && (
                           <button
                             onClick={() => toggleAdmin(r)}
                             className="text-xs rounded-md border border-border px-2 py-1 mr-1"
@@ -651,7 +655,7 @@ function Admin() {
                             {isAdminRow ? "Demote" : "Make admin"}
                           </button>
                         )}
-                        {!isOwner && (
+                        {!isOwnerRow && (
                           <button
                             onClick={() => toggleBan(r)}
                             className={`text-xs rounded-md px-2 py-1 ${r.banned ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}

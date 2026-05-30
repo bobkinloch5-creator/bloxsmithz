@@ -104,6 +104,14 @@ const changelogItems = [
           "Image-based building replica prompts now route through stronger vision handling, get longer generation time, and fall back to a complete Roblox-scale building model instead of an empty folder.",
       },
       {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Owner-Only Admin Role Changes",
+        detail:
+          "Admin promotion and demotion is now locked to owner accounts at the database policy, RPC, admin page, and Global Chat command layers.",
+      },
+      {
         category: "Tools",
         tagColor: tagStyles.tools,
         icon: Palette,

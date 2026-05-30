@@ -856,13 +856,17 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       if (!isAdmin) { toast.error("Owner/staff command only"); return false; }
       return true;
     };
+    const ownerOnly = () => {
+      if (!roles.includes("owner")) { toast.error("Owner command only"); return false; }
+      return true;
+    };
     if (cmd === "help") {
       pushEphemeralBot([
         "BloxBot commands:",
         "/rules, /credits, /daily, /profile, /badges, /rank, /project, /publish, /plugin, /models, /updates",
         "/report @user reason, /mute @user, /follow @user, /friend @user, /dm @user message, /online, /staff",
         "/me <action>, /shrug, /clear-mine",
-        ...(isAdmin ? ["Staff: /announce, /givecredits, /takecredits, /badge, /role, /warn, /timeout, /ban, /unban, /feature, /changelog, /slow, /clear"] : []),
+        ...(isAdmin ? [`Staff: /announce, /givecredits, /takecredits, /badge, /warn, /timeout, /ban, /unban, /feature, /changelog, /slow, /clear${roles.includes("owner") ? ", /role" : ""}`] : []),
       ].join("\n"));
       return;
     }
@@ -896,7 +900,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     if (["givecredits", "takecredits", "badge", "role", "warn", "timeout", "ban", "unban"].includes(cmd)) { if (!staffOnly()) return; const target = findMention(args); if (!target) return toast.error("Use @user"); const rest = args.replace(/@([A-Za-z0-9_ .-]{2,40})/, "").trim(); const [first, ...tail] = rest.split(/\s+/); const reason = tail.join(" ") || "BloxBot staff command";
       if (cmd === "givecredits" || cmd === "takecredits") { const amount = Math.abs(parseInt(first, 10)); if (!amount) return toast.error("Enter amount"); const { error } = await (supabase as any).rpc("admin_adjust_credits", { _user_id: target.id, _amount: cmd === "takecredits" ? -amount : amount, _reason: reason }); if (error) toast.error(error.message); else toast.success("Credits updated"); return; }
       if (cmd === "badge") { const { error } = await (supabase as any).rpc("admin_grant_badge", { _user_id: target.id, _badge: first }); if (error) toast.error(error.message); else toast.success("Badge granted"); return; }
-      if (cmd === "role") { const role = first === "owner" ? "admin" : first; const { error } = await (supabase as any).rpc("admin_set_role", { _user_id: target.id, _role: role, _grant: true }); if (error) toast.error(error.message); else toast.success("Role updated"); return; }
+      if (cmd === "role") { if (!ownerOnly()) return; const role = first === "owner" ? "admin" : first; const { error } = await (supabase as any).rpc("admin_set_role", { _user_id: target.id, _role: role, _grant: true }); if (error) toast.error(error.message); else toast.success("Role updated"); return; }
       if (cmd === "warn") { const { error } = await (supabase as any).rpc("admin_chat_warn", { _user_id: target.id, _reason: rest || "Warning" }); if (error) toast.error(error.message); else toast.success("Warned"); return; }
       if (cmd === "timeout") { const minutes = parseInt(first, 10) || 5; await muteUser(target.id, minutes, reason); return; }
       if (cmd === "ban" || cmd === "unban") { const { error } = await (supabase as any).rpc("admin_set_ban", { _user_id: target.id, _banned: cmd === "ban", _reason: reason }); if (error) toast.error(error.message); else toast.success(cmd === "ban" ? "Banned" : "Unbanned"); return; }

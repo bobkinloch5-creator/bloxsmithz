@@ -21,6 +21,10 @@
 - Added a complete Roblox-scale building replica fallback with floors, facade, roof, windows, trim, balcony, lights, spawn, and ground instead of an empty folder.
 - Broadened build intent and asset-tool detection so visual build requests get richer actions more consistently.
 
+### Admin Security
+- Locked admin role promotion/demotion to owner accounts only.
+- Updated database role policies, the `admin_set_role` RPC, the admin page, and the Global Chat `/role` command so regular admins cannot make other users admin.
+
 ### Profile Fixes
 - Fixed profile settings not saving correctly.
 - Added a stronger fallback save system for display name, bio, and studio specialty.
