@@ -15,6 +15,10 @@ import {
   sanitizeGradient,
   sanitizeIcon,
 } from "@/lib/chat-customization";
+import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
+
+const ACCENT_PRESETS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
+
 
 const NICK_RE = /^[A-Za-z0-9 _.\-]{0,24}$/;
 
