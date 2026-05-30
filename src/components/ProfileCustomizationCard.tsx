@@ -12,7 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PROFILE_BACKGROUNDS, ProfileBackground, type ProfileBackgroundId } from "./profile/ProfileBackground";
 import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
-import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film } from "lucide-react";
+import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award } from "lucide-react";
+import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow } from "./profile/ProfileBadges";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
 const LAYOUTS: Array<{ id: "classic" | "card" | "cinematic" | "compact"; label: string; hint: string }> = [
@@ -50,6 +51,7 @@ export function ProfileCustomizationCard() {
     presence_enabled: p.presence_enabled !== false,
     show_activity: p.show_activity !== false,
     presence_status: (p.presence_status ?? "online") as "online" | "idle" | "dnd" | "invisible",
+    profile_badges: (Array.isArray(p.profile_badges) ? p.profile_badges : []) as string[],
   });
   const [saving, setSaving] = useState(false);
 
@@ -75,6 +77,7 @@ export function ProfileCustomizationCard() {
       presence_enabled: q.presence_enabled !== false,
       show_activity: q.show_activity !== false,
       presence_status: q.presence_status ?? s.presence_status,
+      profile_badges: Array.isArray(q.profile_badges) ? q.profile_badges : s.profile_badges,
     }));
   }, [profile]);
 
@@ -105,6 +108,7 @@ export function ProfileCustomizationCard() {
           presence_enabled: state.presence_enabled,
           show_activity: state.show_activity,
           presence_status: state.presence_status,
+          profile_badges: state.profile_badges,
         },
       });
       await refresh();
@@ -186,6 +190,9 @@ export function ProfileCustomizationCard() {
               <p className="text-xs text-muted-foreground truncate">{state.status_message}</p>
             )}
             {state.bio && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{state.bio}</p>}
+            {state.profile_badges.length > 0 && (
+              <ProfileBadgeRow ids={state.profile_badges} size={22} className="mt-2" />
+            )}
           </div>
         </div>
       </div>
@@ -388,6 +395,46 @@ export function ProfileCustomizationCard() {
                 }`}
               >
                 {e.label}
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      {/* BADGES */}
+      <Section icon={<Award className="h-4 w-4" />} title={`Badges (${state.profile_badges.length}/12)`}>
+        <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+          Pick up to 12 badges to show off on your profile. Click to toggle.
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          {PROFILE_BADGES.map((b) => {
+            const active = state.profile_badges.includes(b.id);
+            const atLimit = !active && state.profile_badges.length >= 12;
+            return (
+              <button
+                key={b.id}
+                type="button"
+                disabled={atLimit}
+                onClick={() =>
+                  setState((s) => ({
+                    ...s,
+                    profile_badges: active
+                      ? s.profile_badges.filter((x) => x !== b.id)
+                      : [...s.profile_badges, b.id],
+                  }))
+                }
+                className={`group flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition disabled:opacity-40 ${
+                  active
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/60 bg-background/40 hover:border-border"
+                }`}
+                title={b.description}
+              >
+                <ProfileBadgeIcon id={b.id} size={30} />
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold truncate">{b.label}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{b.description}</div>
+                </div>
               </button>
             );
           })}

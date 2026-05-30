@@ -10,6 +10,7 @@ import { ProfileEffect } from "./ProfileEffect";
 import { ProfileBackground } from "@/components/profile/ProfileBackground";
 import { PfpRing } from "@/components/profile/PfpRing";
 import { presenceFromProfile } from "@/lib/presence";
+import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
 
 
 type Profile = {
@@ -35,6 +36,7 @@ type Profile = {
   last_seen_at: string | null;
   show_activity: boolean | null;
   current_activity: any;
+  profile_badges: string[] | null;
 };
 
 
@@ -72,7 +74,7 @@ export function UserProfilePopover({
       const [{ data: p }, { data: fr }] = await Promise.all([
         (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect,profile_background,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges")
           .eq("id", userId)
           .maybeSingle(),
 
@@ -343,6 +345,9 @@ export function UserProfilePopover({
                 </div>
                 {profile.status_message && (
                   <p className="mt-0.5 text-xs text-foreground/80 italic">"{profile.status_message}"</p>
+                )}
+                {profile.profile_badges && profile.profile_badges.length > 0 && (
+                  <ProfileBadgeRow ids={profile.profile_badges} size={24} className="mt-2" />
                 )}
 
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
