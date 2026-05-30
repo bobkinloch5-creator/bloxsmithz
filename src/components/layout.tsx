@@ -18,6 +18,16 @@ import {
   MessageCircle,
   Box,
   Shirt,
+  Image as ImageIcon,
+  Layout as LayoutIcon,
+  Star,
+  Users,
+  GalleryHorizontal,
+  Trophy,
+  Lightbulb,
+  Server,
+  FileText,
+  HelpCircle,
 } from "lucide-react";
 import { PluginStatus } from "@/components/PluginStatus";
 import { McpStatus } from "@/components/McpStatus";
@@ -64,16 +74,24 @@ const MOBILE_NAV_ITEMS: readonly NavItem[] = [
   { to: "/", label: "Home", icon: Home },
   { to: "/dashboard", label: "Build", icon: LayoutDashboard, authOnly: true },
   { to: "/account", label: "Profile", icon: User, authOnly: true },
-  { to: "/clothing", label: "Clothing", icon: Shirt },
   { to: "/login", label: "Login", icon: User, guestOnly: true },
-  { to: "/plugin", label: "Plugin", icon: Puzzle },
   { to: "/pricing", label: "Credits", icon: BadgeDollarSign },
   { to: "/templates", label: "Templates", icon: Sparkles },
+  { to: "/clothing", label: "Clothing", icon: Shirt },
+  { to: "/image-generator", label: "Images", icon: ImageIcon },
   { to: "/toolbox", label: "Toolbox", icon: Box },
+  { to: "/ui-generator", label: "UI Generator", icon: LayoutIcon },
+  { to: "/showcase", label: "Showcase", icon: Star },
+  { to: "/browse", label: "Community Chat", icon: Users },
+  { to: "/gallery", label: "Gallery", icon: GalleryHorizontal },
+  { to: "/achievements", label: "Achievements", icon: Trophy },
+  { to: "/ideas", label: "Ideas", icon: Lightbulb },
   { to: "/docs", label: "Docs", icon: BookOpen },
-  { to: "/ideas", label: "Ideas", icon: Sparkles },
+  { to: "/plugin", label: "Plugin", icon: Puzzle },
   { to: "/mcp", label: "MCP", icon: Box },
-  { to: "/faq", label: "FAQ", icon: MessageCircle },
+  { to: "/mcp-servers", label: "MCP Servers", icon: Server, authOnly: true },
+  { to: "/changelog", label: "Changelog", icon: FileText },
+  { to: "/faq", label: "FAQ", icon: HelpCircle },
 ];
 
 function ProfileAvatar({
@@ -362,8 +380,14 @@ export function Header() {
             rel="noopener noreferrer"
             className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-[#5865F2]/30 bg-[#5865F2]/15 px-3 py-2 text-xs font-bold text-[#8ea0ff] active:scale-[0.98] hover:bg-[#5865F2]/25"
           >
-            Discord
+            Discord +5
           </a>
+          {user && (
+            <>
+              <PluginStatus compact />
+              <McpStatus compact />
+            </>
+          )}
         </div>
       </nav>
     </header>
