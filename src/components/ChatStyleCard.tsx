@@ -6,12 +6,17 @@ import { Check, Loader2, Palette, RotateCcw, Sparkles, X } from "lucide-react";
 import {
   CHAT_ICONS,
   CHAT_ICON_MAP,
+  CHAT_FONTS,
   NAME_GRADIENT_PRESETS,
   TEXT_GRADIENT_PRESETS,
+  chatFontStyle,
   gradientTextStyle,
+  sanitizeFont,
   sanitizeGradient,
   sanitizeIcon,
 } from "@/lib/chat-customization";
+
+const NICK_RE = /^[A-Za-z0-9 _.\-]{0,24}$/;
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
@@ -26,19 +31,24 @@ export function ChatStyleCard() {
   const [nameStops, setNameStops] = useState<string[]>([]);
   const [textStops, setTextStops] = useState<string[]>([]);
   const [icon, setIcon] = useState<string | null>(null);
+  const [nickname, setNickname] = useState<string>("");
+  const [font, setFont] = useState<string>("default");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setNameStops(sanitizeGradient(profile?.chat_name_gradient) ?? []);
     setTextStops(sanitizeGradient(profile?.chat_text_gradient) ?? []);
     setIcon(sanitizeIcon(profile?.chat_icon));
-  }, [profile?.chat_name_gradient, profile?.chat_text_gradient, profile?.chat_icon]);
+    setNickname(profile?.chat_nickname ?? "");
+    setFont(sanitizeFont(profile?.chat_font) ?? "default");
+  }, [profile?.chat_name_gradient, profile?.chat_text_gradient, profile?.chat_icon, profile?.chat_nickname, profile?.chat_font]);
 
-  const displayName = profile?.display_name || user?.email?.split("@")[0] || "You";
+  const displayName = (nickname.trim() || profile?.display_name || user?.email?.split("@")[0] || "You");
   const Icon = icon ? CHAT_ICON_MAP[icon] : null;
 
-  const previewName = useMemo(() => gradientTextStyle(nameStops.length ? nameStops : null), [nameStops]);
-  const previewText = useMemo(() => gradientTextStyle(textStops.length ? textStops : null), [textStops]);
+  const fontStyle = useMemo(() => chatFontStyle(font), [font]);
+  const previewName = useMemo(() => ({ ...gradientTextStyle(nameStops.length ? nameStops : null), ...fontStyle }), [nameStops, fontStyle]);
+  const previewText = useMemo(() => ({ ...gradientTextStyle(textStops.length ? textStops : null), ...fontStyle }), [textStops, fontStyle]);
 
   const save = async () => {
     if (!user) return;
@@ -47,12 +57,19 @@ export function ChatStyleCard() {
       const cleanName = sanitizeGradient(nameStops);
       const cleanText = sanitizeGradient(textStops);
       const cleanIcon = sanitizeIcon(icon);
+      const cleanFont = sanitizeFont(font);
+      const trimmedNick = nickname.trim();
+      if (trimmedNick && !NICK_RE.test(trimmedNick)) {
+        throw new Error("Nickname must be 1-24 chars: letters, numbers, space . _ -");
+      }
       const { error } = await supabase
         .from("profiles")
         .update({
           chat_name_gradient: cleanName,
           chat_text_gradient: cleanText,
           chat_icon: cleanIcon,
+          chat_nickname: trimmedNick || null,
+          chat_font: cleanFont,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
@@ -70,6 +87,8 @@ export function ChatStyleCard() {
     setNameStops([]);
     setTextStops([]);
     setIcon(null);
+    setNickname("");
+    setFont("default");
   };
 
   return (
