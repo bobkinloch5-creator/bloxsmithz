@@ -303,7 +303,7 @@ export function UserProfilePopover({
                       : undefined
                 }
               >
-                {!profile.banner_url && <ProfileBackground id={profile.profile_background ?? "none"} />}
+                {!profile.banner_url && <ProfileBackground id={profile.profile_background ?? "none"} customUrl={(profile as any).custom_background_url ?? null} />}
                 <ProfileEffect effect={profile.profile_effect} accent={profile.profile_accent} />
               </div>
               <div className="absolute -bottom-8 left-3">

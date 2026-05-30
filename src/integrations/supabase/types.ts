@@ -1273,6 +1273,7 @@ export type Database = {
           created_at: string
           credits: number
           current_activity: Json | null
+          custom_background_url: string | null
           discord_claimed: boolean
           display_name: string | null
           email: string
@@ -1320,6 +1321,7 @@ export type Database = {
           created_at?: string
           credits?: number
           current_activity?: Json | null
+          custom_background_url?: string | null
           discord_claimed?: boolean
           display_name?: string | null
           email: string
@@ -1367,6 +1369,7 @@ export type Database = {
           created_at?: string
           credits?: number
           current_activity?: Json | null
+          custom_background_url?: string | null
           discord_claimed?: boolean
           display_name?: string | null
           email?: string

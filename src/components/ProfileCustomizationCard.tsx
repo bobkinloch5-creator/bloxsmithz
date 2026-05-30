@@ -1,16 +1,18 @@
 // Full profile customization panel: identity, background, layout, ring effect,
 // accent + animated effect, privacy & presence. Saves everything via a single
 // authenticated server function so it persists to the database.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useServerFn } from "@tanstack/react-start";
 import { updateProfileCustomization } from "@/lib/profile-customization.functions";
+import { setCustomBackground } from "@/lib/profile-media.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PROFILE_BACKGROUNDS, ProfileBackground, type ProfileBackgroundId } from "./profile/ProfileBackground";
 import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
-import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound } from "lucide-react";
+import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film } from "lucide-react";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
 const LAYOUTS: Array<{ id: "classic" | "card" | "cinematic" | "compact"; label: string; hint: string }> = [
@@ -40,6 +42,7 @@ export function ProfileCustomizationCard() {
     profile_accent: (p.profile_accent ?? "#7c3cff") as string,
     profile_effect: (p.profile_effect ?? "none") as ProfileEffectId,
     profile_background: (p.profile_background ?? "none") as ProfileBackgroundId,
+    custom_background_url: (p.custom_background_url ?? null) as string | null,
     profile_layout: (p.profile_layout ?? "classic") as "classic" | "card" | "cinematic" | "compact",
     pfp_effect: (p.pfp_effect ?? "none") as PfpEffectId,
     private_profile: !!p.private_profile,
@@ -64,6 +67,7 @@ export function ProfileCustomizationCard() {
       profile_accent: q.profile_accent ?? s.profile_accent,
       profile_effect: q.profile_effect ?? s.profile_effect,
       profile_background: q.profile_background ?? s.profile_background,
+      custom_background_url: q.custom_background_url ?? s.custom_background_url ?? null,
       profile_layout: q.profile_layout ?? s.profile_layout,
       pfp_effect: q.pfp_effect ?? s.pfp_effect,
       private_profile: !!q.private_profile,
@@ -93,6 +97,7 @@ export function ProfileCustomizationCard() {
           profile_accent: state.profile_accent,
           profile_effect: state.profile_effect,
           profile_background: state.profile_background,
+          custom_background_url: state.custom_background_url,
           profile_layout: state.profile_layout,
           pfp_effect: state.pfp_effect,
           private_profile: state.private_profile,
@@ -139,7 +144,7 @@ export function ProfileCustomizationCard() {
       {/* LIVE PREVIEW */}
       <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-background/40">
         <div className="relative h-40 w-full overflow-hidden">
-          <ProfileBackground id={state.profile_background} />
+          <ProfileBackground id={state.profile_background} customUrl={state.custom_background_url} />
           <ProfileEffect effect={state.profile_effect} accent={state.profile_accent} />
           {state.profile_background === "none" && (
             <div
@@ -260,6 +265,24 @@ export function ProfileCustomizationCard() {
             );
           })}
         </div>
+
+        {/* CUSTOM UPLOAD TILE inside background section */}
+        <CustomBackgroundUploader
+          userId={user?.id ?? null}
+          url={state.custom_background_url}
+          active={state.profile_background === "custom"}
+          onPick={() => {
+            if (state.custom_background_url) set("profile_background", "custom");
+          }}
+          onChange={(url) => {
+            setState((s) => ({
+              ...s,
+              custom_background_url: url,
+              profile_background: url ? "custom" : s.profile_background === "custom" ? "none" : s.profile_background,
+            }));
+            refresh();
+          }}
+        />
       </Section>
 
       {/* LAYOUT */}
@@ -502,5 +525,151 @@ function ToggleRow({
         <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>
       </div>
     </label>
+  );
+}
+
+const MAX_BYTES = 15 * 1024 * 1024; // 15MB
+const ACCEPT = "image/png,image/jpeg,image/webp,image/gif,image/apng,video/mp4,video/webm";
+
+function CustomBackgroundUploader({
+  userId,
+  url,
+  active,
+  onPick,
+  onChange,
+}: {
+  userId: string | null;
+  url: string | null;
+  active: boolean;
+  onPick: () => void;
+  onChange: (url: string | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const saveUrl = useServerFn(setCustomBackground);
+
+  const isVideo = !!url && /\.(mp4|webm)(\?|$)/i.test(url);
+  const isGif = !!url && /\.gif(\?|$)/i.test(url);
+
+  function pathFromPublicUrl(u: string | null): string | null {
+    if (!u) return null;
+    const m = u.match(/\/storage\/v1\/object\/public\/profile-media\/(.+)$/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  async function handleFile(file: File) {
+    if (!userId) {
+      toast.error("Sign in to upload");
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      toast.error("File is too large (max 15MB)");
+      return;
+    }
+    setBusy(true);
+    try {
+      const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `${userId}/bg-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("profile-media")
+        .upload(path, file, { contentType: file.type, upsert: true, cacheControl: "31536000" });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("profile-media").getPublicUrl(path);
+      const publicUrl = data.publicUrl;
+      const previousPath = pathFromPublicUrl(url);
+      await saveUrl({ data: { url: publicUrl, previousPath } });
+      onChange(publicUrl);
+      toast.success("Custom background uploaded");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed");
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function handleRemove() {
+    if (!url) return;
+    setBusy(true);
+    try {
+      const previousPath = pathFromPublicUrl(url);
+      await saveUrl({ data: { url: null, previousPath } });
+      onChange(null);
+      toast.success("Custom background removed");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't remove");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-dashed border-primary/40 bg-gradient-to-br from-primary/5 via-background/40 to-fuchsia-500/5 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Film className="h-4 w-4 text-primary shrink-0" />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Custom animated background</div>
+            <div className="text-[11px] text-muted-foreground">
+              Upload your own GIF, PNG, JPG, WEBP, or short MP4/WebM (max 15MB).
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ACCEPT}
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFile(f);
+            }}
+          />
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {url ? "Replace" : "Upload"}
+          </button>
+          {url && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleRemove}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Remove
+            </button>
+          )}
+        </div>
+      </div>
+
+      {url && (
+        <button
+          type="button"
+          onClick={onPick}
+          className={`group relative mt-3 block h-28 w-full overflow-hidden rounded-lg border transition ${
+            active ? "border-primary ring-2 ring-primary/40" : "border-border/60 hover:border-border"
+          }`}
+          title="Use this background"
+        >
+          {isVideo ? (
+            <video src={url} autoPlay loop muted playsInline className="h-full w-full object-cover" />
+          ) : (
+            <img src={url} alt="Custom background" className="h-full w-full object-cover" />
+          )}
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">
+            <span>{active ? "Selected" : "Click to use"}</span>
+            <span className="rounded bg-white/15 px-1.5 py-0.5">
+              {isVideo ? "VIDEO" : isGif ? "GIF" : "IMAGE"}
+            </span>
+          </div>
+        </button>
+      )}
+    </div>
   );
 }

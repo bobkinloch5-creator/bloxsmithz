@@ -4,6 +4,7 @@ import { memo } from "react";
 
 export type ProfileBackgroundId =
   | "none"
+  | "custom"
   | "studio"
   | "neon-city"
   | "obby"
@@ -35,6 +36,7 @@ export const PROFILE_BACKGROUNDS: { id: ProfileBackgroundId; label: string; prev
 
 const STYLES: Record<ProfileBackgroundId, React.CSSProperties> = {
   none: {},
+  custom: {},
   studio: {
     background:
       "radial-gradient(120% 90% at 20% 0%, #0ea5e9 0%, transparent 55%), radial-gradient(120% 90% at 100% 100%, #1e293b 0%, transparent 60%), linear-gradient(135deg,#0b1220,#1e293b)",
@@ -94,12 +96,34 @@ const STYLES: Record<ProfileBackgroundId, React.CSSProperties> = {
 
 export const ProfileBackground = memo(function ProfileBackground({
   id,
+  customUrl,
   className = "",
 }: {
   id?: ProfileBackgroundId | string | null;
+  customUrl?: string | null;
   className?: string;
 }) {
   const key = (id ?? "none") as ProfileBackgroundId;
+  if (key === "custom" && customUrl) {
+    const isVideo = /\.(mp4|webm)(\?|$)/i.test(customUrl);
+    return (
+      <div aria-hidden className={`absolute inset-0 overflow-hidden ${className}`}>
+        {isVideo ? (
+          <video
+            src={customUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <img src={customUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-background/10 to-transparent" />
+      </div>
+    );
+  }
   const style = STYLES[key] ?? {};
   return <div aria-hidden className={`absolute inset-0 ${className}`} style={style} />;
 });
