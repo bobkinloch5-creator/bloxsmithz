@@ -598,6 +598,37 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     await (supabase as any).rpc("send_global_chat_message_v2", { _content: content });
   }
 
+  async function shareRobloxGame() {
+    const url = robloxUrl.trim();
+    const caption = robloxCaption.trim();
+    if (!url) return toast.error("Paste a Roblox game URL");
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { return toast.error("That doesn't look like a valid URL"); }
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (host !== "roblox.com" && host !== "web.roblox.com") {
+      return toast.error("Only roblox.com links are allowed");
+    }
+    if (!/\/games?\//i.test(parsed.pathname) && !/\/users\//i.test(parsed.pathname)) {
+      return toast.error("Use a Roblox game or user link");
+    }
+    setSending(true);
+    try {
+      const { error } = await (supabase as any).rpc("send_global_chat_message_v2", {
+        _content: caption, // caption text only; link goes in attachment_url
+        _reply_to_id: null,
+        _attachment_url: parsed.toString(),
+        _attachment_type: "roblox",
+        _channel_id: currentChannel,
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Roblox game shared");
+        setShowRobloxShare(false); setRobloxUrl(""); setRobloxCaption("");
+      }
+    } finally { setSending(false); }
+  }
+
   function pushEphemeralBot(content: string) {
     setMessages((prev) => [...prev, {
       id: `bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
