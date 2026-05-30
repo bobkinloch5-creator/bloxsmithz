@@ -1136,7 +1136,7 @@ function ProjectEditor() {
       }
 
       const v = out.validation;
-      const vLine = v
+      const vLine = v && ((v.errors?.length ?? 0) > 0 || (v.warnings?.length ?? 0) > 0)
         ? `\n\nSync check: ${v.errors?.length ?? 0} blocked · ${v.warnings?.length ?? 0} warning(s).` +
           (v.errors?.length
             ? "\n" +
@@ -1528,7 +1528,7 @@ function ProjectEditor() {
         ? `\n\nAssumptions:\n${out.assumptions.map((a) => `  • ${a}`).join("\n")}`
         : "";
       const v = (out as any).validation;
-      const vLine = v
+      const vLine = v && ((v.errors ?? 0) > 0 || (v.warnings ?? 0) > 0)
         ? `\n\nSync check: ${v.errors ?? 0} blocked · ${v.warnings ?? 0} warning(s) across ${v.phases?.length ?? 0} phase(s).` +
           (v.phases ?? [])
             .filter((p: any) => p.errors?.length || p.warnings?.length)
