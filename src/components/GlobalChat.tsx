@@ -27,6 +27,11 @@ import { ChannelSidebar, type Channel } from "@/components/chat/ChannelSidebar";
 import { FriendsPanel } from "@/components/chat/FriendsPanel";
 import { UserProfilePopover } from "@/components/chat/UserProfilePopover";
 import bloxbotAvatar from "@/assets/bloxbot-avatar.png";
+import { ProfileEffect } from "@/components/chat/ProfileEffect";
+import { PfpRing } from "@/components/profile/PfpRing";
+import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
+import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
+import { presenceFromProfile } from "@/lib/presence";
 
 type DbMessage = {
   id: string;
@@ -47,6 +52,15 @@ type Author = {
   avatar_url: string | null;
   roles: Role[];
   badges: string[];
+  profile_badges: string[];
+  profile_accent: string | null;
+  profile_effect: string | null;
+  profile_background: string | null;
+  pfp_effect: string | null;
+  profile_decoration: string | null;
+  presence_enabled: boolean | null;
+  presence_status: string | null;
+  last_seen_at: string | null;
   chat_name_gradient: string[] | null;
   chat_text_gradient: string[] | null;
   chat_icon: string | null;
