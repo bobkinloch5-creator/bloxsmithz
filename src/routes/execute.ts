@@ -2763,6 +2763,10 @@ export const Route = createFileRoute("/execute")({
             JSON.stringify({
               generationId,
               message: finalMessage,
+              output: finalMessage,
+              text: finalMessage,
+              content: finalMessage,
+              result: finalMessage,
               files: result.files,
               actions: queued,
               status: shouldAuto ? "executing" : "preview",

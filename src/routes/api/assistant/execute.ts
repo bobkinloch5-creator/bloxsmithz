@@ -508,6 +508,10 @@ function buildFallbackResult(prompt: string) {
   const actions = basicWorkspaceActions(prompt);
   return {
     message,
+    output: message,
+    text: message,
+    content: message,
+    result: message,
     files,
     actions,
     autoExecute: true,

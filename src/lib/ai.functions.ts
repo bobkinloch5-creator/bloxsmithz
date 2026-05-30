@@ -936,6 +936,9 @@ export const generateWithAI = createServerFn({ method: "POST" })
     if (preview) {
       return {
         ...result,
+        output: result.message,
+        text: result.message,
+        content: result.message,
         generationId: genRow?.id ?? null,
         preview: true,
         queuedCount: queued.length,
@@ -990,6 +993,9 @@ export const generateWithAI = createServerFn({ method: "POST" })
 
     return {
       ...result,
+      output: result.message,
+      text: result.message,
+      content: result.message,
       generationId: genRow?.id ?? null,
       preview: false,
       queuedCount: queued.length,

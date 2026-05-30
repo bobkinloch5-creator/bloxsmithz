@@ -5,30 +5,23 @@ import { CLOTHING_KNOWLEDGE_PROMPT } from "./roblox-clothing";
 export function extractAIText(result: any): string {
   if (!result) return "";
 
-  // Responses API
-  if (result.output_text && result.output_text.trim()) {
+  // OpenAI Responses API
+  if (typeof result?.output_text === "string" && result.output_text.trim()) {
     return result.output_text.trim();
   }
 
-  // Chat Completions API
-  const chatText = result.choices?.[0]?.message?.content;
-  if (typeof chatText === "string" && chatText.trim()) {
-    return chatText.trim();
-  }
+  // Responses API fallback
+  if (Array.isArray(result?.output)) {
+    const parts: string[] = [];
 
-  // Responses API fallback: manually scan output parts
-  const output = result.output;
-  if (Array.isArray(output)) {
-    const parts = [];
-
-    for (const item of output) {
+    for (const item of result.output) {
       if (item && Array.isArray(item.content)) {
         for (const content of item.content) {
-          if (content.type === "output_text" && content.text) {
+          if (typeof content.text === "string") {
             parts.push(content.text);
           }
-          if (content.type === "text" && content.text) {
-            parts.push(content.text);
+          if (typeof content.output_text === "string") {
+            parts.push(content.output_text);
           }
         }
       }
@@ -36,6 +29,19 @@ export function extractAIText(result: any): string {
 
     const text = parts.join("\n").trim();
     if (text) return text;
+  }
+
+  // Chat Completions API
+  const chatText = result?.choices?.[0]?.message?.content;
+  if (typeof chatText === "string" && chatText.trim()) {
+    return chatText.trim();
+  }
+
+  // If the model returned tool calls instead of text
+  const toolCalls = result?.choices?.[0]?.message?.tool_calls;
+  if (Array.isArray(toolCalls) && toolCalls.length > 0) {
+    console.error("AI returned tool calls instead of text:", JSON.stringify(toolCalls, null, 2));
+    return "";
   }
 
   return "";
