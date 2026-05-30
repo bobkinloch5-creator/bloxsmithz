@@ -1072,6 +1072,80 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
           {showSettings && <ChatSettingsPanel prefs={prefs} onChange={updatePrefs} onClose={() => setShowSettings(false)} />}
           {showMod && isAdmin && <ChatModerationPanel onClose={() => setShowMod(false)} onDeleteMessage={deleteMessage} />}
+
+          {showLogs && (
+            <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
+              <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+                <h2 className="flex items-center gap-2 text-sm font-bold">
+                  <FileText className="h-4 w-4 text-primary" /> Chat logs · #{activeChannel?.name ?? "general"}
+                </h2>
+                <button onClick={() => setShowLogs(false)} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              </header>
+              <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  Showing {visibleMessages.length} message{visibleMessages.length === 1 ? "" : "s"} from this session. Messages are auto-cleared after 7 days.
+                </p>
+                <div className="space-y-1 font-mono text-[11px] leading-relaxed">
+                  {visibleMessages.map((m) => {
+                    const name = m.ephemeralBot ? "BloxBot" : authors.get(m.user_id)?.display_name ?? m.user_id.slice(0, 6);
+                    const t = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                    const extra = m.attachment_type === "image" ? " [image]" : m.attachment_type === "roblox" ? ` [roblox: ${m.attachment_url}]` : "";
+                    return (
+                      <div key={m.id} className="flex gap-2 border-b border-border/40 pb-1">
+                        <span className="shrink-0 text-muted-foreground">{t}</span>
+                        <span className="shrink-0 font-semibold text-primary">{name}:</span>
+                        <span className="break-words text-foreground">{m.content}{extra}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showRobloxShare && (
+            <div className="absolute inset-0 z-40 grid place-items-center bg-background/70 backdrop-blur-sm p-4" onClick={() => setShowRobloxShare(false)}>
+              <div className="w-full max-w-sm rounded-2xl border border-border bg-surface-elevated p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/15 text-emerald-400">
+                    <Gamepad2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold">Share a Roblox game</h3>
+                    <p className="text-[11px] text-muted-foreground">Paste a roblox.com game link.</p>
+                  </div>
+                </div>
+                <label className="text-[11px] font-semibold text-muted-foreground">Game URL</label>
+                <input
+                  type="url"
+                  value={robloxUrl}
+                  onChange={(e) => setRobloxUrl(e.target.value)}
+                  placeholder="https://www.roblox.com/games/..."
+                  className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                />
+                <label className="mt-2 block text-[11px] font-semibold text-muted-foreground">Caption (optional, no links)</label>
+                <input
+                  type="text"
+                  value={robloxCaption}
+                  onChange={(e) => setRobloxCaption(e.target.value.slice(0, 200))}
+                  placeholder="Check out my game!"
+                  className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <button onClick={() => { setShowRobloxShare(false); setRobloxUrl(""); setRobloxCaption(""); }}
+                    className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs hover:bg-surface-elevated">
+                    Cancel
+                  </button>
+                  <button onClick={shareRobloxGame} disabled={sending}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                    <Send className="h-3 w-3" /> Share
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </aside>
       )}
     </>
