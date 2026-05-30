@@ -199,14 +199,14 @@ function UIGeneratorPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-6 space-y-5">
+      <main className="flex-1 mx-auto w-full max-w-[1600px] px-4 sm:px-6 py-6 space-y-5">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <Wand2 className="w-7 h-7 text-primary" />
               UI Generator
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground max-w-2xl">
               AI-generated Roblox GUIs with live preview and one-click Studio insert. Costs {UI_GEN_CREDIT_COST} credits per generation.
             </p>
           </div>
@@ -224,7 +224,7 @@ function UIGeneratorPage() {
             {library.length === 0 ? (
               <p className="text-xs text-muted-foreground">Your saved generations will appear here.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {library.map((it) => (
                   <div key={it.id} className="rounded-lg border border-border bg-surface p-3 flex flex-col gap-1">
                     <div className="text-sm font-medium line-clamp-1">{it.title}</div>
@@ -242,11 +242,14 @@ function UIGeneratorPage() {
           </section>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-5 items-start">
           {/* Customizer */}
-          <aside className="space-y-4">
+          <aside className="space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
             <section className="glass rounded-2xl p-4 space-y-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Template</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Template</h2>
+                <span className="text-[10px] text-muted-foreground truncate max-w-[55%]" title={category}>{category}</span>
+              </div>
               <TemplateGrid active={category} onPick={setCategory} />
             </section>
 
@@ -257,8 +260,10 @@ function UIGeneratorPage() {
                   <button
                     key={s}
                     onClick={() => setStyle(s)}
-                    className={`text-xs rounded-full px-2.5 py-1 border ${
-                      style === s ? "bg-primary text-primary-foreground border-primary" : "border-border bg-surface hover:bg-surface-elevated"
+                    className={`text-xs rounded-full px-3 py-1.5 border transition ${
+                      style === s
+                        ? "bg-primary text-primary-foreground border-primary shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
+                        : "border-border bg-surface hover:bg-surface-elevated hover:border-primary/40"
                     }`}
                   >
                     {s}
@@ -274,19 +279,19 @@ function UIGeneratorPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Title text (optional)"
-                className="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm"
+                className="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
                 placeholder={`Describe extras for this ${category}… (optional)`}
-                className="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm"
+                className="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
               />
               <button
                 onClick={run}
                 disabled={busy}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-primary to-primary/85 px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] hover:brightness-110 disabled:opacity-60 transition"
               >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {busy ? "Generating…" : `Generate — ${UI_GEN_CREDIT_COST} credits`}
@@ -322,14 +327,14 @@ function UIGeneratorPage() {
           </aside>
 
           {/* Preview */}
-          <section className="glass rounded-2xl p-4 min-h-[640px] flex flex-col">
+          <section className="glass rounded-2xl p-4 flex flex-col lg:sticky lg:top-20 lg:h-[calc(100vh-7rem)] min-h-[640px]">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="inline-flex rounded-lg bg-surface border border-border p-0.5">
                 {(["preview", "luau", "spec"] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setTab(t)}
-                    className={`px-3 py-1 text-xs font-medium rounded-md ${
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition ${
                       tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -341,16 +346,16 @@ function UIGeneratorPage() {
                 <div className="inline-flex rounded-lg bg-surface border border-border p-0.5">
                   <button
                     onClick={() => setDevice("desktop")}
-                    className={`px-2.5 py-1 text-xs rounded-md inline-flex items-center gap-1 ${
-                      device === "desktop" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    className={`px-2.5 py-1 text-xs rounded-md inline-flex items-center gap-1 transition ${
+                      device === "desktop" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Monitor className="w-3.5 h-3.5" /> Desktop
                   </button>
                   <button
                     onClick={() => setDevice("mobile")}
-                    className={`px-2.5 py-1 text-xs rounded-md inline-flex items-center gap-1 ${
-                      device === "mobile" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    className={`px-2.5 py-1 text-xs rounded-md inline-flex items-center gap-1 transition ${
+                      device === "mobile" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Smartphone className="w-3.5 h-3.5" /> Mobile
@@ -359,23 +364,32 @@ function UIGeneratorPage() {
               )}
             </div>
 
-            <div className="flex-1 min-h-[560px]">
+            <div className="flex-1 min-h-0 overflow-auto">
               {!result ? (
-                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-6">
-                  Pick a template and style, then Generate to see a live Roblox-style preview here.
+                <div className="h-full min-h-[480px] flex flex-col items-center justify-center text-center px-8 rounded-xl border border-dashed border-border/60 bg-background/30">
+                  <div className="relative mb-4">
+                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-2xl" />
+                    <div className="relative grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/30">
+                      <Wand2 className="h-7 w-7 text-primary" />
+                    </div>
+                  </div>
+                  <h3 className="text-base font-semibold mb-1">Your UI will appear here</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm">
+                    Pick a template and style on the left, tweak your colors, then hit Generate to see a live Roblox-style preview.
+                  </p>
                 </div>
               ) : tab === "preview" ? (
-                <div className="h-[560px]">
+                <div className="h-full min-h-[480px]">
                   <DevicePreviewFrame mode={device}>
                     <UIPreview spec={result.spec} bg={bg} />
                   </DevicePreviewFrame>
                 </div>
               ) : tab === "luau" ? (
-                <pre className="text-[11px] leading-relaxed bg-surface rounded-lg p-3 overflow-auto max-h-[560px] whitespace-pre-wrap">
+                <pre className="text-[11px] leading-relaxed bg-surface rounded-lg p-3 overflow-auto h-full whitespace-pre-wrap">
                   {luauPreview || "(no scripts in this UI)"}
                 </pre>
               ) : (
-                <pre className="text-[11px] leading-relaxed bg-surface rounded-lg p-3 overflow-auto max-h-[560px]">
+                <pre className="text-[11px] leading-relaxed bg-surface rounded-lg p-3 overflow-auto h-full">
                   {JSON.stringify(result.spec, null, 2)}
                 </pre>
               )}
@@ -392,7 +406,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1.5 rounded-lg bg-surface border border-border px-1.5 py-1">
+      <div className="flex items-center gap-1.5 rounded-lg bg-surface border border-border px-1.5 py-1 focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20">
         <input
           type="color"
           value={value}
@@ -403,7 +417,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 bg-transparent text-xs outline-none"
+          className="flex-1 min-w-0 bg-transparent text-xs outline-none"
         />
       </div>
     </label>
