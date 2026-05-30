@@ -394,7 +394,7 @@ function UIGeneratorPage() {
           <section className="glass rounded-2xl p-4 flex flex-col lg:sticky lg:top-20 lg:h-[calc(100vh-7rem)] min-h-[640px]">
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="inline-flex rounded-lg bg-surface border border-border p-0.5">
-                {(["preview", "luau", "spec"] as const).map((t) => (
+                {(["preview", "image", "luau", "spec"] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setTab(t)}
@@ -402,7 +402,13 @@ function UIGeneratorPage() {
                       tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {t === "preview" ? "Preview" : t === "luau" ? "Luau Code" : "JSON Spec"}
+                    {t === "preview"
+                      ? "Preview"
+                      : t === "image"
+                        ? "Image"
+                        : t === "luau"
+                          ? "Luau Code"
+                          : "JSON Spec"}
                   </button>
                 ))}
               </div>
