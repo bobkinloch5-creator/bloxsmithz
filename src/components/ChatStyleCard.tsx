@@ -147,6 +147,66 @@ export function ChatStyleCard() {
         </div>
       </div>
 
+      {/* Nickname */}
+      <div className="space-y-1.5">
+        <div>
+          <div className="text-sm font-medium">Chat nickname</div>
+          <div className="text-[11px] text-muted-foreground">
+            Shown in chat instead of your real name. Leave empty to use your display name.
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            maxLength={24}
+            placeholder={profile?.display_name ?? "your nickname"}
+            className="flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary"
+          />
+          {nickname && (
+            <button
+              onClick={() => setNickname("")}
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] hover:bg-surface-elevated"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="text-[10px] text-muted-foreground">
+          Letters, numbers, space, . _ - (max 24). {nickname.length}/24
+        </div>
+      </div>
+
+      {/* Font family */}
+      <div className="space-y-1.5">
+        <div>
+          <div className="text-sm font-medium">Font</div>
+          <div className="text-[11px] text-muted-foreground">Applies to your name and messages in chat.</div>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+          {CHAT_FONTS.map((f) => {
+            const active = font === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFont(f.id)}
+                className={`rounded-lg border px-2 py-2 text-center text-xs transition ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-surface text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                }`}
+                style={chatFontStyle(f.id)}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+
       {/* Name gradient */}
       <GradientPicker
         label="Name color"
