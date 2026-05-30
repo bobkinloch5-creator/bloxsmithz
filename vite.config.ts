@@ -22,7 +22,7 @@ export default defineConfig({
       "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
         process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
           process.env.SUPABASE_PUBLISHABLE_KEY ||
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFjYWlvZ3BocWRnZmtsZ2ZiZHJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwODEyMjgsImV4cCI6MjA5NTY1NzIyOH0.KJtWF6jceZdfpzV57swpKGF4nlK_Zh9UtkIOQ7v0gUc",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjYWlvZ3BocWRnZmtsZ2ZiZHJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwODEyMjgsImV4cCI6MjA5NTY1NzIyOH0.KJtWF6jceZdfpzV57swpKGF4nlK_Zh9UtkIOQ7v0gUc",
       ),
     },
   },
