@@ -634,8 +634,21 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   const myRoles = useMemo(() => roles as Role[], [roles]);
   const myName = user ? authors.get(user.id)?.display_name ?? null : null;
-  const messagesById = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages]);
-  const pinned = useMemo(() => messages.filter((m) => m.pinned_at).slice(-3), [messages]);
+  const visibleChannels = useMemo(
+    () => channels.filter((c) => c.view_role !== "admin" || isAdmin),
+    [channels, isAdmin],
+  );
+  const activeChannel = useMemo(
+    () => visibleChannels.find((c) => c.slug === currentChannel) ?? visibleChannels[0] ?? null,
+    [visibleChannels, currentChannel],
+  );
+  const canPostHere = !activeChannel || activeChannel.post_role !== "admin" || isAdmin;
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => m.ephemeralBot || (m.channel_id ?? "general") === (activeChannel?.slug ?? "general")),
+    [messages, activeChannel?.slug],
+  );
+  const messagesById = useMemo(() => new Map(visibleMessages.map((m) => [m.id, m])), [visibleMessages]);
+  const pinned = useMemo(() => visibleMessages.filter((m) => m.pinned_at).slice(-3), [visibleMessages]);
   const accent = prefs.theme_accent;
 
   // Mention suggestions
