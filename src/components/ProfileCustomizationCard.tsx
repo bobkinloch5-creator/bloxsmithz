@@ -164,13 +164,15 @@ export function ProfileCustomizationCard() {
           )}
         </div>
         <div className="flex items-end gap-3 px-4 -mt-8 pb-4">
-          <PfpRing effect={state.pfp_effect} size={72}>
-            {p.avatar_url ? (
-              <img src={p.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-            ) : (
-              <span className="text-xl font-bold text-muted-foreground">{initial}</span>
-            )}
-          </PfpRing>
+          <AvatarDecoration id={state.profile_decoration} size={78}>
+            <PfpRing effect={state.pfp_effect} size={72}>
+              {p.avatar_url ? (
+                <img src={p.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+              ) : (
+                <span className="text-xl font-bold text-muted-foreground">{initial}</span>
+              )}
+            </PfpRing>
+          </AvatarDecoration>
           <div className="min-w-0 flex-1 pb-1">
             <div className="flex flex-wrap items-baseline gap-2">
               <h3
