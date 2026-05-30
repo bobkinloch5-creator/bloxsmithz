@@ -284,32 +284,118 @@ export type Database = {
           },
         ]
       }
+      global_chat_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_message_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_message_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_message_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      global_chat_blocked_words: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          severity: string
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          severity?: string
+          word: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          severity?: string
+          word?: string
+        }
+        Relationships: []
+      }
       global_chat_messages: {
         Row: {
+          attachment_type: string | null
+          attachment_url: string | null
           content: string
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
+          edited_at: string | null
+          flagged: boolean
+          flagged_reason: string | null
           id: string
+          pinned_at: string | null
+          pinned_by: string | null
+          reply_to_id: string | null
           user_id: string
         }
         Insert: {
+          attachment_type?: string | null
+          attachment_url?: string | null
           content: string
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          edited_at?: string | null
+          flagged?: boolean
+          flagged_reason?: string | null
           id?: string
+          pinned_at?: string | null
+          pinned_by?: string | null
+          reply_to_id?: string | null
           user_id: string
         }
         Update: {
+          attachment_type?: string | null
+          attachment_url?: string | null
           content?: string
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          edited_at?: string | null
+          flagged?: boolean
+          flagged_reason?: string | null
           id?: string
+          pinned_at?: string | null
+          pinned_by?: string | null
+          reply_to_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "global_chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "global_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       global_chat_mutes: {
         Row: {
@@ -335,24 +421,178 @@ export type Database = {
         }
         Relationships: []
       }
+      global_chat_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_chat_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "global_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      global_chat_reports: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          reason: string | null
+          reported_user_id: string
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          reason?: string | null
+          reported_user_id: string
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          reason?: string | null
+          reported_user_id?: string
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_chat_reports_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "global_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_chat_settings: {
         Row: {
+          ai_moderation: boolean
+          allow_attachments: boolean
           id: number
+          max_message_length: number
+          profanity_filter: boolean
           slow_mode_seconds: number
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          ai_moderation?: boolean
+          allow_attachments?: boolean
           id?: number
+          max_message_length?: number
+          profanity_filter?: boolean
           slow_mode_seconds?: number
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          ai_moderation?: boolean
+          allow_attachments?: boolean
           id?: number
+          max_message_length?: number
+          profanity_filter?: boolean
           slow_mode_seconds?: number
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      global_chat_user_prefs: {
+        Row: {
+          badge_icon: string | null
+          density: string
+          font_size: string
+          message_gradient: string | null
+          name_color: string | null
+          notify_mode: string
+          sound_enabled: boolean
+          theme_accent: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          badge_icon?: string | null
+          density?: string
+          font_size?: string
+          message_gradient?: string | null
+          name_color?: string | null
+          notify_mode?: string
+          sound_enabled?: boolean
+          theme_accent?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          badge_icon?: string | null
+          density?: string
+          font_size?: string
+          message_gradient?: string | null
+          name_color?: string | null
+          notify_mode?: string
+          sound_enabled?: boolean
+          theme_accent?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      global_chat_warnings: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          id: string
+          issued_by: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          id?: string
+          issued_by: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          id?: string
+          issued_by?: string
+          reason?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1628,8 +1868,16 @@ export type Database = {
         Args: { _minutes: number; _reason: string; _user_id: string }
         Returns: string
       }
+      admin_chat_pin_message: {
+        Args: { _message_id: string; _pin: boolean }
+        Returns: undefined
+      }
       admin_chat_set_slow_mode: { Args: { _seconds: number }; Returns: number }
       admin_chat_unmute: { Args: { _user_id: string }; Returns: undefined }
+      admin_chat_warn: {
+        Args: { _reason: string; _user_id: string }
+        Returns: string
+      }
       admin_reject_payment: {
         Args: { _reason: string; _request_id: string }
         Returns: undefined
@@ -1702,6 +1950,15 @@ export type Database = {
         Returns: string
       }
       send_global_chat_message: { Args: { _content: string }; Returns: string }
+      send_global_chat_message_v2: {
+        Args: {
+          _attachment_type?: string
+          _attachment_url?: string
+          _content: string
+          _reply_to_id?: string
+        }
+        Returns: string
+      }
       spend_credits_atomic: { Args: { _amount: number }; Returns: number }
     }
     Enums: {
