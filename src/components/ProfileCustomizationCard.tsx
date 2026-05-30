@@ -97,6 +97,7 @@ export function ProfileCustomizationCard() {
           profile_accent: state.profile_accent,
           profile_effect: state.profile_effect,
           profile_background: state.profile_background,
+          custom_background_url: state.custom_background_url,
           profile_layout: state.profile_layout,
           pfp_effect: state.pfp_effect,
           private_profile: state.private_profile,
