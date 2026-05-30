@@ -13,7 +13,7 @@ import { PROFILE_BACKGROUNDS, ProfileBackground, type ProfileBackgroundId } from
 import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
 import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award } from "lucide-react";
-import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow, type BadgeId } from "./profile/ProfileBadges";
+import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow } from "./profile/ProfileBadges";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
 const LAYOUTS: Array<{ id: "classic" | "card" | "cinematic" | "compact"; label: string; hint: string }> = [
