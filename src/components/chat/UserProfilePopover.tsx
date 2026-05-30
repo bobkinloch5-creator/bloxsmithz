@@ -475,16 +475,20 @@ export function UserProfilePopover({
                   <p className="text-xs text-muted-foreground">No achievements unlocked yet.</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-1.5">
-                    {achievements.slice(0, 12).map((a) => (
-                      <div
-                        key={a.key}
-                        title={`${a.name}${a.xp_reward ? ` · +${a.xp_reward} XP` : ""} · ${new Date(a.unlocked_at).toLocaleDateString()}`}
-                        className="flex items-center gap-1.5 rounded-md border border-border/60 bg-surface/60 px-2 py-1.5"
-                      >
-                        <span className="text-base leading-none">{a.icon || "🏆"}</span>
-                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{a.name}</span>
-                      </div>
-                    ))}
+                    {achievements.slice(0, 12).map((a) => {
+                      const Ico = (a.icon && (Icons as any)[a.icon]) || Award;
+                      return (
+                        <div
+                          key={a.key}
+                          title={`${a.name}${a.xp_reward ? ` · +${a.xp_reward} XP` : ""} · ${new Date(a.unlocked_at).toLocaleDateString()}`}
+                          className="flex items-center gap-1.5 rounded-md border border-border/60 bg-surface/60 px-2 py-1.5"
+                        >
+                          <Ico className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                          <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{a.name}</span>
+                        </div>
+                      );
+                    })}
+
                     {achievements.length > 12 && (
                       <div className="col-span-2 text-center text-[10px] text-muted-foreground">
                         +{achievements.length - 12} more
