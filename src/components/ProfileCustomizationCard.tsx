@@ -112,6 +112,7 @@ export function ProfileCustomizationCard() {
           show_activity: state.show_activity,
           presence_status: state.presence_status,
           profile_badges: state.profile_badges,
+          profile_decoration: state.profile_decoration,
         },
       });
       await refresh();
