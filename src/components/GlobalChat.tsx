@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import {
   MessagesSquare, Send, X, Loader2, Trash2, Volume2, VolumeX,
   ShieldAlert, Bot, MoreVertical, Reply, Pin, PinOff, Flag,
-  Image as ImageIcon, Settings2, Shield, AtSign, Users,
+  Image as ImageIcon, Settings2, Shield, AtSign, Users, Hash, Megaphone, LifeBuoy,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
