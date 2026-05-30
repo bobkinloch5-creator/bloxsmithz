@@ -16,6 +16,12 @@ import { useAuth } from "@/lib/auth-context";
 import { RoleBadges, type Role } from "@/components/RoleBadge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  CHAT_ICON_MAP,
+  gradientTextStyle,
+  sanitizeGradient,
+  sanitizeIcon,
+} from "@/lib/chat-customization";
 
 type DbMessage = {
   id: string;
@@ -29,6 +35,9 @@ type Author = {
   display_name: string | null;
   avatar_url: string | null;
   roles: Role[];
+  chat_name_gradient: string[] | null;
+  chat_text_gradient: string[] | null;
+  chat_icon: string | null;
 };
 
 type RenderMessage = DbMessage & { ephemeralBot?: boolean };
