@@ -62,8 +62,10 @@ export function McpStatus({ compact = false }: { compact?: boolean }) {
     };
     load();
 
-    const channel = supabase
-      .channel("mcp-status-" + user.id)
+    const channel = supabase.channel(
+      `mcp-status-${user.id}-${Math.random().toString(36).slice(2)}`,
+    );
+    channel
       .on(
         "postgres_changes",
         {
