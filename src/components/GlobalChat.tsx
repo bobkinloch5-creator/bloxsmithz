@@ -196,7 +196,9 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
 }
 
 export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
-  const { user, profile, isAdmin, roles, refresh } = useAuth();
+  const { user, profile, isAdmin, isModerator, roles, refresh } = useAuth();
+  const isOwner = roles.includes("owner");
+  const canModerate = isModerator;
   const { prefs, update: updatePrefs } = useChatPrefs();
   const moderate = useServerFn(moderateChatMessage);
 
@@ -852,12 +854,16 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       for (const [id, a] of authors) if (a.display_name?.toLowerCase() === q) return { id, name: a.display_name };
       return null;
     };
+    const modOnly = () => {
+      if (!canModerate) { toast.error("Moderator command only"); return false; }
+      return true;
+    };
     const staffOnly = () => {
-      if (!isAdmin) { toast.error("Owner/staff command only"); return false; }
+      if (!isAdmin) { toast.error("Admin command only"); return false; }
       return true;
     };
     const ownerOnly = () => {
-      if (!roles.includes("owner")) { toast.error("Owner command only"); return false; }
+      if (!isOwner) { toast.error("Owner command only"); return false; }
       return true;
     };
     if (cmd === "help") {
@@ -866,7 +872,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         "/rules, /credits, /daily, /profile, /badges, /rank, /project, /publish, /plugin, /models, /updates",
         "/report @user reason, /mute @user, /follow @user, /friend @user, /dm @user message, /online, /staff",
         "/me <action>, /shrug, /clear-mine",
-        ...(isAdmin ? [`Staff: /announce, /givecredits, /takecredits, /badge, /warn, /timeout, /ban, /unban, /feature, /changelog, /slow, /clear${roles.includes("owner") ? ", /role" : ""}`] : []),
+        ...(canModerate ? ["Moderation: /warn, /timeout"] : []),
+        ...(isAdmin ? ["Admin: /announce, /badge, /ban, /unban, /feature, /changelog, /slow, /clear"] : []),
+        ...(isOwner ? ["Owner: /givecredits, /takecredits, /role"] : []),
       ].join("\n"));
       return;
     }
@@ -875,11 +883,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       pushEphemeralBot("Opened Global Chat rules. Short version: be respectful, keep it BloxSmith/Roblox friendly, no spam, scams, NSFW, harassment, unsafe links, or personal info. Breaking rules can mean message removal, a warning, timeout/mute, or account restrictions.");
       return;
     }
-    if (cmd === "credits") { pushEphemeralBot(`Credit balance: ${roles.includes("owner") ? "unlimited (owner)" : `${profile?.credits ?? 0} credits`}.`); return; }
+    if (cmd === "credits") { pushEphemeralBot(`Credit balance: ${isOwner ? "unlimited (owner)" : `${profile?.credits ?? 0} credits`}.`); return; }
     if (cmd === "daily") { const { data, error } = await (supabase as any).rpc("claim_daily_credits"); if (error) toast.error(error.message); else { await refresh(); pushEphemeralBot((data as any)?.claimed ? `Daily claimed: +${(data as any).amount} credits. Balance: ${(data as any).credits}.` : "Daily already claimed today."); } return; }
     if (cmd === "profile") { pushEphemeralBot(`Profile: ${profile?.display_name ?? user?.email ?? "Builder"}\nRank: ${roles.join(", ") || "user"}\nCredits: ${profile?.credits ?? 0}`); return; }
     if (cmd === "badges") { pushEphemeralBot(`Badges: ${(authors.get(user!.id)?.badges ?? []).join(", ") || "none yet"}.`); return; }
-    if (cmd === "rank") { pushEphemeralBot(`Rank: ${roles.includes("owner") ? "Owner" : roles.includes("admin") ? "Staff/Admin" : "Member"}.`); return; }
+    if (cmd === "rank") { pushEphemeralBot(`Rank: ${isOwner ? "Owner" : roles.includes("admin") ? "Staff/Admin" : roles.includes("moderator") ? "Moderator" : "Member"}.`); return; }
     if (cmd === "project") { const id = location.pathname.match(/\/project\/([^/]+)/)?.[1]; pushEphemeralBot(id ? `Current project ID: ${id}` : "Open a project page to see current project info."); return; }
     if (cmd === "publish") { pushEphemeralBot("To publish: open a project, polish the build, use the project publish/showcase controls, add a title/description/thumbnail, then submit it to Published Creations."); return; }
     if (cmd === "plugin") { pushEphemeralBot("Plugin setup: open /plugin, install the Roblox Studio plugin, sign in, copy/connect your token, then use Sync in Studio to pull BloxSmith commands."); return; }
@@ -895,12 +903,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       if (cmd === "dm") { const { error } = await (supabase as any).from("direct_messages").insert({ sender_id: user!.id, recipient_id: target.id, content: rest || "👋" }); if (error) toast.error(error.message); else pushEphemeralBot(`DM sent to ${target.name}.`); return; }
     }
     if (cmd === "online") { pushEphemeralBot(`Online: ${onlineUsers.map((id) => authors.get(id)?.display_name ?? id.slice(0, 6)).join(", ") || "none"}.`); return; }
-    if (cmd === "staff") { pushEphemeralBot(`Staff online: ${onlineUsers.filter((id) => authors.get(id)?.roles.some((r) => r === "owner" || r === "admin")).map((id) => authors.get(id)?.display_name ?? "Staff").join(", ") || "none visible"}.`); return; }
+    if (cmd === "staff") { pushEphemeralBot(`Staff online: ${onlineUsers.filter((id) => authors.get(id)?.roles.some((r) => r === "owner" || r === "admin" || r === "moderator")).map((id) => authors.get(id)?.display_name ?? "Staff").join(", ") || "none visible"}.`); return; }
     if (cmd === "announce") { if (!staffOnly()) return; const { error } = await (supabase as any).rpc("admin_chat_announce", { _content: args }); if (error) toast.error(error.message); return; }
-    if (["givecredits", "takecredits", "badge", "role", "warn", "timeout", "ban", "unban"].includes(cmd)) { if (!staffOnly()) return; const target = findMention(args); if (!target) return toast.error("Use @user"); const rest = args.replace(/@([A-Za-z0-9_ .-]{2,40})/, "").trim(); const [first, ...tail] = rest.split(/\s+/); const reason = tail.join(" ") || "BloxBot staff command";
+    if (["givecredits", "takecredits", "badge", "role", "warn", "timeout", "ban", "unban"].includes(cmd)) { const needsOwner = cmd === "givecredits" || cmd === "takecredits" || cmd === "role"; const needsMod = cmd === "warn" || cmd === "timeout"; if (needsOwner ? !ownerOnly() : needsMod ? !modOnly() : !staffOnly()) return; const target = findMention(args); if (!target) return toast.error("Use @user"); const rest = args.replace(/@([A-Za-z0-9_ .-]{2,40})/, "").trim(); const [first, ...tail] = rest.split(/\s+/); const reason = tail.join(" ") || "BloxBot staff command";
       if (cmd === "givecredits" || cmd === "takecredits") { const amount = Math.abs(parseInt(first, 10)); if (!amount) return toast.error("Enter amount"); const { error } = await (supabase as any).rpc("admin_adjust_credits", { _user_id: target.id, _amount: cmd === "takecredits" ? -amount : amount, _reason: reason }); if (error) toast.error(error.message); else toast.success("Credits updated"); return; }
       if (cmd === "badge") { const { error } = await (supabase as any).rpc("admin_grant_badge", { _user_id: target.id, _badge: first }); if (error) toast.error(error.message); else toast.success("Badge granted"); return; }
-      if (cmd === "role") { if (!ownerOnly()) return; const role = first === "owner" ? "admin" : first; const { error } = await (supabase as any).rpc("admin_set_role", { _user_id: target.id, _role: role, _grant: true }); if (error) toast.error(error.message); else toast.success("Role updated"); return; }
+      if (cmd === "role") { if (!ownerOnly()) return; const role = first === "owner" ? "admin" : first === "mod" ? "moderator" : first; const { error } = await (supabase as any).rpc("admin_set_role", { _user_id: target.id, _role: role, _grant: true }); if (error) toast.error(error.message); else toast.success("Role updated"); return; }
       if (cmd === "warn") { const { error } = await (supabase as any).rpc("admin_chat_warn", { _user_id: target.id, _reason: rest || "Warning" }); if (error) toast.error(error.message); else toast.success("Warned"); return; }
       if (cmd === "timeout") { const minutes = parseInt(first, 10) || 5; await muteUser(target.id, minutes, reason); return; }
       if (cmd === "ban" || cmd === "unban") { const { error } = await (supabase as any).rpc("admin_set_ban", { _user_id: target.id, _banned: cmd === "ban", _reason: reason }); if (error) toast.error(error.message); else toast.success(cmd === "ban" ? "Banned" : "Unbanned"); return; }
@@ -1218,7 +1226,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
                 <Settings2 className="h-4 w-4" />
               </button>
-              {isAdmin && (
+              {canModerate && (
                 <button type="button" onClick={() => setShowMod(true)} aria-label="Moderation"
                   className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
                   <Shield className="h-4 w-4" />
@@ -1255,7 +1263,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                     <Pin className="h-3 w-3 text-primary shrink-0" />
                     <span className="font-semibold">{a?.display_name ?? "User"}:</span>
                     <span className="truncate text-muted-foreground">{p.content}</span>
-                    {isAdmin && (
+                    {canModerate && (
                       <button type="button" onClick={() => pinMessage(p.id, false)} className="ml-auto text-muted-foreground hover:text-destructive">
                         <PinOff className="h-3 w-3" />
                       </button>
@@ -1373,7 +1381,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                       {isBot && <span className="text-[10px] text-muted-foreground">· only you see this</span>}
                       {!isBot && (
                         <MsgActions
-                          isAdmin={!!isAdmin}
+                          isAdmin={!!canModerate}
                           isSelf={isMe}
                           pinned={!!m.pinned_at}
                           onReply={() => { setReplyTo(m); inputRef.current?.focus(); }}
@@ -1530,12 +1538,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             </div>
             <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
               <span>You as <RoleBadges roles={myRoles} size="sm" showLabel /> · {draft.length}/500</span>
-              {slow > 0 && !isAdmin && <span>Slow mode {slow}s</span>}
+              {slow > 0 && !canModerate && <span>Slow mode {slow}s</span>}
             </div>
           </form>
 
           {showSettings && <ChatSettingsPanel prefs={prefs} onChange={updatePrefs} onClose={() => setShowSettings(false)} />}
-          {showMod && isAdmin && <ChatModerationPanel onClose={() => setShowMod(false)} onDeleteMessage={deleteMessage} />}
+          {showMod && canModerate && <ChatModerationPanel onClose={() => setShowMod(false)} onDeleteMessage={deleteMessage} canManageWords={isAdmin} />}
           {showRules && <ChatRulesPanel onClose={() => setShowRules(false)} />}
 
           {view === "friends" && (

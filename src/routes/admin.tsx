@@ -201,7 +201,29 @@ function Admin() {
     loadUsers();
   };
 
+  const toggleModerator = async (r: Row) => {
+    if (!isOwner) {
+      toast.error("Only the owner can manage moderator roles.");
+      return;
+    }
+    const isModeratorRow = r.roles.includes("moderator");
+    if (!confirm(`${isModeratorRow ? "Remove moderator from" : "Make moderator"} ${r.email}?`))
+      return;
+    const { error } = await supabase.rpc("admin_set_role", {
+      _user_id: r.id,
+      _role: "moderator",
+      _grant: !isModeratorRow,
+    });
+    if (error) return toast.error(error.message);
+    toast.success(isModeratorRow ? "Moderator removed" : "Moderator granted");
+    loadUsers();
+  };
+
   const resetCredits = async (r: Row) => {
+    if (!isOwner) {
+      toast.error("Only the owner can reset credits.");
+      return;
+    }
     if (!confirm(`Reset credits to 0 for ${r.email}? (current: ${r.credits})`)) return;
     await adjustCredits(r.id, -r.credits, "admin reset to 0");
   };
@@ -360,6 +382,10 @@ function Admin() {
   };
 
   const adjustCredits = async (id: string, delta: number, reason = "admin adjust") => {
+    if (!isOwner) {
+      toast.error("Only the owner can adjust credits.");
+      return;
+    }
     const { data, error } = await supabase.rpc("admin_adjust_credits", {
       _user_id: id,
       _amount: delta,
@@ -372,6 +398,10 @@ function Admin() {
   };
 
   const giftCustom = async (row: Row) => {
+    if (!isOwner) {
+      toast.error("Only the owner can gift credits.");
+      return;
+    }
     const amtStr = window.prompt(
       `Gift credits to ${row.email}\nPositive to add, negative to remove. Current: ${row.credits}`,
       "100",
@@ -421,6 +451,7 @@ function Admin() {
 
 
 
+        {isOwner && (
         <section className="glass rounded-2xl p-6">
           <div className="flex justify-between items-center mb-3">
             <h2 className="font-semibold">Pending payment verifications ({requests.length})</h2>
@@ -484,7 +515,9 @@ function Admin() {
             </div>
           )}
         </section>
+        )}
 
+        {isOwner && (
         <section className="glass rounded-2xl p-6">
           <h2 className="font-semibold mb-3">Pending promotion submissions ({promoSubs.length})</h2>
           {promoSubs.length === 0 ? (
@@ -538,6 +571,7 @@ function Admin() {
             </div>
           )}
         </section>
+        )}
 
         <section className="glass rounded-2xl p-6">
           <div className="flex justify-between items-center mb-3 gap-3 flex-wrap">
@@ -582,6 +616,7 @@ function Admin() {
                 {filtered.map((r) => {
                   const isOwnerRow = r.roles.includes("owner");
                   const isAdminRow = r.roles.includes("admin");
+                  const isModeratorRow = r.roles.includes("moderator");
                   return (
                     <tr
                       key={r.id}
@@ -614,6 +649,10 @@ function Admin() {
                           <span className="text-[10px] uppercase rounded bg-primary/15 text-primary px-1.5 py-0.5">
                             Admin
                           </span>
+                        ) : isModeratorRow ? (
+                          <span className="text-[10px] uppercase rounded bg-sky-500/15 text-sky-300 px-1.5 py-0.5">
+                            Mod
+                          </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">user</span>
                         )}
@@ -622,37 +661,49 @@ function Admin() {
                       <td className="text-muted-foreground">{r.projects}</td>
                       <td className="text-muted-foreground">{r.generations}</td>
                       <td className="text-right whitespace-nowrap">
-                        <button
-                          onClick={() => giftCustom(r)}
-                          className="text-xs rounded-md bg-primary px-2 py-1 mr-1 font-semibold text-primary-foreground"
-                        >
-                          🎁 Gift
-                        </button>
-                        <button
-                          onClick={() => adjustCredits(r.id, 100, "quick +100")}
-                          className="text-xs rounded-md bg-primary/20 px-2 py-1 mr-1"
-                        >
-                          +100
-                        </button>
-                        <button
-                          onClick={() => adjustCredits(r.id, -100, "quick -100")}
-                          className="text-xs rounded-md border border-border px-2 py-1 mr-1"
-                        >
-                          −100
-                        </button>
-                        <button
-                          onClick={() => resetCredits(r)}
-                          className="text-xs rounded-md border border-border px-2 py-1 mr-1"
-                          disabled={isOwnerRow}
-                        >
-                          Reset
-                        </button>
+                        {isOwner && (
+                          <>
+                            <button
+                              onClick={() => giftCustom(r)}
+                              className="text-xs rounded-md bg-primary px-2 py-1 mr-1 font-semibold text-primary-foreground"
+                            >
+                              Gift
+                            </button>
+                            <button
+                              onClick={() => adjustCredits(r.id, 100, "quick +100")}
+                              className="text-xs rounded-md bg-primary/20 px-2 py-1 mr-1"
+                            >
+                              +100
+                            </button>
+                            <button
+                              onClick={() => adjustCredits(r.id, -100, "quick -100")}
+                              className="text-xs rounded-md border border-border px-2 py-1 mr-1"
+                            >
+                              -100
+                            </button>
+                            <button
+                              onClick={() => resetCredits(r)}
+                              className="text-xs rounded-md border border-border px-2 py-1 mr-1"
+                              disabled={isOwnerRow}
+                            >
+                              Reset
+                            </button>
+                          </>
+                        )}
                         {isOwner && !isOwnerRow && (
                           <button
                             onClick={() => toggleAdmin(r)}
                             className="text-xs rounded-md border border-border px-2 py-1 mr-1"
                           >
                             {isAdminRow ? "Demote" : "Make admin"}
+                          </button>
+                        )}
+                        {isOwner && !isOwnerRow && !isAdminRow && (
+                          <button
+                            onClick={() => toggleModerator(r)}
+                            className="text-xs rounded-md border border-sky-400/40 bg-sky-500/10 text-sky-200 px-2 py-1 mr-1"
+                          >
+                            {isModeratorRow ? "Remove mod" : "Make mod"}
                           </button>
                         )}
                         {!isOwnerRow && (
@@ -713,6 +764,7 @@ function Admin() {
           )}
         </section>
 
+        {isOwner && (
         <section className="glass rounded-2xl p-6">
           <h2 className="font-semibold mb-3">Promo codes</h2>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-4">
@@ -802,6 +854,7 @@ function Admin() {
             </div>
           )}
         </section>
+        )}
       </main>
       <Footer />
     </div>

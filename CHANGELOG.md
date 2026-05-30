@@ -24,6 +24,8 @@
 ### Admin Security
 - Locked admin role promotion/demotion to owner accounts only.
 - Updated database role policies, the `admin_set_role` RPC, the admin page, and the Global Chat `/role` command so regular admins cannot make other users admin.
+- Added an owner-managed Moderator role for Global Chat moderation without admin/dashboard credit permissions.
+- Locked manual credit adjustments to owners, protected profile credit fields from direct client edits, and tightened refund RPC checks so users cannot call refunds to mint credits.
 
 ### Profile Fixes
 - Fixed profile settings not saving correctly.

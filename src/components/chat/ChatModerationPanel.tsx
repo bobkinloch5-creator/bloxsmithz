@@ -8,11 +8,18 @@ type Tab = "reports" | "words" | "audit";
 export function ChatModerationPanel({
   onClose,
   onDeleteMessage,
+  canManageWords = false,
 }: {
   onClose: () => void;
   onDeleteMessage: (id: string) => Promise<void>;
+  canManageWords?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("reports");
+  const tabs = [
+    { id: "reports" as Tab, l: "Reports", icon: Flag },
+    ...(canManageWords ? [{ id: "words" as Tab, l: "Words", icon: FileText }] : []),
+    { id: "audit" as Tab, l: "Audit", icon: History },
+  ];
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
       <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
@@ -30,11 +37,7 @@ export function ChatModerationPanel({
         </button>
       </header>
       <nav className="flex shrink-0 border-b border-border">
-        {[
-          { id: "reports" as Tab, l: "Reports", icon: Flag },
-          { id: "words" as Tab, l: "Words", icon: FileText },
-          { id: "audit" as Tab, l: "Audit", icon: History },
-        ].map((t) => {
+        {tabs.map((t) => {
           const Ico = t.icon;
           return (
             <button
@@ -54,7 +57,7 @@ export function ChatModerationPanel({
       </nav>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {tab === "reports" && <ReportsTab onDeleteMessage={onDeleteMessage} />}
-        {tab === "words" && <WordsTab />}
+        {tab === "words" && canManageWords && <WordsTab />}
         {tab === "audit" && <AuditTab />}
       </div>
     </div>

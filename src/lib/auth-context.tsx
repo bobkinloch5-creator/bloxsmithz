@@ -45,7 +45,7 @@ type Profile = {
   profile_decoration?: string | null;
 };
 
-type Role = "owner" | "admin" | "user";
+type Role = "owner" | "admin" | "moderator" | "user";
 
 type AuthCtx = {
   session: Session | null;
@@ -54,6 +54,7 @@ type AuthCtx = {
   roles: Role[];
   isOwner: boolean;
   isAdmin: boolean;
+  isModerator: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -236,6 +237,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     roles,
     isOwner: roles.includes("owner"),
     isAdmin: roles.includes("admin") || roles.includes("owner"),
+    isModerator:
+      roles.includes("moderator") || roles.includes("admin") || roles.includes("owner"),
     loading,
     signOut: async () => {
       await supabase.auth.signOut();

@@ -112,6 +112,14 @@ const changelogItems = [
           "Admin promotion and demotion is now locked to owner accounts at the database policy, RPC, admin page, and Global Chat command layers.",
       },
       {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Moderator Role & Credit Guards",
+        detail:
+          "Owners can now assign a Moderator role for Global Chat actions without giving admin dashboard or credit powers. Manual credit adjustments are owner-only, direct profile credit edits are blocked, and refund checks are stricter.",
+      },
+      {
         category: "Tools",
         tagColor: tagStyles.tools,
         icon: Palette,
