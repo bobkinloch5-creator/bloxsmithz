@@ -83,7 +83,12 @@ export function GlobalChat() {
     const need = ids.filter((id) => id && !authors.has(id));
     if (!need.length) return;
     const [{ data: profs }, { data: rs }] = await Promise.all([
-      supabase.from("profiles").select("id,display_name,avatar_url").in("id", need),
+      supabase
+        .from("profiles")
+        .select(
+          "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon",
+        )
+        .in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
     ]);
     const rolesByUser = new Map<string, Role[]>();
@@ -99,6 +104,9 @@ export function GlobalChat() {
           display_name: p.display_name,
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
+          chat_name_gradient: sanitizeGradient(p.chat_name_gradient),
+          chat_text_gradient: sanitizeGradient(p.chat_text_gradient),
+          chat_icon: sanitizeIcon(p.chat_icon),
         });
       });
       return next;
