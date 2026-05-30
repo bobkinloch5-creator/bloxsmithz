@@ -99,6 +99,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       if (s?.user) {
         setTimeout(() => loadProfile(s.user.id), 0);
+        if (event === "SIGNED_IN") {
+          // Enforce 1-account-per-user. Runs once per fresh sign-in.
+          setTimeout(async () => {
+            try {
+              const fp = getDeviceFingerprint();
+              await recordAndEnforceSingleAccount({ data: { fingerprint: fp } });
+            } catch (e) {
+              const msg =
+                e instanceof Error
+                  ? e.message
+                  : "This device is already linked to another account.";
+              toast.error(msg);
+              try {
+                await supabase.auth.signOut();
+              } catch {
+                /* noop */
+              }
+              try {
+                router.navigate({ to: "/login" as any });
+              } catch {
+                /* noop */
+              }
+            }
+          }, 0);
+        }
       } else {
         setProfile(null);
         setRoles([]);
@@ -110,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.invalidate();
       qc.invalidateQueries();
     });
+
 
     supabase.auth
       .getSession()
