@@ -73,7 +73,7 @@ export function UserProfilePopover({
       const [{ data: p }, { data: fr }] = await Promise.all([
         (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect,profile_background,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges")
           .eq("id", userId)
           .maybeSingle(),
 
