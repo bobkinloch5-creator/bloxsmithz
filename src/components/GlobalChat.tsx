@@ -1223,6 +1223,34 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           {showSettings && <ChatSettingsPanel prefs={prefs} onChange={updatePrefs} onClose={() => setShowSettings(false)} />}
           {showMod && isAdmin && <ChatModerationPanel onClose={() => setShowMod(false)} onDeleteMessage={deleteMessage} />}
 
+          {view === "friends" && (
+            <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
+              <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+                <h2 className="flex items-center gap-2 text-sm font-bold">
+                  <UserPlus className="h-4 w-4 text-primary" /> Friends & DMs
+                </h2>
+                <button onClick={() => { setView("channels"); setActiveDm(null); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              </header>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <FriendsPanel
+                  activeDm={activeDm}
+                  setActiveDm={setActiveDm}
+                  onOpenProfile={(uid) => setProfileUid(uid)}
+                />
+              </div>
+            </div>
+          )}
+
+          {profileUid && (
+            <UserProfilePopover
+              userId={profileUid}
+              onClose={() => setProfileUid(null)}
+              onOpenDm={(uid) => { setProfileUid(null); setView("friends"); setActiveDm(uid); setDmUnread(0); }}
+            />
+          )}
+
           {showLogs && (
             <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
               <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
