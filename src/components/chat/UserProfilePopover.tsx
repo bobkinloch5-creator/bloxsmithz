@@ -389,6 +389,36 @@ export function UserProfilePopover({
                   </div>
                 )}
               </div>
+
+              {/* Achievements */}
+              <div className="rounded-xl border border-border bg-background/40 p-3">
+                <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Trophy className="h-3 w-3 text-amber-400" /> Achievements ({achievements.length})
+                  </span>
+                </div>
+                {achievements.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No achievements unlocked yet.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {achievements.slice(0, 12).map((a) => (
+                      <div
+                        key={a.key}
+                        title={`${a.name}${a.xp_reward ? ` · +${a.xp_reward} XP` : ""} · ${new Date(a.unlocked_at).toLocaleDateString()}`}
+                        className="flex items-center gap-1.5 rounded-md border border-border/60 bg-surface/60 px-2 py-1.5"
+                      >
+                        <span className="text-base leading-none">{a.icon || "🏆"}</span>
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{a.name}</span>
+                      </div>
+                    ))}
+                    {achievements.length > 12 && (
+                      <div className="col-span-2 text-center text-[10px] text-muted-foreground">
+                        +{achievements.length - 12} more
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
