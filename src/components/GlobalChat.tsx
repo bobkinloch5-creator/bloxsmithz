@@ -639,7 +639,7 @@ export function GlobalChat() {
         <aside
           role="dialog"
           aria-label="Global chat"
-          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(80dvh,680px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(680px,calc(100dvh-2.5rem))] md:w-[420px]"
+          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]"
           style={{
             ...(chatBackgroundStyle(prefs) ?? {}),
             ...(accent ? ({ ["--chat-accent" as any]: accent } as React.CSSProperties) : {}),
@@ -892,8 +892,9 @@ export function GlobalChat() {
                   else if (e.key === "Escape") { setReplyTo(null); setMentionQuery(null); }
                 }}
                 placeholder={muted ? "You're muted" : "Message everyone… (@ to mention, / for commands)"}
-                disabled={!!muted || sending} maxLength={500} rows={1}
-                className={cn("max-h-24 min-w-0 flex-1 resize-none rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50", fontSizeClass(prefs.font_size))}
+                disabled={!!muted || sending} maxLength={500} rows={2}
+                className={cn("max-h-32 min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border", fontSizeClass(prefs.font_size), chatFontStyle(profile?.chat_font) && "")}
+                style={chatFontStyle(profile?.chat_font)}
               />
               <button type="submit" disabled={sending || (!draft.trim() && !pendingFile) || !!muted} aria-label="Send"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
