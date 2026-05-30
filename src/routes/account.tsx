@@ -22,6 +22,10 @@ import {
   Gift,
   Eye,
   EyeOff,
+  Coins,
+  DollarSign,
+  Zap,
+  TrendingUp,
 } from "lucide-react";
 
 import { toast } from "sonner";
