@@ -446,7 +446,7 @@ export function ProfileCustomizationCard() {
         <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
           Pick up to 12 badges to show off on your profile. Click to toggle.
         </p>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-9">
           {PROFILE_BADGES.map((b) => {
             const active = state.profile_badges.includes(b.id);
             const atLimit = !active && state.profile_badges.length >= 12;
@@ -463,23 +463,28 @@ export function ProfileCustomizationCard() {
                       : [...s.profile_badges, b.id],
                   }))
                 }
-                className={`group flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition disabled:opacity-40 ${
+                className={`group relative flex flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2 transition disabled:opacity-40 ${
                   active
                     ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                    : "border-border/60 bg-background/40 hover:border-border"
+                    : "border-border/60 bg-background/40 hover:border-border hover:bg-background/70"
                 }`}
-                title={b.description}
+                title={`${b.label} — ${b.description}`}
               >
                 <ProfileBadgeIcon id={b.id} size={30} />
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold truncate">{b.label}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">{b.description}</div>
-                </div>
+                <span className="text-[10px] font-medium leading-tight text-center text-foreground/90 line-clamp-1 w-full px-0.5">
+                  {b.label}
+                </span>
+                {active && (
+                  <span className="absolute -top-1.5 -right-1.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow">
+                    ✓
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </Section>
+
 
       {/* PRIVACY + PRESENCE */}
       <Section icon={<Lock className="h-4 w-4" />} title="Privacy & Presence">
