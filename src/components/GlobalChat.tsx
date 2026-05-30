@@ -278,7 +278,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     if (!need.length) return;
     const [{ data: profs }, { data: rs }, { data: badges }] = await Promise.all([
       supabase.from("profiles").select(
-        "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
+        "id,display_name,avatar_url,profile_badges,profile_accent,profile_effect,profile_background,pfp_effect,profile_decoration,presence_enabled,presence_status,last_seen_at,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
       ).in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
       (supabase as any).from("user_badges").select("user_id,badge").in("user_id", need),
@@ -304,6 +304,15 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
           badges: badgesByUser.get(p.id) ?? [],
+          profile_badges: Array.isArray(p.profile_badges) ? p.profile_badges : [],
+          profile_accent: typeof p.profile_accent === "string" ? p.profile_accent : null,
+          profile_effect: typeof p.profile_effect === "string" ? p.profile_effect : null,
+          profile_background: typeof p.profile_background === "string" ? p.profile_background : null,
+          pfp_effect: typeof p.pfp_effect === "string" ? p.pfp_effect : null,
+          profile_decoration: typeof p.profile_decoration === "string" ? p.profile_decoration : null,
+          presence_enabled: p.presence_enabled ?? null,
+          presence_status: typeof p.presence_status === "string" ? p.presence_status : null,
+          last_seen_at: typeof p.last_seen_at === "string" ? p.last_seen_at : null,
           chat_name_gradient: sanitizeGradient(p.chat_name_gradient),
           chat_text_gradient: sanitizeGradient(p.chat_text_gradient),
           chat_icon: sanitizeIcon(p.chat_icon),
