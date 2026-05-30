@@ -953,13 +953,25 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             "flex flex-col overflow-hidden border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl",
             inline
               ? "relative h-[min(720px,calc(100dvh-14rem))] min-h-[420px] w-full rounded-2xl border"
-              : "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] rounded-2xl border md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]",
+              : "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] rounded-2xl border md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]",
           )}
           style={{
             ...(chatBackgroundStyle(prefs) ?? {}),
             ...(accent ? ({ ["--chat-accent" as any]: accent } as React.CSSProperties) : {}),
+            ...(!inline && typeof window !== "undefined" && window.matchMedia?.("(min-width: 768px)").matches
+              ? { width: `${size.w}px`, height: `${size.h}px` }
+              : {}),
           }}
         >
+          {!inline && (
+            <div
+              onPointerDown={startResize}
+              role="separator"
+              aria-label="Resize chat"
+              title="Drag to resize"
+              className="hidden md:block absolute -top-1 -right-1 z-20 h-5 w-5 cursor-nesw-resize rounded-tr-2xl bg-transparent hover:bg-primary/20 transition"
+            />
+          )}
           <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
               <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/15" style={accent ? { background: `${accent}22`} : undefined}>
