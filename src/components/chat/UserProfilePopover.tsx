@@ -346,6 +346,9 @@ export function UserProfilePopover({
                 {profile.status_message && (
                   <p className="mt-0.5 text-xs text-foreground/80 italic">"{profile.status_message}"</p>
                 )}
+                {profile.profile_badges && profile.profile_badges.length > 0 && (
+                  <ProfileBadgeRow ids={profile.profile_badges} size={24} className="mt-2" />
+                )}
 
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                   <span><span className="font-semibold text-foreground">{followerCount}</span> follower{followerCount === 1 ? "" : "s"}</span>
