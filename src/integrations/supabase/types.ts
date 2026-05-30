@@ -195,6 +195,39 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_channels: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          name: string
+          position: number
+          post_role: string
+          slug: string
+          view_role: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          name: string
+          position?: number
+          post_role?: string
+          slug: string
+          view_role?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          name?: string
+          position?: number
+          post_role?: string
+          slug?: string
+          view_role?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -396,6 +429,7 @@ export type Database = {
         Row: {
           attachment_type: string | null
           attachment_url: string | null
+          channel_id: string
           content: string
           created_at: string
           deleted_at: string | null
@@ -412,6 +446,7 @@ export type Database = {
         Insert: {
           attachment_type?: string | null
           attachment_url?: string | null
+          channel_id?: string
           content: string
           created_at?: string
           deleted_at?: string | null
@@ -428,6 +463,7 @@ export type Database = {
         Update: {
           attachment_type?: string | null
           attachment_url?: string | null
+          channel_id?: string
           content?: string
           created_at?: string
           deleted_at?: string | null
@@ -442,6 +478,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "global_chat_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["slug"]
+          },
           {
             foreignKeyName: "global_chat_messages_reply_to_id_fkey"
             columns: ["reply_to_id"]
@@ -2053,8 +2096,17 @@ export type Database = {
         Returns: undefined
       }
       apply_referral: { Args: { _code: string }; Returns: Json }
+      are_friends: { Args: { _a: string; _b: string }; Returns: boolean }
       can_access_project: {
         Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_post_channel: {
+        Args: { _slug: string; _uid: string }
+        Returns: boolean
+      }
+      can_view_channel: {
+        Args: { _slug: string; _uid: string }
         Returns: boolean
       }
       check_and_record_ai_usage: { Args: never; Returns: Json }
@@ -2104,10 +2156,16 @@ export type Database = {
         Args: { _new_name: string; _source_id: string }
         Returns: string
       }
+      remove_friend: { Args: { _other: string }; Returns: undefined }
       report_chat_user: {
         Args: { _reason: string; _reported_user_id: string }
         Returns: string
       }
+      respond_friend_request: {
+        Args: { _accept: boolean; _id: string }
+        Returns: undefined
+      }
+      send_friend_request: { Args: { _target: string }; Returns: string }
       send_global_chat_message: { Args: { _content: string }; Returns: string }
       send_global_chat_message_v2: {
         Args: {
