@@ -218,6 +218,47 @@ export function UserProfilePopover({
           </div>
         ) : !profile ? (
           <div className="p-4 text-sm text-muted-foreground">User not found.</div>
+        ) : profile.private_profile && !isSelf && friend.status !== "friends" ? (
+          <>
+            <div className="relative">
+              <div className="h-24 w-full bg-gradient-to-br from-primary/30 via-primary/15 to-transparent" />
+              <div className="absolute -bottom-8 left-3">
+                <div className="grid h-16 w-16 place-items-center rounded-full border-4 border-surface-elevated bg-surface">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                  ) : (
+                    <span className="text-lg font-bold text-muted-foreground">{displayName.slice(0, 1).toUpperCase()}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3 px-3 pb-3 pt-10">
+              <h3 className="text-lg font-bold">{displayName}</h3>
+              <div className="rounded-xl border border-border bg-background/40 p-4 text-center space-y-2">
+                <div className="text-2xl">🔒</div>
+                <p className="text-sm font-semibold">This profile is private</p>
+                <p className="text-xs text-muted-foreground">Only friends can see {displayName}'s full profile, achievements, and Roblox info.</p>
+                {friend.status === "none" && (
+                  <button onClick={addFriend} className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+                    <UserPlus className="h-3.5 w-3.5" /> Add friend
+                  </button>
+                )}
+                {friend.status === "pending_out" && (
+                  <p className="text-[11px] text-muted-foreground">Friend request sent</p>
+                )}
+                {friend.status === "pending_in" && (
+                  <div className="flex justify-center gap-1.5">
+                    <button onClick={() => respond(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+                      <UserCheck className="h-3.5 w-3.5" /> Accept
+                    </button>
+                    <button onClick={() => respond(false)} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs hover:bg-surface-elevated">
+                      Decline
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
         ) : (
           <>
             {/* Banner + avatar */}
