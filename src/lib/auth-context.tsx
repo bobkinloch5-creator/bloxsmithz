@@ -41,6 +41,7 @@ type Profile = {
   presence_status?: string | null;
   show_activity?: boolean;
   last_seen_at?: string | null;
+  profile_badges?: string[] | null;
 };
 
 type Role = "owner" | "admin" | "user";
