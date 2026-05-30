@@ -47,6 +47,10 @@ const Schema = z
     presence_enabled: z.boolean().optional(),
     show_activity: z.boolean().optional(),
     presence_status: z.enum(["online", "idle", "dnd", "invisible"]).optional(),
+    profile_badges: z
+      .array(z.string().regex(/^[a-z0-9_-]+$/).max(32))
+      .max(12)
+      .optional(),
   })
   .strict();
 
