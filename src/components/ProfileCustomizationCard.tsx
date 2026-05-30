@@ -264,6 +264,24 @@ export function ProfileCustomizationCard() {
             );
           })}
         </div>
+
+        {/* CUSTOM UPLOAD TILE inside background section */}
+        <CustomBackgroundUploader
+          userId={user?.id ?? null}
+          url={state.custom_background_url}
+          active={state.profile_background === "custom"}
+          onPick={() => {
+            if (state.custom_background_url) set("profile_background", "custom");
+          }}
+          onChange={(url) => {
+            setState((s) => ({
+              ...s,
+              custom_background_url: url,
+              profile_background: url ? "custom" : s.profile_background === "custom" ? "none" : s.profile_background,
+            }));
+            refresh();
+          }}
+        />
       </Section>
 
       {/* LAYOUT */}
