@@ -190,6 +190,9 @@ export function ProfileCustomizationCard() {
               <p className="text-xs text-muted-foreground truncate">{state.status_message}</p>
             )}
             {state.bio && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{state.bio}</p>}
+            {state.profile_badges.length > 0 && (
+              <ProfileBadgeRow ids={state.profile_badges} size={22} className="mt-2" />
+            )}
           </div>
         </div>
       </div>
