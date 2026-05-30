@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useServerFn } from "@tanstack/react-start";
 import { getRobloxPresence } from "@/lib/roblox-presence.functions";
 import { toast } from "sonner";
-import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown, Heart, HeartOff, Flag } from "lucide-react";
+import { X, UserPlus, UserCheck, UserMinus, MessageCircle, Gamepad2, Hammer, ExternalLink, Loader2, Crown, Heart, HeartOff, Flag, Trophy } from "lucide-react";
 
 type Profile = {
   id: string;
@@ -40,6 +40,8 @@ export function UserProfilePopover({
   const [reportReason, setReportReason] = useState("");
   const [presence, setPresence] = useState<Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getRobloxPresence>>>> | null>(null);
   const [presenceLoading, setPresenceLoading] = useState(false);
+  const [achievements, setAchievements] = useState<Array<{ key: string; name: string; icon: string | null; xp_reward: number | null; unlocked_at: string }>>([]);
+  const [level, setLevel] = useState<{ level: number; xp: number } | null>(null);
   const isSelf = user?.id === userId;
   const fetchPresence = useServerFn(getRobloxPresence);
 
@@ -86,6 +88,27 @@ export function UserProfilePopover({
       if (!cancel) {
         setFollowerCount(fc ?? 0);
         setIsFollowing(!!myFollow);
+      }
+      // Load achievements + level
+      const [{ data: ua }, { data: lv }] = await Promise.all([
+        (supabase as any)
+          .from("user_achievements")
+          .select("achievement_key, unlocked_at, achievements:achievement_key(name,icon,xp_reward)")
+          .eq("user_id", userId)
+          .order("unlocked_at", { ascending: false })
+          .limit(50),
+        (supabase as any).from("user_levels").select("level,xp").eq("user_id", userId).maybeSingle(),
+      ]);
+      if (!cancel) {
+        const list = ((ua ?? []) as any[]).map((r) => ({
+          key: r.achievement_key as string,
+          name: (r.achievements?.name as string) ?? r.achievement_key,
+          icon: (r.achievements?.icon as string | null) ?? null,
+          xp_reward: (r.achievements?.xp_reward as number | null) ?? null,
+          unlocked_at: r.unlocked_at as string,
+        }));
+        setAchievements(list);
+        setLevel(lv ? { level: (lv as any).level ?? 1, xp: (lv as any).xp ?? 0 } : null);
       }
       setLoading(false);
     })();
@@ -221,8 +244,16 @@ export function UserProfilePopover({
                     <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
                   )}
                 </div>
-                <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                   <span><span className="font-semibold text-foreground">{followerCount}</span> follower{followerCount === 1 ? "" : "s"}</span>
+                  {level && (
+                    <span className="inline-flex items-center gap-1">
+                      <Trophy className="h-3 w-3 text-amber-400" />
+                      <span className="font-semibold text-foreground">Lv {level.level}</span>
+                      <span className="text-muted-foreground">· {level.xp.toLocaleString()} XP</span>
+                    </span>
+                  )}
+                  <span><span className="font-semibold text-foreground">{achievements.length}</span> achievement{achievements.length === 1 ? "" : "s"}</span>
                 </div>
                 {profile.bio && <p className="mt-1 text-xs text-muted-foreground">{profile.bio}</p>}
               </div>
@@ -355,6 +386,36 @@ export function UserProfilePopover({
                         </p>
                       )}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Achievements */}
+              <div className="rounded-xl border border-border bg-background/40 p-3">
+                <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Trophy className="h-3 w-3 text-amber-400" /> Achievements ({achievements.length})
+                  </span>
+                </div>
+                {achievements.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No achievements unlocked yet.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {achievements.slice(0, 12).map((a) => (
+                      <div
+                        key={a.key}
+                        title={`${a.name}${a.xp_reward ? ` · +${a.xp_reward} XP` : ""} · ${new Date(a.unlocked_at).toLocaleDateString()}`}
+                        className="flex items-center gap-1.5 rounded-md border border-border/60 bg-surface/60 px-2 py-1.5"
+                      >
+                        <span className="text-base leading-none">{a.icon || "🏆"}</span>
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium">{a.name}</span>
+                      </div>
+                    ))}
+                    {achievements.length > 12 && (
+                      <div className="col-span-2 text-center text-[10px] text-muted-foreground">
+                        +{achievements.length - 12} more
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -3,7 +3,7 @@ import {
   MessagesSquare, Send, X, Loader2, Trash2, Volume2, VolumeX,
   ShieldAlert, Bot, MoreVertical, Reply, Pin, PinOff, Flag,
   Image as ImageIcon, Settings2, Shield, AtSign, Users, Hash, Megaphone, LifeBuoy,
-  FileText, Gamepad2, ExternalLink,
+  FileText, Gamepad2, ExternalLink, UserPlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -165,6 +165,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [profileUid, setProfileUid] = useState<string | null>(null);
   const [dmUnread, setDmUnread] = useState(0);
   const presenceSyncedRef = useRef(false);
+  const activeDmRef = useRef<string | null>(null);
+  useEffect(() => { activeDmRef.current = activeDm; }, [activeDm]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -440,6 +442,35 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
+
+  // Realtime: incoming DMs → toast + unread badge
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel(realtimeTopic("bloxsmith-dms"))
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "direct_messages", filter: `recipient_id=eq.${user.id}` },
+        async (payload) => {
+          const row = payload.new as { sender_id: string; content: string };
+          if (!row?.sender_id) return;
+          await loadAuthors([row.sender_id]);
+          const a = authorsRef.current.get(row.sender_id);
+          const who = a?.display_name ?? "Someone";
+          // Only badge/toast if not actively viewing that DM
+          if (!(view === "friends" && activeDmRef.current === row.sender_id)) {
+            setDmUnread((n) => n + 1);
+            toast.info(`💬 ${who} sent you a DM`, {
+              description: row.content.slice(0, 140),
+              action: { label: "Open", onClick: () => { setOpen(true); setView("friends"); setActiveDm(row.sender_id); setDmUnread(0); } },
+            });
+            if (prefsRef.current.sound_enabled) playPing();
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id, loadAuthors]);
 
   // Prune stale typing entries
   useEffect(() => {
@@ -908,6 +939,15 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               </div>
             </div>
             <div className="flex items-center gap-0.5">
+              <button type="button" onClick={() => { setView("friends"); setDmUnread(0); }} aria-label="Friends & DMs"
+                className="relative grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
+                <UserPlus className="h-4 w-4" />
+                {dmUnread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                    {dmUnread > 9 ? "9+" : dmUnread}
+                  </span>
+                )}
+              </button>
               <button type="button" onClick={() => setShowLogs(true)} aria-label="Chat logs"
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
                 <FileText className="h-4 w-4" />
@@ -1028,14 +1068,19 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               }
               return (
                 <div key={m.id} className="group flex gap-2">
-                  <div className={cn(
-                    "grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-bold",
-                    isBot ? "bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40" : "bg-surface text-muted-foreground",
-                  )}>
+                  <button
+                    type="button"
+                    onClick={() => !isBot && setProfileUid(m.user_id)}
+                    disabled={isBot}
+                    className={cn(
+                      "grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-bold transition",
+                      isBot ? "bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40 cursor-default" : "bg-surface text-muted-foreground hover:ring-2 hover:ring-primary/40",
+                    )}
+                  >
                     {isBot ? <img src={bloxbotAvatar} alt="BloxBot" className="h-8 w-8 rounded-full object-cover" />
                       : author?.avatar_url ? <img src={author.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
                       : name.slice(0, 1).toUpperCase()}
-                  </div>
+                  </button>
                   <div className="min-w-0 flex-1">
                     {replyTarget && (
                       <div className="mb-1 flex items-center gap-1 rounded-md border-l-2 border-primary/50 bg-surface/40 px-2 py-0.5 text-[11px] text-muted-foreground">
@@ -1050,9 +1095,18 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                         const stops = author.chat_name_gradient;
                         return <Ico className="h-3.5 w-3.5 shrink-0" style={stops?.length ? { color: stops[0] } : undefined} aria-hidden />;
                       })() : null}
-                      <span className="truncate text-xs font-semibold" style={!isBot ? { ...gradientTextStyle(author?.chat_name_gradient), ...chatFontStyle(author?.chat_font) } : undefined}>
-                        {name}
-                      </span>
+                      {isBot ? (
+                        <span className="truncate text-xs font-semibold">{name}</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setProfileUid(m.user_id)}
+                          className="truncate text-xs font-semibold hover:underline"
+                          style={{ ...gradientTextStyle(author?.chat_name_gradient), ...chatFontStyle(author?.chat_font) }}
+                        >
+                          {name}
+                        </button>
+                      )}
                       {isBot ? (
                         <span className="rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">BOT</span>
                       ) : (author && <RoleBadges roles={author.roles} size="sm" showLabel={false} />)}
@@ -1199,6 +1253,34 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
           {showSettings && <ChatSettingsPanel prefs={prefs} onChange={updatePrefs} onClose={() => setShowSettings(false)} />}
           {showMod && isAdmin && <ChatModerationPanel onClose={() => setShowMod(false)} onDeleteMessage={deleteMessage} />}
+
+          {view === "friends" && (
+            <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
+              <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+                <h2 className="flex items-center gap-2 text-sm font-bold">
+                  <UserPlus className="h-4 w-4 text-primary" /> Friends & DMs
+                </h2>
+                <button onClick={() => { setView("channels"); setActiveDm(null); }} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              </header>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <FriendsPanel
+                  activeDm={activeDm}
+                  setActiveDm={setActiveDm}
+                  onOpenProfile={(uid) => setProfileUid(uid)}
+                />
+              </div>
+            </div>
+          )}
+
+          {profileUid && (
+            <UserProfilePopover
+              userId={profileUid}
+              onClose={() => setProfileUid(null)}
+              onOpenDm={(uid) => { setProfileUid(null); setView("friends"); setActiveDm(uid); setDmUnread(0); }}
+            />
+          )}
 
           {showLogs && (
             <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
