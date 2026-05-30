@@ -372,7 +372,18 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     }
   }, [open, prefs.notify_mode]);
 
-  function playPing() {
+  function playPing() { playTone(880, 0.18); }
+  function playJoin() {
+    // ascending two-tone
+    playTone(523, 0.12);
+    setTimeout(() => playTone(784, 0.16), 90);
+  }
+  function playLeave() {
+    // descending two-tone
+    playTone(523, 0.12);
+    setTimeout(() => playTone(330, 0.18), 90);
+  }
+  function playTone(freq: number, dur: number) {
     try {
       let ctx = audioCtxRef.current;
       if (!ctx) {
@@ -385,13 +396,13 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
       const o = ctx.createOscillator();
       const g = ctx.createGain();
-      o.frequency.value = 880;
+      o.frequency.value = freq;
       o.connect(g); g.connect(ctx.destination);
       g.gain.setValueAtTime(0.0001, ctx.currentTime);
       g.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
       o.start();
-      o.stop(ctx.currentTime + 0.2);
+      o.stop(ctx.currentTime + dur + 0.02);
     } catch {}
   }
 
