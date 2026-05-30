@@ -167,7 +167,16 @@ export function ChatSettingsPanel({
           </div>
         </Row>
 
-        {prefs.bg_style !== "default" && (
+        {prefs.bg_style === "custom-image" && (
+          <Row label="Custom image">
+            <ChatBgImageUploader
+              url={prefs.bg_image_url}
+              onChange={(url) => onChange({ bg_image_url: url })}
+            />
+          </Row>
+        )}
+
+        {prefs.bg_style !== "default" && prefs.bg_style !== "custom-image" && (
           <>
             <Row label="Background colors">
               <div className="flex items-center gap-3">
@@ -194,15 +203,18 @@ export function ChatSettingsPanel({
                 })}
               </div>
             </Row>
-
-            <Row label="Live preview">
-              <div
-                className="h-16 w-full rounded-lg border border-border"
-                style={chatBackgroundStyle(prefs)}
-              />
-            </Row>
           </>
         )}
+
+        {prefs.bg_style !== "default" && (
+          <Row label="Live preview">
+            <div
+              className="h-16 w-full rounded-lg border border-border"
+              style={chatBackgroundStyle(prefs)}
+            />
+          </Row>
+        )}
+
 
         <p className="pt-2 text-[11px] text-muted-foreground">
           Name color, message gradient, and icon are set in your profile.
