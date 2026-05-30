@@ -22,6 +22,7 @@ import {
   ScrollText,
   Server,
   ShieldCheck,
+  Shirt,
   Smartphone,
   Sparkles,
   Trash2,
@@ -51,10 +52,42 @@ const changelogItems = [
       {
         category: "Tools",
         tagColor: tagStyles.tools,
+        icon: Library,
+        title: "Premium Credit Templates",
+        detail:
+          "The Template Store now includes premium credit-costing Roblox kits for anime RPG hubs, pet simulator hatcheries, tycoons, battle passes, trading plazas, and moderation suites.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.integrations,
+        icon: Award,
+        title: "Earned Profile Badges",
+        detail:
+          "Profiles now show earned badge progress based on activity, projects, credits, Discord perks, and owner/staff status, with Discord-style badge visuals.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Shirt,
+        title: "Better Clothing Avatar Preview",
+        detail:
+          "The Roblox clothing preview now renders layered tops, hoodies, pants, hats, face items, back accessories, neck items, and waist accessories as wearable 3D shapes instead of stamping every item onto the torso.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.backend,
+        icon: CreditCard,
+        title: "AI Usage Graph Fix",
+        detail:
+          "AI usage now records successful generators and template installs, including owner/free runs, and the account graph fills from usage events or credit transactions instead of staying blank.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
         icon: Zap,
         title: "No More Empty UI Output",
         detail:
-          "Fixed the generator path that could sit on loading and then show \"No output generated.\" Slow or empty AI responses now fall back to a complete deterministic ScreenGui so users still get a usable Roblox UI.",
+          'Fixed the generator path that could sit on loading and then show "No output generated." Slow or empty AI responses now fall back to a complete deterministic ScreenGui so users still get a usable Roblox UI.',
       },
       {
         category: "Performance",
@@ -73,22 +106,6 @@ const changelogItems = [
           "The /ui-generator page now has a compact builder header, generation stats, cleaner template tiles, stronger style controls, a better preview toolbar, and a grid-backed device preview frame.",
       },
       {
-        category: "Tools",
-        tagColor: tagStyles.tools,
-        icon: Sparkles,
-        title: "Fancier Generated Roblox UIs",
-        detail:
-          "Generated fallback templates now look more premium with layered panels, header glow, status badges, gradients, stronger action buttons, thicker strokes, and clearer hierarchy.",
-      },
-      {
-        category: "Tools",
-        tagColor: tagStyles.tools,
-        icon: Library,
-        title: "Manual Save to UI Library",
-        detail:
-          "Generated previews now have a visible Save to Library action, so users can keep a generated UI even if the automatic save path did not return a saved generation id.",
-      },
-      {
         category: "Account",
         tagColor: tagStyles.integrations,
         icon: MessageSquare,
@@ -103,6 +120,22 @@ const changelogItems = [
         title: "Image to 3D, Rigged Export & Safety",
         detail:
           "The 3D generator now supports safe reference-image uploads, server-side NSFW checks, and Tripo rigged / animation-ready export controls with FBX-friendly settings.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Sparkles,
+        title: "Fancier Generated Roblox UIs",
+        detail:
+          "Generated fallback templates now look more premium with layered panels, header glow, status badges, gradients, stronger action buttons, thicker strokes, and clearer hierarchy.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Library,
+        title: "Manual Save to UI Library",
+        detail:
+          "Generated previews now have a visible Save to Library action, so users can keep a generated UI even if the automatic save path did not return a saved generation id.",
       },
       {
         category: "Community",
@@ -199,7 +232,7 @@ const changelogItems = [
         icon: Link2Off,
         title: "Link Blocker in Chat",
         detail:
-          "Server-side regex blocks http(s)://, www., common TLDs (.com / .gg / .net …) and Discord invites in every channel. A friendly \"Links aren't allowed\" toast replaces the silent failure.",
+          'Server-side regex blocks http(s)://, www., common TLDs (.com / .gg / .net …) and Discord invites in every channel. A friendly "Links aren\'t allowed" toast replaces the silent failure.',
       },
       {
         category: "UI",
@@ -264,7 +297,7 @@ const changelogItems = [
         icon: Sparkles,
         title: "Images, Presence & Typing",
         detail:
-          "Upload images up to 5 MB straight into chat. See who's online via the Users chip in the header, and watch a live \"typing…\" indicator when others are mid-message. Pinned messages (admin only) sit at the top of the conversation.",
+          'Upload images up to 5 MB straight into chat. See who\'s online via the Users chip in the header, and watch a live "typing…" indicator when others are mid-message. Pinned messages (admin only) sit at the top of the conversation.',
       },
       {
         category: "Security",
@@ -305,7 +338,7 @@ const changelogItems = [
         icon: ShieldCheck,
         title: "Google Sign-In API Key Refreshed",
         detail:
-          "Rotated the Lovable AI gateway key powering the Google OAuth broker so the \"Invalid API key\" toast that appeared for some users when clicking Sign in with Google is resolved.",
+          'Rotated the Lovable AI gateway key powering the Google OAuth broker so the "Invalid API key" toast that appeared for some users when clicking Sign in with Google is resolved.',
       },
       {
         category: "UI",
@@ -313,7 +346,7 @@ const changelogItems = [
         icon: Palette,
         title: "Audio Stays Quiet Until You Interact",
         detail:
-          "Confirmed sound effects only initialize after a real user gesture (click/tap/key), so Chrome's \"AudioContext was not allowed to start\" warning no longer appears on first load.",
+          'Confirmed sound effects only initialize after a real user gesture (click/tap/key), so Chrome\'s "AudioContext was not allowed to start" warning no longer appears on first load.',
       },
     ],
   },
@@ -330,7 +363,7 @@ const changelogItems = [
         icon: ShieldCheck,
         title: "Browse & Community Pages Now Require Login",
         detail:
-          "Showcase, Showcase detail, Templates, Ideas, Project editor, and Clothing Studio all now require an account. Logged-out visitors see a clean \"Please log in to view and interact with community content\" gate and are redirected to /login with a return path so they land back where they were after signing in. Private projects stay private — only published showcase entries appear in browse, backed by RLS on the database.",
+          'Showcase, Showcase detail, Templates, Ideas, Project editor, and Clothing Studio all now require an account. Logged-out visitors see a clean "Please log in to view and interact with community content" gate and are redirected to /login with a return path so they land back where they were after signing in. Private projects stay private — only published showcase entries appear in browse, backed by RLS on the database.',
       },
       {
         category: "Security",
@@ -399,7 +432,6 @@ const changelogItems = [
     ],
   },
   {
-
     version: "v3.0.0",
     date: "May 29, 2026",
     title: "Toolbox Overhaul, Stay-Signed-In & UI Generator",

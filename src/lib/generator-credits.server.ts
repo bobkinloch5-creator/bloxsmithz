@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { recordAiUsageEvent } from "@/lib/usage-events.server";
 
 export async function isGeneratorOwner(userId: string, supabase: any) {
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -86,9 +87,17 @@ export async function spendCreditsAfterSuccess(opts: {
   userId?: string;
   reason?: string;
 }) {
-  if (opts.isOwner || opts.amount <= 0) return;
-
   const reason = opts.reason ?? "AI generation";
+  if (opts.isOwner || opts.amount <= 0) {
+    await recordAiUsageEvent({
+      userId: opts.userId,
+      source: reason,
+      creditsUsed: 0,
+      metadata: { owner: opts.isOwner },
+    });
+    return;
+  }
+
   const { error } = await opts.supabase.rpc("spend_credits_atomic", { _amount: opts.amount });
   if (!error) {
     await insertCreditTransaction({
@@ -96,6 +105,11 @@ export async function spendCreditsAfterSuccess(opts: {
       userId: opts.userId,
       amount: opts.amount,
       reason,
+    });
+    await recordAiUsageEvent({
+      userId: opts.userId,
+      source: reason,
+      creditsUsed: opts.amount,
     });
     return;
   }
@@ -111,6 +125,11 @@ export async function spendCreditsAfterSuccess(opts: {
       amount: opts.amount,
       insufficientMessage: opts.insufficientMessage,
       reason,
+    });
+    await recordAiUsageEvent({
+      userId: opts.userId,
+      source: reason,
+      creditsUsed: opts.amount,
     });
     return;
   }

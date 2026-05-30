@@ -9,6 +9,8 @@ import {
   UISpecSchema,
   type UISpec,
 } from "@/lib/ui-generator.server";
+import { isGeneratorOwner } from "@/lib/generator-credits.server";
+import { recordAiUsageEvent } from "@/lib/usage-events.server";
 
 export const UI_GEN_CREDIT_COST = 5;
 
@@ -46,6 +48,7 @@ export const generateRobloxUIFn = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const isOwner = await isGeneratorOwner(userId, supabase);
 
     const spendErr = await trySpend(supabase, UI_GEN_CREDIT_COST);
     if (spendErr) {
@@ -73,6 +76,13 @@ export const generateRobloxUIFn = createServerFn({ method: "POST" })
     }
 
     const { actions, files } = specToPluginPayload(spec);
+    await recordAiUsageEvent({
+      userId,
+      source: "UI Generator",
+      creditsUsed: isOwner ? 0 : UI_GEN_CREDIT_COST,
+      model: "BloxSmith UI Generator",
+      metadata: { category: data.category, style: data.style },
+    });
 
     // Save to the user's UI library
     let savedId: string | null = null;

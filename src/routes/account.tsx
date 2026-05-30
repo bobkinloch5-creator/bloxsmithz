@@ -26,6 +26,7 @@ import {
   DollarSign,
   Zap,
   TrendingUp,
+  Award,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ import { RobloxAccountLink } from "@/components/RobloxAccountLink";
 import { ChatStyleCard } from "@/components/ChatStyleCard";
 import { ProfileCustomizationCard } from "@/components/ProfileCustomizationCard";
 import { RoleBadges } from "@/components/RoleBadge";
+import { ProfileBadgeRow, getBadgeDef } from "@/components/profile/ProfileBadges";
 import { formatCreditBalance } from "@/lib/credit-display";
 import {
   ResponsiveContainer,
@@ -59,6 +61,14 @@ export const Route = createFileRoute("/account")({
 });
 
 type Tx = { id: string; amount: number; type?: string; reason: string | null; created_at: string };
+type UsageEvent = {
+  id: number | string;
+  created_at: string;
+  source?: string | null;
+  model?: string | null;
+  credits_used?: number | null;
+  metadata?: Record<string, unknown> | null;
+};
 type PR = {
   id: string;
   pack_id: string;
@@ -96,6 +106,7 @@ function Account() {
   const [bio, setBio] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [txs, setTxs] = useState<Tx[]>([]);
+  const [usageEvents, setUsageEvents] = useState<UsageEvent[]>([]);
   const [prs, setPrs] = useState<PR[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [projectCount, setProjectCount] = useState(0);
@@ -213,6 +224,13 @@ function Account() {
       .limit(100)
       .then(({ data }) => setTxs((data ?? []) as Tx[]));
     supabase
+      .from("ai_usage_events")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .then(({ data }) => setUsageEvents((data ?? []) as UsageEvent[]));
+    supabase
       .from("payment_requests")
       .select("id,pack_id,credits,amount,status,paypal_transaction_id,created_at")
       .eq("user_id", user.id)
@@ -276,7 +294,15 @@ function Account() {
 
   // Process credit transactions to extract model usage stats
   const spendTxs = txs.filter((t) => t.amount < 0);
-  const totalCreditsUsed = spendTxs.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const trackedUsageEvents = usageEvents.filter(
+    (e) => String(e.source ?? "") !== "credit_spend" || spendTxs.length === 0,
+  );
+  const txCreditsUsed = spendTxs.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const eventCreditsUsed = trackedUsageEvents.reduce(
+    (sum, e) => sum + Math.max(0, Number(e.credits_used ?? 0)),
+    0,
+  );
+  const totalCreditsUsed = Math.max(txCreditsUsed, eventCreditsUsed);
   const totalSpendUsd = totalCreditsUsed * 0.05; // $0.05 per credit (from PayPal packs: $5 for 100 credits)
 
   // Map transactions to models based on amount
@@ -322,10 +348,20 @@ function Account() {
       costUsd: absAmt * 0.05,
     };
   });
+  const eventOnlyLogs = trackedUsageEvents.map((e) => ({
+    id: `usage-${e.id}`,
+    amount: -Math.max(1, Number(e.credits_used ?? 1)),
+    created_at: e.created_at,
+    reason: String(e.source ?? "AI usage"),
+    modelName: e.model || "BloxSmith AI",
+    actionType: String(e.source ?? "AI usage").replace(/_/g, " "),
+    costUsd: Math.max(0, Number(e.credits_used ?? 0)) * 0.05,
+  }));
+  const usageLogs = enrichedTxs.length > 0 ? enrichedTxs : eventOnlyLogs;
 
   // Calculate top/most active model
   const modelCounts: Record<string, number> = {};
-  enrichedTxs.forEach((t) => {
+  usageLogs.forEach((t) => {
     modelCounts[t.modelName] = (modelCounts[t.modelName] || 0) + 1;
   });
   let mostActiveModel = "None";
@@ -348,7 +384,8 @@ function Account() {
   }
 
   // Populate daily spend
-  enrichedTxs.forEach((t) => {
+  const chartEvents = usageLogs.length > 0 ? usageLogs : enrichedTxs;
+  chartEvents.forEach((t) => {
     const dateStr = new Date(t.created_at).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -368,7 +405,7 @@ function Account() {
 
   // Model spend distribution data for pie chart
   const modelSpendMap: Record<string, number> = {};
-  enrichedTxs.forEach((t) => {
+  usageLogs.forEach((t) => {
     modelSpendMap[t.modelName] = (modelSpendMap[t.modelName] || 0) + Math.abs(t.amount);
   });
   const COLORS = ["#8B5CF6", "#3B82F6", "#10B981", "#F59E0B", "#EF4444"];
@@ -377,6 +414,21 @@ function Account() {
     value,
     color: COLORS[idx % COLORS.length],
   }));
+  const selectedBadgeIds = Array.isArray((profile as any)?.profile_badges)
+    ? ((profile as any).profile_badges as string[])
+    : [];
+  const earnedBadgeIds = Array.from(
+    new Set([
+      ...selectedBadgeIds,
+      projectCount > 0 ? "creator" : "",
+      projectCount >= 3 ? "developer" : "",
+      totalCreditsUsed > 0 ? "active" : "",
+      totalCreditsUsed >= 25 ? "scripter" : "",
+      (profile as any)?.discord_claimed ? "booster" : "",
+      (profile as any)?.credits > 0 ? "supporter" : "",
+      isOwner ? "founder" : "",
+    ].filter(Boolean)),
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
@@ -407,9 +459,9 @@ function Account() {
             {
               icon: Sparkles,
               label: "AI Builds",
-              value: String(txs.filter((t) => t.amount < 0).length),
+              value: String(Math.max(spendTxs.length, trackedUsageEvents.length)),
               color: "text-accent",
-              desc: "Total code improvements",
+              desc: "Tracked AI runs",
             },
             {
               icon: Clock,
@@ -436,6 +488,39 @@ function Account() {
             </div>
           ))}
         </div>
+
+        {earnedBadgeIds.length > 0 && (
+          <section className="rounded-2xl border border-border/50 bg-surface/20 p-5 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" /> Earned Profile Badges
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Badges unlock from activity, credits, Discord perks, projects, and owner/staff status.
+                </p>
+              </div>
+              <ProfileBadgeRow ids={earnedBadgeIds} size={30} />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {earnedBadgeIds.slice(0, 6).map((id) => {
+                const badge = getBadgeDef(id);
+                if (!badge) return null;
+                return (
+                  <div
+                    key={id}
+                    className="rounded-xl border border-border/50 bg-background/35 p-3"
+                  >
+                    <div className="text-sm font-semibold">{badge.label}</div>
+                    <div className="mt-0.5 text-[11px] text-muted-foreground">
+                      {badge.description}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Usage Analytics Dashboard */}
         <section className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-surface/40 via-surface/20 to-surface/10 p-6 space-y-6">
@@ -507,7 +592,7 @@ function Account() {
 
 
           {/* Interactive Chart Panel */}
-          {mounted && spendTxs.length > 0 ? (
+          {mounted ? (
             <div className="grid lg:grid-cols-12 gap-6">
               {/* Daily Spend Area Chart */}
               <div className="lg:col-span-8 rounded-xl border border-border/40 bg-surface-elevated/10 p-4 space-y-3">
@@ -619,21 +704,21 @@ function Account() {
                   </>
                 ) : (
                   <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
-                    No model distribution data.
+                    No model distribution data yet.
                   </div>
                 )}
               </div>
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-border/60 bg-surface-elevated/5 p-8 text-center text-sm text-muted-foreground">
-              {spendTxs.length === 0
-                ? "No AI usage history found. Your spent credits will be graphed here."
+              {usageLogs.length === 0
+                ? "No AI usage history yet. The graph is ready and will fill as soon as you run a generation."
                 : "Loading analytics dashboard..."}
             </div>
           )}
 
           {/* Model Usage Logs List */}
-          {spendTxs.length > 0 && (
+          {usageLogs.length > 0 && (
             <div className="space-y-3 pt-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Detailed AI Operation Logs
@@ -651,7 +736,7 @@ function Account() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
-                      {enrichedTxs.map((t) => (
+                      {usageLogs.map((t) => (
                         <tr key={t.id} className="hover:bg-surface-elevated/10 transition">
                           <td className="p-3 text-muted-foreground">
                             {new Date(t.created_at).toLocaleString()}

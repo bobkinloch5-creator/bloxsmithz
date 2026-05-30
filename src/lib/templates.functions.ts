@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isGeneratorOwner } from "@/lib/generator-credits.server";
+import { recordAiUsageEvent } from "@/lib/usage-events.server";
 
 export const listTemplates = createServerFn({ method: "GET" }).handler(async () => {
   // Public catalog — read via the auth-middleware client (RLS allows anon SELECT on active rows
@@ -12,6 +14,7 @@ export const listTemplates = createServerFn({ method: "GET" }).handler(async () 
       "id,slug,name,category,description,thumbnail_url,credits_cost,difficulty,features,install_count",
     )
     .eq("active", true)
+    .order("credits_cost", { ascending: false })
     .order("install_count", { ascending: false });
   if (error) throw new Error(error.message);
   return { templates: data ?? [] };
@@ -30,6 +33,7 @@ export const installTemplate = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const isOwner = await isGeneratorOwner(userId, supabase);
 
     const { data: tpl, error: tplErr } = await supabaseAdmin
       .from("templates")
@@ -91,6 +95,12 @@ export const installTemplate = createServerFn({ method: "POST" })
       user_id: userId,
       project_id: project.id,
       credits_charged: tpl.credits_cost,
+    });
+    await recordAiUsageEvent({
+      userId,
+      source: "Template install",
+      creditsUsed: isOwner ? 0 : tpl.credits_cost,
+      metadata: { template_slug: tpl.slug, template_name: tpl.name },
     });
     await supabaseAdmin
       .from("templates")

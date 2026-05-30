@@ -529,7 +529,7 @@ function ClothingStudio() {
               ) : result && result.ok ? (
                 view === "3d" ? (
                   <div className="h-[360px] w-full sm:h-[460px] lg:h-[560px]">
-                    <ClothingPreview3D imageUrl={result.imageUrl} kind={result.kind} />
+                    <ClothingPreview3D imageUrl={result.imageUrl} kind={kind} />
                   </div>
                 ) : (
                   <img

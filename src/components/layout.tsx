@@ -168,7 +168,46 @@ export function Header() {
               Browse
               <ChevronDown className="h-3.5 w-3.5 opacity-70" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuContent align="start" className="w-[22rem] p-2">
+              <div className="mb-2 grid gap-2">
+                <Link
+                  to="/templates"
+                  className="group rounded-lg border border-amber-500/25 bg-gradient-to-br from-amber-500/15 via-surface/80 to-primary/10 p-3 transition hover:border-amber-400/50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                        <Sparkles className="h-4 w-4 text-amber-300" />
+                        Premium Templates
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        Credit-costing Roblox starter kits: tycoons, RPG hubs, battle passes,
+                        trading plazas, and more.
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-amber-500/35 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                      credits
+                    </span>
+                  </div>
+                </Link>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/ui-generator"
+                    className="rounded-lg border border-border/60 bg-background/50 p-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-surface"
+                  >
+                    <LayoutIcon className="mb-1 h-4 w-4 text-primary" />
+                    Fancy UI Generator
+                  </Link>
+                  <Link
+                    to="/clothing"
+                    className="rounded-lg border border-border/60 bg-background/50 p-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-surface"
+                  >
+                    <Shirt className="mb-1 h-4 w-4 text-primary" />
+                    Clothing Studio
+                  </Link>
+                </div>
+              </div>
+              <div className="my-2 h-px bg-border/70" />
               {visibleNavItems
                 .filter(
                   (item) =>
