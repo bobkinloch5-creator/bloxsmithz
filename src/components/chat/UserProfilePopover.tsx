@@ -38,6 +38,7 @@ type Profile = {
   show_activity: boolean | null;
   current_activity: any;
   profile_badges: string[] | null;
+  profile_decoration: string | null;
 };
 
 
