@@ -68,7 +68,7 @@ export function ChannelSidebar({
 
       {view === "channels" &&
         channels.map((c) => {
-          const Ico = (c.icon && ICON_MAP[c.icon]) ?? Hash;
+          const Ico = (c.icon && ICON_MAP[c.icon]) || Hash;
           const active = current === c.slug;
           return (
             <button
