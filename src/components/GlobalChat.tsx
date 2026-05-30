@@ -1038,6 +1038,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground" disabled={!!muted}>
                 <ImageIcon className="h-4 w-4" />
               </button>
+              <button type="button" onClick={() => setShowRobloxShare(true)} aria-label="Share a Roblox game"
+                title="Share a Roblox game"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-emerald-400" disabled={!!muted || !canPostHere}>
+                <Gamepad2 className="h-4 w-4" />
+              </button>
               <EmojiPicker onPick={(em) => { setDraft((d) => d + em); inputRef.current?.focus(); }} />
               <EmotePicker onPick={(tok) => { setDraft((d) => d + (d && !d.endsWith(" ") ? " " : "") + tok + " "); inputRef.current?.focus(); }} />
               <textarea
