@@ -454,6 +454,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "global_chat_settings" }, (payload) => {
         setSlow(((payload.new as any).slow_mode_seconds as number) ?? 0);
       })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
+        mergeAuthorProfile(payload.new as any);
+      })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chat_reactions" }, (payload) => {
         setReactions((prev) => [...prev, payload.new as Reaction]);
       })
@@ -519,7 +522,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     });
     presenceChanRef.current = channel;
     return () => { supabase.removeChannel(channel); presenceChanRef.current = null; };
-  }, [user?.id, loadAuthors]);
+  }, [user?.id, loadAuthors, mergeAuthorProfile]);
 
   // Realtime: achievement unlocks → pop into global chat for everyone
   useEffect(() => {
