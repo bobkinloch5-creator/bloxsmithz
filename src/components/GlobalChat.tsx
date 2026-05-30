@@ -329,8 +329,15 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         if (!presenceSyncedRef.current) return; // skip initial population
         if (key === user.id) return;
         await loadAuthors([key]);
-        const a = authorsRef.current.get(key);
-        const name = a?.display_name ?? "Someone";
+        let name = authorsRef.current.get(key)?.display_name;
+        if (!name) {
+          const { data: p } = await supabase
+            .from("profiles")
+            .select("display_name,chat_nickname")
+            .eq("id", key)
+            .maybeSingle();
+          name = (p?.chat_nickname?.trim() || p?.display_name || "Someone") as string;
+        }
         if (prefsRef.current.sound_enabled) playJoin();
         setMessages((prev) => [...prev, {
           id: `sys-join-${key}-${Date.now()}`,
