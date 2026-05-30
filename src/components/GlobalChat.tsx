@@ -406,6 +406,41 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     return () => { supabase.removeChannel(ch); };
   }, [user?.id, loadAuthors]);
 
+  // Realtime: own level-ups → toast notification
+  useEffect(() => {
+    if (!user) return;
+    let lastLevel: number | null = null;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("user_levels").select("level").eq("user_id", user.id).maybeSingle();
+      lastLevel = (data?.level as number) ?? 1;
+    })();
+    const ch = supabase
+      .channel(realtimeTopic("bloxsmith-levels"))
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_levels", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const next = (payload.new as any)?.level as number | undefined;
+          if (typeof next !== "number") return;
+          if (lastLevel !== null && next > lastLevel) {
+            toast.success(`🎉 Level Up! You're now Level ${next}`, {
+              description: "Keep chatting and building to earn more XP.",
+              duration: 6000,
+            });
+            if (prefsRef.current.sound_enabled) {
+              playTone(523, 0.12);
+              setTimeout(() => playTone(659, 0.12), 100);
+              setTimeout(() => playTone(784, 0.18), 200);
+            }
+          }
+          lastLevel = next;
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id]);
+
   // Prune stale typing entries
   useEffect(() => {
     const t = setInterval(() => {
