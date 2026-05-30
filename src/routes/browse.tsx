@@ -26,19 +26,19 @@ function BrowsePage() {
       <Header />
       <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-4 sm:px-6 sm:py-6">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <img
               src={MASCOT_SRC}
               alt=""
-              className="h-12 w-12 shrink-0 object-contain drop-shadow"
+              className="h-10 w-10 shrink-0 object-contain drop-shadow sm:h-12 sm:w-12"
               loading="lazy"
             />
-            <div>
-              <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl">
-                <MessagesSquare className="h-6 w-6 text-primary" />
-                Browse the community
+            <div className="min-w-0">
+              <h1 className="flex items-center gap-2 text-xl font-bold leading-tight sm:text-3xl">
+                <MessagesSquare className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" />
+                <span className="truncate">Browse the community</span>
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground sm:text-sm">
                 Full-screen global chat with channels, friends, emotes and live presence.
               </p>
             </div>
