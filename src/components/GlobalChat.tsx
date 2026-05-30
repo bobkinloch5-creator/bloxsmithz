@@ -260,6 +260,36 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   useEffect(() => { openRef.current = open; }, [open]);
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
+  const mergeAuthorProfile = useCallback((p: any) => {
+    if (!p?.id) return;
+    setAuthors((prev) => {
+      const existing = prev.get(p.id);
+      if (!existing) return prev;
+      const nick = typeof p.chat_nickname === "string" && p.chat_nickname.trim() ? p.chat_nickname.trim() : null;
+      const next = new Map(prev);
+      next.set(p.id, {
+        ...existing,
+        display_name: nick ?? p.display_name ?? existing.display_name,
+        avatar_url: p.avatar_url ?? existing.avatar_url,
+        profile_badges: Array.isArray(p.profile_badges) ? p.profile_badges : existing.profile_badges,
+        profile_accent: typeof p.profile_accent === "string" ? p.profile_accent : existing.profile_accent,
+        profile_effect: typeof p.profile_effect === "string" ? p.profile_effect : existing.profile_effect,
+        profile_background: typeof p.profile_background === "string" ? p.profile_background : existing.profile_background,
+        pfp_effect: typeof p.pfp_effect === "string" ? p.pfp_effect : existing.pfp_effect,
+        profile_decoration: typeof p.profile_decoration === "string" ? p.profile_decoration : existing.profile_decoration,
+        presence_enabled: p.presence_enabled ?? existing.presence_enabled,
+        presence_status: typeof p.presence_status === "string" ? p.presence_status : existing.presence_status,
+        last_seen_at: typeof p.last_seen_at === "string" ? p.last_seen_at : existing.last_seen_at,
+        chat_name_gradient: sanitizeGradient(p.chat_name_gradient) ?? existing.chat_name_gradient,
+        chat_text_gradient: sanitizeGradient(p.chat_text_gradient) ?? existing.chat_text_gradient,
+        chat_icon: sanitizeIcon(p.chat_icon) ?? existing.chat_icon,
+        chat_nickname: nick ?? existing.chat_nickname,
+        chat_font: sanitizeFont(p.chat_font) ?? existing.chat_font,
+      });
+      return next;
+    });
+  }, []);
+
   // Open state
   useEffect(() => {
     if (inline) { setOpen(true); return; }
@@ -323,6 +353,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    if (profile && user?.id) mergeAuthorProfile({ ...(profile as any), id: user.id });
+  }, [profile, user?.id, mergeAuthorProfile]);
 
   // Initial fetch
   useEffect(() => {
