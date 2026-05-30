@@ -295,7 +295,88 @@ export function ChatStyleCard() {
         </div>
       </div>
 
+      {/* Profile flair: accent color + animated effect */}
+      <div className="space-y-3">
+        <div>
+          <div className="text-sm font-medium">Profile flair</div>
+          <div className="text-[11px] text-muted-foreground">
+            Pick an accent color and an animated effect for your profile card. Visible to everyone who opens your profile.
+          </div>
+        </div>
+
+        {/* Live preview */}
+        <div className="relative h-24 overflow-hidden rounded-xl border border-border bg-background/40"
+          style={accent ? { background: `linear-gradient(135deg, ${accent}55, ${accent}11 60%, transparent)` } : undefined}
+        >
+          <ProfileEffect effect={effect} accent={accent || undefined} />
+          <div className="absolute inset-0 grid place-items-center">
+            <span className="text-sm font-bold" style={accent ? { color: accent, textShadow: `0 0 14px ${accent}66` } : undefined}>
+              {displayName}
+            </span>
+          </div>
+        </div>
+
+        {/* Accent color */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] text-muted-foreground mr-1">Accent</span>
+          {ACCENT_PRESETS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setAccent(c)}
+              title={c}
+              className={`h-6 w-6 rounded-full border-2 transition ${accent.toLowerCase() === c.toLowerCase() ? "border-foreground scale-110" : "border-border hover:scale-105"}`}
+              style={{ background: c }}
+            />
+          ))}
+          <input
+            type="color"
+            value={HEX_RE.test(accent) ? accent : "#7c3cff"}
+            onChange={(e) => setAccent(e.target.value)}
+            className="h-6 w-8 cursor-pointer rounded border-0 bg-transparent"
+          />
+          <input
+            type="text"
+            value={accent}
+            placeholder="#7c3cff"
+            maxLength={7}
+            onChange={(e) => setAccent(e.target.value)}
+            className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-xs outline-none focus:border-primary"
+          />
+          {accent && (
+            <button
+              onClick={() => setAccent("")}
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] hover:bg-surface-elevated"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Effect */}
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+          {PROFILE_EFFECTS.map((e) => {
+            const active = effect === e.id;
+            return (
+              <button
+                key={e.id}
+                type="button"
+                onClick={() => setEffect(e.id)}
+                className={`rounded-lg border px-2 py-2 text-xs transition ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-surface text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                }`}
+              >
+                {e.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex justify-end">
+
         <button
           onClick={save}
           disabled={saving}
