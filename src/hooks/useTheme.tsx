@@ -337,8 +337,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem("bs_theme", theme);
 
     // Persist to user profile (debounced via the effect tick).
-    supabase.auth.getUser().then(({ data }) => {
-      const uid = data.user?.id;
+    // Persist to user profile only if we have a cached session — getSession
+    // is local (no /auth/v1/user call), so it won't 401 for logged-out users.
+    supabase.auth.getSession().then(({ data }) => {
+      const uid = data.session?.user?.id;
       if (!uid) return;
       (supabase as any)
         .from("profiles")
