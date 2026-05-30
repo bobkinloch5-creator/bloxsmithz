@@ -71,43 +71,34 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "BloxSmith — Build Roblox Games With AI" },
+      { title: "Bloxsmith — Build Roblox Games With AI" },
       {
         name: "description",
         content:
-          "Describe your Roblox game, generate scripts and systems, then sync directly into Roblox Studio.",
+          "Bloxsmith is the AI-powered Roblox game builder. Describe your game, generate Luau scripts, systems and assets, then sync them straight into Roblox Studio.",
       },
-      { property: "og:title", content: "BloxSmith — Build Roblox Games With AI" },
+      { property: "og:site_name", content: "Bloxsmith" },
+      { property: "og:title", content: "Bloxsmith — Build Roblox Games With AI" },
       {
         property: "og:description",
         content:
-          "Describe your Roblox game, generate scripts and systems, then sync directly into Roblox Studio.",
+          "Bloxsmith is the AI-powered Roblox game builder. Describe your game, generate Luau scripts, systems and assets, then sync them straight into Roblox Studio.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://bloxsmith.pro" },
+      { property: "og:image", content: "https://bloxsmith.pro/og-bloxsmith.jpg" },
+      { property: "og:image:width", content: "1920" },
+      { property: "og:image:height", content: "1024" },
+      { property: "og:image:alt", content: "Bloxsmith — Build Roblox Games With AI" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "BloxSmith — Build Roblox Games With AI" },
+      { name: "twitter:title", content: "Bloxsmith — Build Roblox Games With AI" },
       {
         name: "twitter:description",
         content:
-          "Describe your Roblox game, generate scripts and systems, then sync directly into Roblox Studio.",
+          "Bloxsmith is the AI-powered Roblox game builder. Describe your game, generate Luau scripts, systems and assets, then sync them straight into Roblox Studio.",
       },
-      {
-        property: "og:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d40a0299-aad3-4400-9750-9e748359ad0c",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d40a0299-aad3-4400-9750-9e748359ad0c",
-      },
+      { name: "twitter:image", content: "https://bloxsmith.pro/og-bloxsmith.jpg" },
       { name: "google-site-verification", content: "TT27YZIAvj3b076VGZ2HHVWMyaF_Szuqd0ZOjxdpSTE" },
-      { name: "description", content: "Bloxsmith Forge is an AI-powered Roblox game builder and asset generator." },
-      { property: "og:description", content: "Bloxsmith Forge is an AI-powered Roblox game builder and asset generator." },
-      { name: "twitter:description", content: "Bloxsmith Forge is an AI-powered Roblox game builder and asset generator." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7e28cb51-2ecd-4bfa-9fd9-f059b1e5ae98/id-preview-af0ea832--6046985f-f2cd-4c4b-8c10-ebc8e41361ca.lovable.app-1780097863705.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7e28cb51-2ecd-4bfa-9fd9-f059b1e5ae98/id-preview-af0ea832--6046985f-f2cd-4c4b-8c10-ebc8e41361ca.lovable.app-1780097863705.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
