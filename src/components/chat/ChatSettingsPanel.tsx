@@ -1,5 +1,27 @@
-import { Settings2, Volume2, VolumeX, Bell, BellOff, AtSign, X } from "lucide-react";
-import { type ChatPrefs } from "@/lib/chat-prefs";
+import { Settings2, Volume2, VolumeX, Bell, BellOff, AtSign, X, Image as ImageIcon } from "lucide-react";
+import { type ChatPrefs, type ChatBgStyle, chatBackgroundStyle } from "@/lib/chat-prefs";
+
+const BG_STYLES: { v: ChatBgStyle; l: string }[] = [
+  { v: "default", l: "Default" },
+  { v: "solid", l: "Solid" },
+  { v: "gradient", l: "Gradient" },
+  { v: "mesh", l: "Mesh" },
+  { v: "aurora", l: "Aurora" },
+  { v: "dots", l: "Dots" },
+  { v: "grid", l: "Grid" },
+  { v: "stripes", l: "Stripes" },
+];
+
+const PRESETS: { name: string; patch: Partial<ChatPrefs> }[] = [
+  { name: "Midnight", patch: { bg_style: "gradient", bg_color: "#0b1220", bg_color2: "#1e1b4b" } },
+  { name: "Sunset", patch: { bg_style: "gradient", bg_color: "#7c2d12", bg_color2: "#db2777" } },
+  { name: "Ocean", patch: { bg_style: "mesh", bg_color: "#0ea5e9", bg_color2: "#6366f1" } },
+  { name: "Forest", patch: { bg_style: "mesh", bg_color: "#064e3b", bg_color2: "#84cc16" } },
+  { name: "Neon", patch: { bg_style: "aurora", bg_color: "#a855f7", bg_color2: "#22d3ee" } },
+  { name: "Carbon", patch: { bg_style: "dots", bg_color: "#0a0a0a", bg_color2: "#525252" } },
+  { name: "Graph", patch: { bg_style: "grid", bg_color: "#0f172a", bg_color2: "#3b82f6" } },
+  { name: "Candy", patch: { bg_style: "stripes", bg_color: "#fb7185", bg_color2: "#f472b6" } },
+];
 
 export function ChatSettingsPanel({
   prefs,
@@ -88,6 +110,65 @@ export function ChatSettingsPanel({
             ))}
           </div>
         </Row>
+
+        <div className="h-px bg-border" />
+
+        <Row label={<><ImageIcon className="mr-1 inline h-3 w-3" />Background style</>}>
+          <div className="flex flex-wrap gap-1">
+            {BG_STYLES.map((s) => (
+              <button
+                key={s.v}
+                type="button"
+                onClick={() => onChange({ bg_style: s.v })}
+                className={`rounded-md border px-2 py-1 text-xs ${
+                  prefs.bg_style === s.v
+                    ? "border-primary bg-primary/15 text-primary"
+                    : "border-border text-muted-foreground hover:bg-surface"
+                }`}
+              >
+                {s.l}
+              </button>
+            ))}
+          </div>
+        </Row>
+
+        {prefs.bg_style !== "default" && (
+          <>
+            <Row label="Background colors">
+              <div className="flex items-center gap-3">
+                <ColorInput label="Primary" value={prefs.bg_color} onChange={(v) => onChange({ bg_color: v })} />
+                <ColorInput label="Accent" value={prefs.bg_color2} onChange={(v) => onChange({ bg_color2: v })} />
+              </div>
+            </Row>
+
+            <Row label="Presets">
+              <div className="grid grid-cols-4 gap-1.5">
+                {PRESETS.map((p) => {
+                  const preview = chatBackgroundStyle({ ...prefs, ...p.patch } as ChatPrefs);
+                  return (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => onChange(p.patch)}
+                      className="group flex flex-col items-stretch gap-1 rounded-md border border-border p-1 hover:border-primary"
+                    >
+                      <div className="h-10 w-full rounded" style={preview} />
+                      <span className="text-[10px] text-muted-foreground group-hover:text-foreground">{p.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Row>
+
+            <Row label="Live preview">
+              <div
+                className="h-16 w-full rounded-lg border border-border"
+                style={chatBackgroundStyle(prefs)}
+              />
+            </Row>
+          </>
+        )}
+
         <p className="pt-2 text-[11px] text-muted-foreground">
           Name color, message gradient, and icon are set in your profile.
         </p>
@@ -96,7 +177,7 @@ export function ChatSettingsPanel({
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
       <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -104,6 +185,20 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       </div>
       {children}
     </div>
+  );
+}
+
+function ColorInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex items-center gap-1.5 text-xs">
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-7 w-9 cursor-pointer rounded border border-border bg-transparent"
+      />
+      <span className="text-muted-foreground">{label}</span>
+    </label>
   );
 }
 
