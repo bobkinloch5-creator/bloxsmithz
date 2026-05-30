@@ -865,10 +865,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const visibleMessages = useMemo(
     () => messages.filter((m) => {
       const slug = activeChannel?.slug ?? "general";
-      if (m.ephemeralBot) return slug === "general";
+      if (m.ephemeralBot) return prefs.show_system && slug === "general";
       return (m.channel_id ?? "general") === slug;
     }),
-    [messages, activeChannel?.slug],
+    [messages, activeChannel?.slug, prefs.show_system],
   );
   const messagesById = useMemo(() => new Map(visibleMessages.map((m) => [m.id, m])), [visibleMessages]);
   const pinned = useMemo(() => visibleMessages.filter((m) => m.pinned_at).slice(-3), [visibleMessages]);
