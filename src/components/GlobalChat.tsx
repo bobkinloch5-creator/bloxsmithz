@@ -721,10 +721,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                   <Shield className="h-4 w-4" />
                 </button>
               )}
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close chat"
-                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
+              {!inline && (
+                <button type="button" onClick={() => setOpen(false)} aria-label="Close chat"
+                  className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </header>
 
