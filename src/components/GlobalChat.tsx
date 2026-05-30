@@ -781,6 +781,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               </div>
             </div>
             <div className="flex items-center gap-0.5">
+              <button type="button" onClick={() => setShowLogs(true)} aria-label="Chat logs"
+                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
+                <FileText className="h-4 w-4" />
+              </button>
               <button type="button" onClick={() => setShowSettings(true)} aria-label="Settings"
                 className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground">
                 <Settings2 className="h-4 w-4" />
