@@ -24,6 +24,7 @@ import { moderateChatMessage } from "@/lib/chat-moderation.functions";
 import { ChannelSidebar, type Channel } from "@/components/chat/ChannelSidebar";
 import { FriendsPanel } from "@/components/chat/FriendsPanel";
 import { UserProfilePopover } from "@/components/chat/UserProfilePopover";
+import bloxbotAvatar from "@/assets/bloxbot-avatar.png";
 
 type DbMessage = {
   id: string;
@@ -850,10 +851,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               return (
                 <div key={m.id} className="group flex gap-2">
                   <div className={cn(
-                    "grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold",
-                    isBot ? "bg-gradient-to-br from-primary/30 to-primary/10 text-primary" : "bg-surface text-muted-foreground",
+                    "grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-bold",
+                    isBot ? "bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40" : "bg-surface text-muted-foreground",
                   )}>
-                    {isBot ? <Bot className="h-4 w-4" />
+                    {isBot ? <img src={bloxbotAvatar} alt="BloxBot" className="h-8 w-8 rounded-full object-cover" />
                       : author?.avatar_url ? <img src={author.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
                       : name.slice(0, 1).toUpperCase()}
                   </div>
