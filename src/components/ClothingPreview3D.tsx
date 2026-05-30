@@ -4,14 +4,10 @@ import { Loader2 } from "lucide-react";
 type Kind = "classic_shirt" | "classic_pants" | "tshirt" | "layered_or_accessory";
 
 /**
- * Client-only 3D preview of a generated Roblox clothing texture. react-three-fiber
- * and three.js touch `window`/`document` and crash during SSR, so the whole
- * three stack is dynamically imported on mount. While it loads (or if it fails),
- * the parent still shows the flat PNG, so the preview is purely additive.
- *
- * This is an APPROXIMATION — it maps the flat texture onto a simple humanoid so
- * users get a feel for the colors/placement in 3D. It is not Roblox's exact
- * template wrap; the downloadable PNG remains the real upload asset.
+ * Client-only Roblox-style avatar preview of a generated clothing texture.
+ * Renders an R6-style blocky humanoid with skin-toned head/arms (or legs for
+ * pants) and the generated PNG mapped onto the clothed parts. The flat
+ * downloadable PNG is unaffected — this is purely an in-browser preview.
  */
 export function ClothingPreview3D({
   imageUrl,
@@ -23,6 +19,8 @@ export function ClothingPreview3D({
   const [mod, setMod] = useState<null | {
     Canvas: any;
     OrbitControls: any;
+    ContactShadows: any;
+    Environment: any;
     THREE: any;
   }>(null);
   const [failed, setFailed] = useState(false);
@@ -36,7 +34,13 @@ export function ClothingPreview3D({
     ])
       .then(([fiber, drei, three]) => {
         if (alive)
-          setMod({ Canvas: fiber.Canvas, OrbitControls: drei.OrbitControls, THREE: three });
+          setMod({
+            Canvas: fiber.Canvas,
+            OrbitControls: drei.OrbitControls,
+            ContactShadows: drei.ContactShadows,
+            Environment: drei.Environment,
+            THREE: three,
+          });
       })
       .catch(() => {
         if (alive) setFailed(true);
@@ -62,22 +66,50 @@ export function ClothingPreview3D({
     );
   }
 
-  const { Canvas, OrbitControls, THREE } = mod;
+  const { Canvas, OrbitControls, ContactShadows, THREE } = mod;
 
   return (
-    <Canvas camera={{ position: [0, 0.2, 4.4], fov: 42 }} dpr={[1, 2]}>
-      <color attach="background" args={["#0e0f14"]} />
-      <ambientLight intensity={0.85} />
-      <directionalLight position={[3, 5, 4]} intensity={1.1} />
-      <directionalLight position={[-4, 2, -3]} intensity={0.35} />
+    <Canvas
+      camera={{ position: [0, 1.2, 6.2], fov: 32 }}
+      dpr={[1, 2]}
+      shadows
+      gl={{ antialias: true }}
+    >
+      {/* Soft gradient backdrop */}
+      <color attach="background" args={["#0b0d14"]} />
+      <fog attach="fog" args={["#0b0d14", 8, 18]} />
+
+      {/* Key / fill / rim lighting for a clean studio look */}
+      <ambientLight intensity={0.45} />
+      <directionalLight
+        position={[4, 6, 5]}
+        intensity={1.4}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      />
+      <directionalLight position={[-5, 3, -2]} intensity={0.35} color="#7aa2ff" />
+      <pointLight position={[0, 2, 5]} intensity={0.4} color="#a0e9ff" />
+
       <Avatar imageUrl={imageUrl} kind={kind} THREE={THREE} />
+
+      <ContactShadows
+        position={[0, -1.55, 0]}
+        opacity={0.55}
+        scale={6}
+        blur={2.4}
+        far={3}
+        color="#000000"
+      />
+
       <OrbitControls
         enablePan={false}
         enableZoom={false}
         autoRotate
-        autoRotateSpeed={1.5}
-        minPolarAngle={Math.PI / 2.6}
-        maxPolarAngle={Math.PI / 1.8}
+        autoRotateSpeed={1.2}
+        minPolarAngle={Math.PI / 2.8}
+        maxPolarAngle={Math.PI / 1.9}
+        target={[0, 0.4, 0]}
       />
     </Canvas>
   );
@@ -94,6 +126,9 @@ function useTexture(imageUrl: string, THREE: any) {
       (t: any) => {
         if (!alive) return;
         t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = 8;
+        t.minFilter = THREE.LinearFilter;
+        t.magFilter = THREE.LinearFilter;
         setTex(t);
       },
       undefined,
@@ -108,62 +143,101 @@ function useTexture(imageUrl: string, THREE: any) {
   return tex;
 }
 
+const SKIN = "#f0c89a";
+const HAIR = "#1f1410";
+const DEFAULT_PANTS = "#2b313d";
+const DEFAULT_SHIRT = "#3a4150";
+
 function Avatar({
   imageUrl,
   kind,
-  THREE,
+  THREE: _THREE,
 }: {
   imageUrl: string;
   kind: Kind;
   THREE: any;
 }) {
-  const tex = useTexture(imageUrl, THREE);
-  const mat = tex
-    ? { map: tex }
-    : { color: "#5b6472" };
+  const tex = useTexture(imageUrl, _THREE);
 
   const isPants = kind === "classic_pants";
+  const isShirtLike = !isPants; // classic_shirt | tshirt | layered
 
-  // Simple blocky humanoid. Skin parts neutral; clothed parts get the texture.
+  const clothedMat = tex ? { map: tex } : { color: isPants ? DEFAULT_PANTS : DEFAULT_SHIRT };
+  const fallbackShirt = { color: DEFAULT_SHIRT };
+  const fallbackPants = { color: DEFAULT_PANTS };
+
+  // R6-ish proportions with small gaps between parts so they read as separate limbs.
   return (
-    <group position={[0, -0.2, 0]}>
-      {/* head */}
-      <mesh position={[0, 1.95, 0]}>
-        <boxGeometry args={[0.62, 0.62, 0.62]} />
-        <meshStandardMaterial color="#e8c9a6" roughness={0.8} />
+    <group position={[0, -0.25, 0]}>
+      {/* Hair cap */}
+      <mesh position={[0, 2.18, 0]} castShadow>
+        <boxGeometry args={[0.7, 0.18, 0.7]} />
+        <meshStandardMaterial color={HAIR} roughness={0.7} />
       </mesh>
 
-      {/* torso */}
-      <mesh position={[0, 1.05, 0]}>
-        <boxGeometry args={[1.15, 1.25, 0.6]} />
-        {isPants ? (
-          <meshStandardMaterial color="#5b6472" roughness={0.7} />
-        ) : (
-          <meshStandardMaterial {...mat} roughness={0.7} metalness={0.05} />
-        )}
+      {/* Head */}
+      <mesh position={[0, 1.78, 0]} castShadow>
+        <boxGeometry args={[0.66, 0.66, 0.66]} />
+        <meshStandardMaterial color={SKIN} roughness={0.85} />
       </mesh>
 
-      {/* arms */}
-      {[-0.78, 0.78].map((x) => (
-        <mesh key={x} position={[x, 1.0, 0]}>
-          <boxGeometry args={[0.34, 1.2, 0.36]} />
-          {isPants ? (
-            <meshStandardMaterial color="#e8c9a6" roughness={0.8} />
-          ) : (
-            <meshStandardMaterial {...mat} roughness={0.7} />
-          )}
+      {/* Eyes */}
+      <mesh position={[-0.14, 1.82, 0.331]}>
+        <boxGeometry args={[0.08, 0.08, 0.01]} />
+        <meshStandardMaterial color="#0d0d0d" />
+      </mesh>
+      <mesh position={[0.14, 1.82, 0.331]}>
+        <boxGeometry args={[0.08, 0.08, 0.01]} />
+        <meshStandardMaterial color="#0d0d0d" />
+      </mesh>
+
+      {/* Neck gap is implicit via spacing */}
+
+      {/* Torso (shirt) */}
+      <mesh position={[0, 0.92, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.0, 1.1, 0.55]} />
+        <meshStandardMaterial
+          {...(isShirtLike ? clothedMat : fallbackShirt)}
+          roughness={0.75}
+          metalness={0.02}
+        />
+      </mesh>
+
+      {/* Arms — separated from torso by a clear gap */}
+      {[-0.72, 0.72].map((x) => (
+        <mesh key={x} position={[x, 0.92, 0]} castShadow>
+          <boxGeometry args={[0.36, 1.1, 0.4]} />
+          <meshStandardMaterial
+            {...(isShirtLike ? clothedMat : { color: SKIN })}
+            roughness={isShirtLike ? 0.75 : 0.85}
+          />
         </mesh>
       ))}
 
-      {/* legs */}
-      {[-0.3, 0.3].map((x) => (
-        <mesh key={x} position={[x, 0.05, 0]}>
-          <boxGeometry args={[0.42, 1.15, 0.42]} />
-          {isPants ? (
-            <meshStandardMaterial {...mat} roughness={0.7} />
-          ) : (
-            <meshStandardMaterial color="#3a4150" roughness={0.8} />
-          )}
+      {/* Hands (always skin) */}
+      {[-0.72, 0.72].map((x) => (
+        <mesh key={`h${x}`} position={[x, 0.27, 0]} castShadow>
+          <boxGeometry args={[0.36, 0.18, 0.4]} />
+          <meshStandardMaterial color={SKIN} roughness={0.85} />
+        </mesh>
+      ))}
+
+      {/* Legs */}
+      {[-0.26, 0.26].map((x) => (
+        <mesh key={`l${x}`} position={[x, -0.3, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.46, 1.3, 0.5]} />
+          <meshStandardMaterial
+            {...(isPants ? clothedMat : fallbackPants)}
+            roughness={0.8}
+          />
+        </mesh>
+      ))}
+
+      {/* Shoes */}
+      {[-0.26, 0.26].map((x) => (
+        <mesh key={`s${x}`} position={[x, -1.05, 0.03]} castShadow>
+          <boxGeometry args={[0.5, 0.22, 0.58]} />
+          <meshStandardMaterial color="#15171c" roughness={0.6} />
         </mesh>
       ))}
     </group>
