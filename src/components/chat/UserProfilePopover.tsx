@@ -10,6 +10,7 @@ import { ProfileEffect } from "./ProfileEffect";
 import { ProfileBackground } from "@/components/profile/ProfileBackground";
 import { PfpRing } from "@/components/profile/PfpRing";
 import { presenceFromProfile } from "@/lib/presence";
+import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
 
 
 type Profile = {
