@@ -5,12 +5,17 @@ import { Loader2, RefreshCw, CheckCircle2, AlertCircle, BookOpen } from "lucide-
 import { syncRobloxDocsFn, getRobloxDocsStatusFn, searchRobloxDocsFn } from "@/lib/roblox-docs.functions";
 
 type SyncStatus = {
-  id?: string;
-  status?: string;
-  total_docs?: number;
-  embedded_docs?: number;
-  last_synced_at?: string | null;
-  error?: string | null;
+  latest: {
+    id?: string;
+    status?: string;
+    processed?: number;
+    total?: number;
+    skipped?: number;
+    error?: string | null;
+    started_at?: string | null;
+    finished_at?: string | null;
+  } | null;
+  indexedChunks?: number;
 } | null;
 
 export function RobloxDocsPanel() {
@@ -20,6 +25,7 @@ export function RobloxDocsPanel() {
 
   const [info, setInfo] = useState<SyncStatus>(null);
   const [busy, setBusy] = useState(false);
+  const [progressMsg, setProgressMsg] = useState<string>("");
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Array<{ title: string; section?: string; source_url: string; similarity: number }>>([]);
   const [searching, setSearching] = useState(false);
@@ -37,14 +43,25 @@ export function RobloxDocsPanel() {
 
   const runSync = async () => {
     setBusy(true);
+    setProgressMsg("Starting sync…");
     try {
-      const res: any = await sync({ data: { batchSize: 20 } });
-      toast.success(`Sync ${res?.status ?? "ok"}: ${res?.embedded_docs ?? 0}/${res?.total_docs ?? 0} chunks`);
-      await refresh();
+      let resumeSyncId: string | undefined = (info?.latest?.status === "running" && info?.latest?.id) || undefined;
+      let safety = 80;
+      while (safety-- > 0) {
+        const res: any = await sync({ data: { batchSize: 15, resumeSyncId } });
+        resumeSyncId = res?.syncId;
+        setProgressMsg(`Processed ${res?.processed ?? 0}/${res?.total ?? 0} files…`);
+        await refresh();
+        if (res?.done) {
+          toast.success(`Sync complete: ${res.processed}/${res.total} files`);
+          break;
+        }
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Sync failed");
     } finally {
       setBusy(false);
+      setProgressMsg("");
     }
   };
 
@@ -61,7 +78,11 @@ export function RobloxDocsPanel() {
     }
   };
 
-  const pct = info?.total_docs ? Math.round(((info.embedded_docs ?? 0) / info.total_docs) * 100) : 0;
+  const latest = info?.latest ?? null;
+  const total = latest?.total ?? 0;
+  const processed = latest?.processed ?? 0;
+  const pct = total ? Math.round((processed / total) * 100) : 0;
+  const statusLabel = latest?.status ?? "never run";
 
   return (
     <section className="glass rounded-2xl p-6">
@@ -76,7 +97,7 @@ export function RobloxDocsPanel() {
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          {busy ? "Syncing…" : "Sync Docs Now"}
+          {busy ? (progressMsg || "Syncing…") : "Sync Docs Now"}
         </button>
       </div>
 
@@ -84,32 +105,35 @@ export function RobloxDocsPanel() {
         <div className="rounded-xl border border-border p-3">
           <div className="text-xs uppercase text-muted-foreground">Status</div>
           <div className="mt-1 text-sm font-medium flex items-center gap-2">
-            {info?.status === "completed" || info?.status === "ok" ? (
+            {statusLabel === "completed" ? (
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            ) : info?.status === "failed" ? (
+            ) : statusLabel === "failed" ? (
               <AlertCircle className="w-4 h-4 text-red-400" />
             ) : (
-              <Loader2 className="w-4 h-4" />
+              <Loader2 className={`w-4 h-4 ${busy || statusLabel === "running" ? "animate-spin" : ""}`} />
             )}
-            {info?.status ?? "never run"}
+            {statusLabel}
           </div>
         </div>
         <div className="rounded-xl border border-border p-3">
-          <div className="text-xs uppercase text-muted-foreground">Chunks embedded</div>
+          <div className="text-xs uppercase text-muted-foreground">Files indexed</div>
           <div className="mt-1 text-sm font-medium">
-            {info?.embedded_docs ?? 0} / {info?.total_docs ?? 0} ({pct}%)
+            {processed} / {total} ({pct}%) · {info?.indexedChunks ?? 0} chunks
+          </div>
+          <div className="mt-2 h-1.5 rounded-full bg-border overflow-hidden">
+            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
           </div>
         </div>
         <div className="rounded-xl border border-border p-3">
           <div className="text-xs uppercase text-muted-foreground">Last synced</div>
           <div className="mt-1 text-sm font-medium">
-            {info?.last_synced_at ? new Date(info.last_synced_at).toLocaleString() : "—"}
+            {latest?.finished_at ? new Date(latest.finished_at).toLocaleString() : latest?.started_at ? `started ${new Date(latest.started_at).toLocaleString()}` : "—"}
           </div>
         </div>
       </div>
 
-      {info?.error ? (
-        <p className="text-xs text-red-400 mb-3">Last error: {info.error}</p>
+      {latest?.error ? (
+        <p className="text-xs text-red-400 mb-3">Last error: {latest.error}</p>
       ) : null}
 
       <div className="rounded-xl border border-border p-3">
