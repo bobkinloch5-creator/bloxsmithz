@@ -1266,19 +1266,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               }
               return (
                 <div key={m.id} className="group flex gap-2">
-                  <button
-                    type="button"
+                  <ChatAvatar
+                    isBot={isBot}
+                    author={author}
+                    name={name}
                     onClick={() => !isBot && setProfileUid(m.user_id)}
-                    disabled={isBot}
-                    className={cn(
-                      "grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full text-[11px] font-bold transition",
-                      isBot ? "bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-2 ring-primary/40 cursor-default" : "bg-surface text-muted-foreground hover:ring-2 hover:ring-primary/40",
-                    )}
-                  >
-                    {isBot ? <img src={bloxbotAvatar} alt="BloxBot" className="h-8 w-8 rounded-full object-cover" />
-                      : author?.avatar_url ? <img src={author.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
-                      : name.slice(0, 1).toUpperCase()}
-                  </button>
+                  />
                   <div className="min-w-0 flex-1">
                     {replyTarget && (
                       <div className="mb-1 flex items-center gap-1 rounded-md border-l-2 border-primary/50 bg-surface/40 px-2 py-0.5 text-[11px] text-muted-foreground">
@@ -1308,6 +1301,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                       {isBot ? (
                         <span className="rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">BOT</span>
                       ) : (author && <RoleBadges roles={author.roles} size="sm" showLabel={false} />)}
+                      {!isBot && author?.profile_badges?.length ? (
+                        <ProfileBadgeRow ids={author.profile_badges} size={16} max={4} className="shrink-0" />
+                      ) : null}
                       <span className="text-[10px] text-muted-foreground">{formatTime(m.created_at)}</span>
                       {m.pinned_at && <Pin className="h-2.5 w-2.5 text-primary" />}
                       {isBot && <span className="text-[10px] text-muted-foreground">· only you see this</span>}
