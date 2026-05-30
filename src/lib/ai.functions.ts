@@ -695,16 +695,19 @@ export const generateWithAI = createServerFn({ method: "POST" })
         ? await (await import("./mcp-client.server")).buildUserMcpTools(userId)
         : {};
       const tools = { ...builtInTools, ...mcpTools } as Record<string, unknown>;
-      // Trust the model profile's timeout for heavy builds instead of
-      // clamping it down. The previous 30s cap on complex (non-thinking)
-      // requests was shorter than a full map/tycoon generation needs, so the
-      // AbortController fired mid-stream and produced "operation was aborted
-      // due to timeout" — which isn't a model error, so the fallback retry was
-      // skipped and the build hard-failed. Give complex builds the profile's
-      // full budget; keep a sane floor so a tiny profile can't starve them.
+      // Timeout budget. Reasoning models (the "-thinking" Claude/GPT variants)
+      // routed through Neokens routinely take 30-50s for a full JSON build, so
+      // the old 20s cap on simple prompts killed them mid-stream → "operation
+      // was aborted due to timeout". We give a solid first-attempt budget but
+      // CAP it so that, on Cloudflare Workers' wall-clock limit, there's still
+      // time for the fast gemini-3-flash retry (35s) + template fallback. An
+      // abort now recovers instead of hard-failing.
+      const reasoning =
+        thinking ||
+        /thinking|reason|codex|opus|sonnet/.test(String(resolved.modelName).toLowerCase());
       timeoutMs = isComplex
-        ? Math.max(profile.timeoutMs, thinking ? 45_000 : 42_000)
-        : Math.min(profile.timeoutMs, thinking ? 28_000 : 20_000);
+        ? Math.min(Math.max(profile.timeoutMs, reasoning ? 60_000 : 48_000), 70_000)
+        : Math.min(Math.max(profile.timeoutMs, reasoning ? 45_000 : 32_000), 55_000);
       const { text: rawText } = await generateTextWithToolFallback(
         generateText,
         {
@@ -776,15 +779,17 @@ export const generateWithAI = createServerFn({ method: "POST" })
           if (neoKey) {
             const fallbackModel = createProvider("neokens", NEOKENS_SAFE_FALLBACK_MODEL);
             const { generateTextWithToolFallback: retryGen } = await import("./ai-retry.server");
+            // Recovery call: slim prompt, no tools, tight timeout — just get a
+            // build out of a fast model.
             const { text: retryText } = await retryGen(
               generateText,
               {
                 model: fallbackModel(NEOKENS_SAFE_FALLBACK_MODEL),
-                system: activeSystemPrompt,
+                system: SLIM_SYSTEM_PROMPT,
                 prompt: fullPrompt,
-                maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 9000 : 4500),
+                maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 8000 : 4500),
                 maxRetries: 0,
-                timeout: { totalMs: timeoutMs, stepMs: timeoutMs, chunkMs: 25_000 },
+                timeout: { totalMs: 35_000, stepMs: 35_000, chunkMs: 20_000 },
               },
               "generateWithAI:fallback",
             );
@@ -794,8 +799,6 @@ export const generateWithAI = createServerFn({ method: "POST" })
               : { message: retryText.trim(), files: [], actions: [] };
             result.files = result.files ?? [];
             result.actions = result.actions ?? [];
-            // Recovered — `result` is set; fall through to the normal
-            // validation/persistence path below by skipping the throw.
             recovered = true;
           }
         } catch (err2) {
@@ -803,17 +806,44 @@ export const generateWithAI = createServerFn({ method: "POST" })
             "[generateWithAI] fallback model also failed:",
             err2 instanceof Error ? err2.message : err2,
           );
-          // fall through to the normal error handling
+          // fall through to the template fallback below
         }
       }
 
+      // If neither the model nor the fast retry produced a result, DON'T hard
+      // fail on a build request — hand back a real template build so the user
+      // always gets something usable, and don't charge them.
       if (!recovered) {
-        if (!isOwner)
-          await supabase.rpc("refund_credits", { _amount: cost, _reason: "ai generation failed" });
-        if (msg.includes("429")) throw new Error("AI rate limit. Try again in a moment.");
-        if (msg.includes("402"))
+        // Credits/rate-limit are real, non-recoverable user-facing errors.
+        if (msg.includes("429")) {
+          if (!isOwner)
+            await supabase.rpc("refund_credits", { _amount: cost, _reason: "ai rate limit" });
+          throw new Error("AI rate limit. Try again in a moment.");
+        }
+        if (msg.includes("402")) {
+          if (!isOwner)
+            await supabase.rpc("refund_credits", { _amount: cost, _reason: "ai credits" });
           throw new Error("AI credits exhausted. Add credits in workspace settings.");
-        throw new Error("AI generation failed: " + msg);
+        }
+        const fb = isBuildIntent(prompt) ? getBuildFallback(prompt) : null;
+        if (fb) {
+          console.warn(
+            `[generateWithAI] generation failed (${msg.slice(0, 120)}); using template fallback.`,
+          );
+          if (!isOwner)
+            await supabase.rpc("refund_credits", {
+              _amount: cost,
+              _reason: "ai failed, template fallback (no charge)",
+            });
+          result = fb;
+          // Note this was a fallback so we don't double-charge later.
+          recovered = true;
+          (result as any)._fallbackNoCharge = true;
+        } else {
+          if (!isOwner)
+            await supabase.rpc("refund_credits", { _amount: cost, _reason: "ai generation failed" });
+          throw new Error("AI generation failed: " + msg);
+        }
       }
     }
 
@@ -876,7 +906,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
         project_id: projectId,
         prompt,
         status: preview ? "pending" : "success",
-        credits_used: isOwner ? 0 : cost,
+        credits_used: isOwner || (result as any)._fallbackNoCharge ? 0 : cost,
         result: { ...result, _queued: queued } as any,
       })
       .select("id")
