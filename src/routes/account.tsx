@@ -745,6 +745,11 @@ function Account() {
               </div>
             </section>
 
+            {/* Chat style customization */}
+            <ChatStyleCard />
+
+
+
             {/* Plugin token manager */}
             <section className="rounded-2xl border border-border/50 bg-surface/20 p-6 space-y-4">
               <h2 className="text-lg font-bold flex items-center gap-2">
