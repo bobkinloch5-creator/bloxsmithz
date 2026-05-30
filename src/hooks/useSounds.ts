@@ -4,7 +4,8 @@ const STORAGE_KEY = "bloxsmith.sounds.enabled";
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
-  const w = window as unknown as { __bsAudioCtx?: AudioContext };
+  const w = window as unknown as { __bsAudioCtx?: AudioContext; __bsAudioUnlocked?: boolean };
+  if (!w.__bsAudioUnlocked) return null;
   if (w.__bsAudioCtx) return w.__bsAudioCtx;
   const Ctor =
     window.AudioContext ||
@@ -106,6 +107,8 @@ export function useAiBusySounds(aiBusy: boolean) {
 export function useUnlockAudio() {
   useEffect(() => {
     const unlock = () => {
+      const w = window as unknown as { __bsAudioUnlocked?: boolean };
+      w.__bsAudioUnlocked = true;
       const ctx = getCtx();
       if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
       window.removeEventListener("pointerdown", unlock);
