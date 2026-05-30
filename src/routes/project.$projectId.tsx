@@ -1096,6 +1096,18 @@ function ProjectEditor() {
     stopRequested.current = false;
     const controller = new AbortController();
     aiAbortRef.current = controller;
+    // Watchdog: if the server call never resolves, don't let the input stay
+    // locked forever (which makes every later prompt silently do nothing
+    // because of the `if (aiBusy) return` guard). Abort + unlock after 90s.
+    let watchdogFired = false;
+    const watchdog = setTimeout(() => {
+      watchdogFired = true;
+      try {
+        controller.abort();
+      } catch {
+        /* noop */
+      }
+    }, 90_000);
     const imgs = opts?.images ?? [];
     if (!opts?.skipUserBubble) {
       const bubble = imgs.length
@@ -1103,6 +1115,17 @@ function ProjectEditor() {
         : userPrompt;
       await pushMsg("user", bubble);
     }
+    // Show an immediate "thinking" placeholder so the user always gets visible
+    // feedback. Without this, a slow or empty generation looks like "nothing
+    // happened" (a blank bubble). We replace this id with the real result, or
+    // remove it on error.
+    const thinkingId = crypto.randomUUID();
+    setMessages((m) => [
+      ...m,
+      { id: thinkingId, role: "assistant", content: "_Thinking…_" },
+    ]);
+    const removeThinking = () =>
+      setMessages((m) => m.filter((x) => x.id !== thinkingId));
     try {
       // Call the REAL AI generation server function (Claude Sonnet via the
       // gateway, with tools, clothing, validation, and the error-feedback
@@ -1131,9 +1154,11 @@ function ProjectEditor() {
       };
 
       if (stopRequested.current) {
+        removeThinking();
         await pushMsg("assistant", "Stopped the request before it finished.");
         return;
       }
+      removeThinking();
 
       const v = out.validation;
       const vLine = v && ((v.errors?.length ?? 0) > 0 || (v.warnings?.length ?? 0) > 0)
@@ -1164,9 +1189,18 @@ function ProjectEditor() {
             .join("\n")}`
         : "";
       const tempId = crypto.randomUUID();
+      // Never render an empty assistant bubble. If the server came back with no
+      // message text, synthesize one from what it queued (or an honest fallback
+      // so the user always knows what happened).
+      const baseMessage =
+        (out.message && out.message.trim()) ||
+        ((out.queuedCount ?? out.actions?.length ?? 0) > 0
+          ? `Queued ${out.queuedCount ?? out.actions?.length} operation${(out.queuedCount ?? out.actions?.length) === 1 ? "" : "s"} for Studio.`
+          : "The AI didn't return a build this time. Try again, or rephrase into a smaller step (e.g. 'just the spawn area' or 'just the shop UI').");
+      const fullContent = baseMessage + vLine + dangerLine + askLine;
       setMessages((m) => [
         ...m,
-        { id: tempId, role: "assistant", content: out.message + vLine + dangerLine + askLine },
+        { id: tempId, role: "assistant", content: fullContent },
       ]);
       // Snapshot pre-state of every file the AI is about to touch, so the user
       // can hit "Revert" to undo this batch (restore old content / delete new
@@ -1193,7 +1227,7 @@ function ProjectEditor() {
       };
       const realId = await persistMsg(
         "assistant",
-        out.message + vLine + dangerLine + askLine,
+        fullContent,
         actionsMeta,
       );
       const finalId = realId ?? tempId;
@@ -1239,6 +1273,14 @@ function ProjectEditor() {
         }));
       }
     } catch (e: any) {
+      removeThinking();
+      if (watchdogFired) {
+        await pushMsg(
+          "assistant",
+          "That took too long and timed out. The server may be busy or the request was too big — try again, or break it into a smaller step.",
+        );
+        return;
+      }
       if (stopRequested.current || e?.name === "AbortError") {
         await pushMsg("assistant", "Stopped the request before it finished.");
         return;
@@ -1265,6 +1307,7 @@ function ProjectEditor() {
       toast.error(friendly);
       await pushMsg("assistant", friendly);
     } finally {
+      clearTimeout(watchdog);
       if (aiAbortRef.current === controller) aiAbortRef.current = null;
       setAiBusy(false);
       refreshCredits();
