@@ -40,6 +40,7 @@ import { Route as ShowcaseProjectIdRouteImport } from './routes/showcase.$projec
 import { Route as ProjectProjectIdRouteImport } from './routes/project.$projectId'
 import { Route as CheckoutCustomRouteImport } from './routes/checkout.custom'
 import { Route as CheckoutPackRouteImport } from './routes/checkout.$pack'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
 import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known.oauth-authorization-server'
 import { Route as ApiStudioSnapshotRouteImport } from './routes/api/studio/snapshot'
@@ -213,6 +214,11 @@ const CheckoutPackRoute = CheckoutPackRouteImport.update({
   path: '/checkout/$pack',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotwellKnownOauthProtectedResourceRoute =
   DotwellKnownOauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -331,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$pack': typeof CheckoutPackRoute
   '/checkout/custom': typeof CheckoutCustomRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
@@ -381,6 +388,7 @@ export interface FileRoutesByTo {
   '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$pack': typeof CheckoutPackRoute
   '/checkout/custom': typeof CheckoutCustomRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
@@ -432,6 +440,7 @@ export interface FileRoutesById {
   '/ui-generator': typeof UiGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$pack': typeof CheckoutPackRoute
   '/checkout/custom': typeof CheckoutCustomRoute
   '/project/$projectId': typeof ProjectProjectIdRoute
@@ -484,6 +493,7 @@ export interface FileRouteTypes {
     | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/auth/callback'
     | '/checkout/$pack'
     | '/checkout/custom'
     | '/project/$projectId'
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
     | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/auth/callback'
     | '/checkout/$pack'
     | '/checkout/custom'
     | '/project/$projectId'
@@ -584,6 +595,7 @@ export interface FileRouteTypes {
     | '/ui-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
+    | '/auth/callback'
     | '/checkout/$pack'
     | '/checkout/custom'
     | '/project/$projectId'
@@ -635,6 +647,7 @@ export interface RootRouteChildren {
   UiGeneratorRoute: typeof UiGeneratorRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   CheckoutPackRoute: typeof CheckoutPackRoute
   CheckoutCustomRoute: typeof CheckoutCustomRoute
   ProjectProjectIdRoute: typeof ProjectProjectIdRoute
@@ -874,6 +887,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutPackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -1040,6 +1060,7 @@ const rootRouteChildren: RootRouteChildren = {
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
     DotwellKnownOauthProtectedResourceRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   CheckoutPackRoute: CheckoutPackRoute,
   CheckoutCustomRoute: CheckoutCustomRoute,
   ProjectProjectIdRoute: ProjectProjectIdRoute,
