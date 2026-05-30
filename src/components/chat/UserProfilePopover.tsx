@@ -282,10 +282,24 @@ export function UserProfilePopover({
             <div className="relative">
               <div
                 className="h-24 w-full bg-gradient-to-br from-primary/30 via-primary/15 to-transparent"
-                style={profile.banner_url ? { backgroundImage: `url(${profile.banner_url})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+                style={
+                  profile.banner_url
+                    ? { backgroundImage: `url(${profile.banner_url})`, backgroundSize: "cover", backgroundPosition: "center" }
+                    : profile.profile_accent
+                      ? { background: `linear-gradient(135deg, ${profile.profile_accent}55, ${profile.profile_accent}11 60%, transparent)` }
+                      : undefined
+                }
               />
+              <ProfileEffect effect={profile.profile_effect} accent={profile.profile_accent} />
               <div className="absolute -bottom-8 left-3">
-                <div className="grid h-16 w-16 place-items-center rounded-full border-4 border-surface-elevated bg-surface">
+                <div
+                  className="grid h-16 w-16 place-items-center rounded-full border-4 border-surface-elevated bg-surface"
+                  style={
+                    profile.profile_accent
+                      ? { boxShadow: `0 0 0 2px ${profile.profile_accent}, 0 0 22px ${profile.profile_accent}88` }
+                      : undefined
+                  }
+                >
                   {profile.avatar_url ? (
                     <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
                   ) : (
@@ -298,11 +312,12 @@ export function UserProfilePopover({
             <div className="space-y-3 px-3 pb-3 pt-10">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold">{displayName}</h3>
+                  <h3 className="text-lg font-bold" style={profile.profile_accent ? { color: profile.profile_accent, textShadow: `0 0 14px ${profile.profile_accent}66` } : undefined}>{displayName}</h3>
                   {profile.chat_nickname && profile.display_name && (
                     <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
                   )}
                 </div>
+
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                   <span><span className="font-semibold text-foreground">{followerCount}</span> follower{followerCount === 1 ? "" : "s"}</span>
                   {level && (
