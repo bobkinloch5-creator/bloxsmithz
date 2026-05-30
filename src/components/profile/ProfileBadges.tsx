@@ -76,7 +76,7 @@ export function ProfileBadgeIcon({
   const px = `${size}px`;
   return (
     <span
-      className={`relative inline-grid place-items-center rounded-[8px] shadow-lg ${def.pulse ? "animate-pulse" : ""} ${className}`}
+      className={`relative inline-grid place-items-center rounded-[8px] shadow-lg ${className}`}
       style={{
         width: px,
         height: px,
