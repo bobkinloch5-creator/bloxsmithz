@@ -19,6 +19,10 @@ import { useChatPrefs, fontSizeClass, densityClass, chatBackgroundStyle } from "
 import { useServerFn } from "@tanstack/react-start";
 import { moderateChatMessage } from "@/lib/chat-moderation.functions";
 
+import { ChannelSidebar, type Channel } from "@/components/chat/ChannelSidebar";
+import { FriendsPanel } from "@/components/chat/FriendsPanel";
+import { UserProfilePopover } from "@/components/chat/UserProfilePopover";
+
 type DbMessage = {
   id: string;
   user_id: string;
@@ -30,6 +34,7 @@ type DbMessage = {
   attachment_type: string | null;
   pinned_at: string | null;
   flagged: boolean | null;
+  channel_id?: string | null;
 };
 
 type Author = {
@@ -115,6 +120,12 @@ export function GlobalChat() {
   const [typingUsers, setTypingUsers] = useState<Map<string, number>>(new Map());
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<{ id: string; reason: string | null }[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [currentChannel, setCurrentChannel] = useState<string>("general");
+  const [view, setView] = useState<"channels" | "friends">("channels");
+  const [activeDm, setActiveDm] = useState<string | null>(null);
+  const [profileUid, setProfileUid] = useState<string | null>(null);
+  const [dmUnread, setDmUnread] = useState(0);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
