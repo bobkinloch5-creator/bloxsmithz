@@ -16,6 +16,7 @@ type Profile = {
   roblox_username: string | null;
   roblox_avatar_url: string | null;
   banner_url: string | null;
+  private_profile: boolean | null;
 };
 
 type FriendStatus = "none" | "pending_out" | "pending_in" | "friends";
