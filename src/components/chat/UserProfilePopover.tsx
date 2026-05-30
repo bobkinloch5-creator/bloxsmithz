@@ -59,9 +59,10 @@ export function UserProfilePopover({
       const [{ data: p }, { data: fr }] = await Promise.all([
         (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect")
           .eq("id", userId)
           .maybeSingle(),
+
         user
           ? (supabase as any)
               .from("friend_requests")
