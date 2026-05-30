@@ -20,6 +20,48 @@ with the shape:
 { "message": string, "files": [...], "actions": [...] }
 No markdown, no code fences, no commentary, no tool calls.`;
 
+// Forces the model to convert whatever it just researched (tool results) into
+// the final build JSON. Used when a tool-using run ends WITHOUT emitting a
+// usable build object (the #1 cause of "empty bubble / nothing happens" for
+// map / city / toolbox builds — the model spends all its steps calling
+// roblox_asset_search and never writes the JSON).
+const FINALIZE_INSTRUCTION = `
+
+=== FINALIZE NOW (no more tools) ===
+You have already gathered everything you need. Do NOT call any more tools.
+Output the COMPLETE build as a single valid JSON object RIGHT NOW:
+{ "message": string, "files": [...], "actions": [...] }
+The "actions" array MUST contain the real build (create / script / insert_toolbox_asset / terrainFill / lighting / spawn …). Use any assetIds you found from your tool calls. An empty "actions" array is a FAILED response unless the user only asked a question. No markdown, no code fences, no commentary.`;
+
+// Does the model's returned text actually contain a build JSON object with at
+// least a message/files/actions shape? We are deliberately lenient: we only
+// need to know "is there a parseable {…} that looks like our contract".
+export function hasUsableBuildJson(text: string | null | undefined): boolean {
+  if (!text) return false;
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || start >= end) return false;
+  const slice = text.slice(start, end + 1);
+  // Cheap structural signal first — avoids a full parse on huge Luau blobs.
+  if (!/"actions"|"files"|"message"/.test(slice)) return false;
+  try {
+    const obj = JSON.parse(slice);
+    return !!obj && typeof obj === "object" && ("actions" in obj || "files" in obj);
+  } catch {
+    // Try the trailing-comma repair the parser uses downstream.
+    try {
+      const repaired = slice.replace(/,\s*([}\]])/g, "$1");
+      const obj = JSON.parse(repaired);
+      return !!obj && typeof obj === "object" && ("actions" in obj || "files" in obj);
+    } catch {
+      // Truncated JSON (hit the token cap) still counts as "the model tried" —
+      // the downstream repair step will handle it. We only force a finalize
+      // when there is NO json-ish content at all.
+      return false;
+    }
+  }
+}
+
 export type AIToolEvent = {
   tool: string;
   args?: unknown;
@@ -80,7 +122,75 @@ export async function generateTextWithToolFallback(
     `[ai] ${label} call → tools=${hasTools ? Object.keys(opts.tools).length : 0} model=${opts?.model?.modelId ?? "unknown"}`,
   );
   try {
-    return await generateText(opts);
+    const res = await generateText(opts);
+
+    // RECOVERY: a tool-using run that ended WITHOUT a build JSON object.
+    // This is the main reason map / city / "insert from toolbox" requests
+    // come back as an empty assistant bubble: the model burns its step budget
+    // on roblox_asset_search calls and stops before writing the final JSON.
+    // We force ONE toolless follow-up that turns the gathered context into the
+    // build object. (Grass/shop/etc. never hit this — they use instant
+    // templates and skip the model entirely.)
+    if (hasTools && !hasUsableBuildJson(res?.text)) {
+      const toolEvents = extractToolActivity(res as any);
+      console.warn(
+        `[ai] ${label}: tool run produced no build JSON (text len=${(res?.text ?? "").length}, toolCalls=${toolEvents.length}). Forcing finalize step.`,
+      );
+      const { tools: _ft, stopWhen: _fs, ...rest } = opts;
+
+      // Feed what the model just did/said back to it so the finalize step has
+      // the asset IDs and reasoning available.
+      const priorText = (res?.text ?? "").slice(0, 6000);
+      const toolSummary = toolEvents
+        .slice(0, 24)
+        .map((e) => {
+          let r = "";
+          try {
+            r = typeof e.result === "string" ? e.result : JSON.stringify(e.result);
+          } catch {
+            r = "";
+          }
+          return `- ${e.tool}(${JSON.stringify(e.args ?? {})}) → ${(r || "(ok)").slice(0, 400)}`;
+        })
+        .join("\n");
+
+      const finalizeMessages = [
+        ...(opts.messages ?? []),
+        {
+          role: "assistant" as const,
+          content:
+            (priorText ? priorText + "\n\n" : "") +
+            (toolSummary ? `Tool results gathered:\n${toolSummary}` : ""),
+        },
+        {
+          role: "user" as const,
+          content:
+            "Now output the final build as a single valid JSON object. Do not call any tools. Include real actions.",
+        },
+      ];
+
+      try {
+        const finalized = await generateText({
+          ...rest,
+          system: (opts.system ?? "") + FINALIZE_INSTRUCTION,
+          messages: finalizeMessages,
+        });
+        if (hasUsableBuildJson(finalized?.text)) {
+          console.log(`[ai] ${label}: finalize step recovered a build JSON.`);
+          // Preserve the original tool activity for the UI.
+          return { ...finalized, steps: [...(res?.steps ?? []), ...(finalized?.steps ?? [])] };
+        }
+        console.warn(`[ai] ${label}: finalize step still produced no usable JSON.`);
+        return finalized?.text ? finalized : res;
+      } catch (finErr) {
+        console.warn(
+          `[ai] ${label}: finalize step threw, returning original result. ${String(finErr).slice(0, 200)}`,
+        );
+        return res;
+      }
+    }
+
+    return res;
   } catch (err: unknown) {
     const msg = String(err instanceof Error ? err.message : err);
     if (!TOOL_VALIDATION_RE.test(msg)) throw err;

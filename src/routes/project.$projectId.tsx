@@ -2765,7 +2765,7 @@ function ProjectEditor() {
                       }
                     >
                       <Send className="h-3.5 w-3.5" />
-                      {chatMode ? "Chat" : planMode ? "Plan" : autoExecute ? "Execute" : "Preview"}
+                      {chatMode ? "Chat" : planMode ? "Plan" : autoExecute ? "Apply to Studio" : "Preview"}
                     </button>
                   )}
                 </div>

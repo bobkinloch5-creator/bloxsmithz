@@ -179,7 +179,12 @@ export function getModelProfile(
     // from the model and prompt upgrades, not from cutting the timeout.
     timeoutMs: opts.thinking ? 45_000 : opts.heavyBuild ? 42_000 : isSmall ? 20_000 : 30_000,
     chatTimeoutMs: opts.thinking ? 40_000 : isSmall ? 12_000 : 18_000,
-    stopSteps: opts.thinking ? 12 : isSmall ? 3 : 6,
+    // Step budget for the tool loop. Map / city / toolbox builds fire several
+    // roblox_asset_search + roblox_asset_info calls; with too few steps the
+    // model spends them all researching and never writes the final JSON (the
+    // "empty bubble" bug). Give non-tiny models enough headroom to research AND
+    // finalize. The generateTextWithToolFallback finalize step is the backstop.
+    stopSteps: opts.thinking ? 12 : opts.heavyBuild ? 10 : isSmall ? 4 : 8,
     supportsTools: !opts.retry && !(provider === "groq" && id.includes("gemma")),
     supportsVision:
       isGemini ||

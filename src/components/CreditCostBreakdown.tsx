@@ -83,11 +83,19 @@ export const FEATURE_COSTS = [
 export const MODEL_MULTIPLIERS = [
   { name: "gemini-3-flash", label: "Gemini Flash", mult: 1, badge: "Fast" },
   { name: "claude-haiku-4-5", label: "Claude Haiku", mult: 1, badge: "Cheap" },
-  { name: "gpt-5.3-codex", label: "GPT Codex", mult: 2, badge: "Code" },
+  { name: "gpt-5.1", label: "GPT-5.1", mult: 1, badge: "Solid" },
+  { name: "gpt-5.1-codex", label: "GPT-5.1 Codex", mult: 1, badge: "Code" },
+  { name: "gpt-5.1-codex-max", label: "GPT-5.1 Codex Max", mult: 2, badge: "Code+" },
+  { name: "gpt-5.2", label: "GPT-5.2", mult: 2, badge: "Smart" },
+  { name: "gpt-5.2-codex", label: "GPT-5.2 Codex", mult: 2, badge: "Code" },
+  { name: "gpt-5.3-codex", label: "GPT-5.3 Codex", mult: 2, badge: "Code" },
   { name: "gpt-5.4", label: "GPT-5.4", mult: 2, badge: "Smart" },
   { name: "gpt-5.5", label: "GPT-5.5", mult: 3, badge: "Best" },
-  { name: "claude-sonnet-4-6", label: "Claude Sonnet", mult: 3, badge: "Deep" },
-  { name: "claude-opus-4-7", label: "Claude Opus", mult: 5, badge: "Max" },
+  { name: "gemini-3.1-pro", label: "Gemini 3.1 Pro", mult: 2, badge: "Big" },
+  { name: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", mult: 3, badge: "Deep" },
+  { name: "claude-sonnet-4-7", label: "Claude Sonnet 4.7", mult: 3, badge: "Deep" },
+  { name: "claude-opus-4-6", label: "Claude Opus 4.6", mult: 5, badge: "Max" },
+  { name: "claude-opus-4-7", label: "Claude Opus 4.7", mult: 5, badge: "Max" },
 ] as const;
 
 export function CreditCostBreakdown() {

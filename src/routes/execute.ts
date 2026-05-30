@@ -1711,6 +1711,15 @@ function detectDangerousActions(files: GenFile[], actions: GenAction[]): string[
 // Groq JSON parser helper
 function tryParseJSON(raw: string): any {
   let cleaned = raw.trim();
+
+  // Strip markdown code fences the model sometimes adds despite instructions
+  // (```json ... ``` or ``` ... ```). This is a common cause of parse failures
+  // on bigger builds where the model "formats" its answer.
+  const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence && fence[1] && fence[1].includes("{")) {
+    cleaned = fence[1].trim();
+  }
+
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start === -1 || end === -1 || start >= end) {
@@ -1721,11 +1730,27 @@ function tryParseJSON(raw: string): any {
   try {
     return JSON.parse(cleaned);
   } catch (e) {
-    const repaired = cleaned.replace(/,\s*([}\]])/g, "$1");
+    // 1) Remove trailing commas before } or ].
+    let repaired = cleaned.replace(/,\s*([}\]])/g, "$1");
     try {
       return JSON.parse(repaired);
     } catch {
-      throw e;
+      // 2) Remove stray control characters that slip into Luau source strings
+      //    (raw tabs/newlines inside a JSON string are illegal and a very
+      //    common failure for script-heavy builds).
+      try {
+        const sanitized = repaired.replace(
+          /"(?:[^"\\]|\\.)*"/g,
+          (m) =>
+            m
+              .replace(/\n/g, "\\n")
+              .replace(/\r/g, "\\r")
+              .replace(/\t/g, "\\t"),
+        );
+        return JSON.parse(sanitized);
+      } catch {
+        throw e;
+      }
     }
   }
 }
