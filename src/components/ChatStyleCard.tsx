@@ -37,15 +37,21 @@ export function ChatStyleCard() {
   const [icon, setIcon] = useState<string | null>(null);
   const [nickname, setNickname] = useState<string>("");
   const [font, setFont] = useState<string>("default");
+  const [accent, setAccent] = useState<string>("");
+  const [effect, setEffect] = useState<ProfileEffectId>("none");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const p = profile as any;
     setNameStops(sanitizeGradient(profile?.chat_name_gradient) ?? []);
     setTextStops(sanitizeGradient(profile?.chat_text_gradient) ?? []);
     setIcon(sanitizeIcon(profile?.chat_icon));
     setNickname(profile?.chat_nickname ?? "");
     setFont(sanitizeFont(profile?.chat_font) ?? "default");
-  }, [profile?.chat_name_gradient, profile?.chat_text_gradient, profile?.chat_icon, profile?.chat_nickname, profile?.chat_font]);
+    setAccent(typeof p?.profile_accent === "string" ? p.profile_accent : "");
+    setEffect((p?.profile_effect as ProfileEffectId) ?? "none");
+  }, [profile]);
+
 
   const displayName = (nickname.trim() || profile?.display_name || user?.email?.split("@")[0] || "You");
   const Icon = icon ? CHAT_ICON_MAP[icon] : null;
