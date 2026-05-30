@@ -11,6 +11,7 @@ import { ProfileBackground } from "@/components/profile/ProfileBackground";
 import { PfpRing } from "@/components/profile/PfpRing";
 import { presenceFromProfile } from "@/lib/presence";
 import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
+import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
 
 
 type Profile = {
@@ -37,6 +38,7 @@ type Profile = {
   show_activity: boolean | null;
   current_activity: any;
   profile_badges: string[] | null;
+  profile_decoration: string | null;
 };
 
 
@@ -74,7 +76,7 @@ export function UserProfilePopover({
       const [{ data: p }, { data: fr }] = await Promise.all([
         (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges,profile_decoration")
           .eq("id", userId)
           .maybeSingle(),
 
@@ -310,13 +312,15 @@ export function UserProfilePopover({
               </div>
               <div className="absolute -bottom-8 left-3">
                 <div className="relative">
-                  <PfpRing effect={profile.pfp_effect ?? "none"} size={64}>
-                    {profile.avatar_url ? (
-                      <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-                    ) : (
-                      <span className="text-lg font-bold text-muted-foreground">{displayName.slice(0, 1).toUpperCase()}</span>
-                    )}
-                  </PfpRing>
+                  <AvatarDecoration id={profile.profile_decoration} size={70}>
+                    <PfpRing effect={profile.pfp_effect ?? "none"} size={64}>
+                      {profile.avatar_url ? (
+                        <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-lg font-bold text-muted-foreground">{displayName.slice(0, 1).toUpperCase()}</span>
+                      )}
+                    </PfpRing>
+                  </AvatarDecoration>
                   {(() => {
                     const pr = presenceFromProfile({
                       presence_enabled: profile.presence_enabled,

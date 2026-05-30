@@ -14,6 +14,7 @@ import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
 import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award } from "lucide-react";
 import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow } from "./profile/ProfileBadges";
+import { PROFILE_DECORATIONS, AvatarDecoration } from "./profile/ProfileDecoration";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
 const LAYOUTS: Array<{ id: "classic" | "card" | "cinematic" | "compact"; label: string; hint: string }> = [
@@ -52,6 +53,7 @@ export function ProfileCustomizationCard() {
     show_activity: p.show_activity !== false,
     presence_status: (p.presence_status ?? "online") as "online" | "idle" | "dnd" | "invisible",
     profile_badges: (Array.isArray(p.profile_badges) ? p.profile_badges : []) as string[],
+    profile_decoration: (p.profile_decoration ?? "none") as string,
   });
   const [saving, setSaving] = useState(false);
 
@@ -78,6 +80,7 @@ export function ProfileCustomizationCard() {
       show_activity: q.show_activity !== false,
       presence_status: q.presence_status ?? s.presence_status,
       profile_badges: Array.isArray(q.profile_badges) ? q.profile_badges : s.profile_badges,
+      profile_decoration: q.profile_decoration ?? s.profile_decoration,
     }));
   }, [profile]);
 
@@ -109,6 +112,7 @@ export function ProfileCustomizationCard() {
           show_activity: state.show_activity,
           presence_status: state.presence_status,
           profile_badges: state.profile_badges,
+          profile_decoration: state.profile_decoration,
         },
       });
       await refresh();
@@ -160,13 +164,15 @@ export function ProfileCustomizationCard() {
           )}
         </div>
         <div className="flex items-end gap-3 px-4 -mt-8 pb-4">
-          <PfpRing effect={state.pfp_effect} size={72}>
-            {p.avatar_url ? (
-              <img src={p.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-            ) : (
-              <span className="text-xl font-bold text-muted-foreground">{initial}</span>
-            )}
-          </PfpRing>
+          <AvatarDecoration id={state.profile_decoration} size={78}>
+            <PfpRing effect={state.pfp_effect} size={72}>
+              {p.avatar_url ? (
+                <img src={p.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+              ) : (
+                <span className="text-xl font-bold text-muted-foreground">{initial}</span>
+              )}
+            </PfpRing>
+          </AvatarDecoration>
           <div className="min-w-0 flex-1 pb-1">
             <div className="flex flex-wrap items-baseline gap-2">
               <h3
@@ -341,6 +347,40 @@ export function ProfileCustomizationCard() {
                   )}
                 </PfpRing>
                 <span className="text-[10px] text-muted-foreground">{e.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      {/* AVATAR DECORATION */}
+      <Section icon={<Sparkles className="h-4 w-4" />} title="Avatar decoration">
+        <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+          Add a hat, halo, wings, or other overlay around your avatar.
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          {PROFILE_DECORATIONS.map((d) => {
+            const active = state.profile_decoration === d.id;
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => set("profile_decoration", d.id)}
+                className={`flex flex-col items-center justify-end gap-1 rounded-xl border px-2 pb-2 pt-5 transition ${
+                  active
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/60 bg-background/40 hover:border-border"
+                }`}
+                title={d.label}
+              >
+                <div className="h-12 grid place-items-center">
+                  <AvatarDecoration id={d.id} size={36}>
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 grid place-items-center text-[10px] text-muted-foreground">
+                      {initial}
+                    </div>
+                  </AvatarDecoration>
+                </div>
+                <span className="text-[10px] text-muted-foreground">{d.label}</span>
               </button>
             );
           })}

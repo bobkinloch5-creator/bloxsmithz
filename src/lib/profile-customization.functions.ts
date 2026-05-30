@@ -51,6 +51,7 @@ const Schema = z
       .array(z.string().regex(/^[a-z0-9_-]+$/).max(32))
       .max(12)
       .optional(),
+    profile_decoration: z.string().regex(/^[a-z0-9_-]{1,32}$/).optional(),
   })
   .strict();
 
