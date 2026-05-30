@@ -47,8 +47,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const qc = useQueryClient();
 
+  const cleanupLegacyAuthStorage = () => {
+    if (typeof localStorage === "undefined") return;
+    const currentRef = (() => {
+      try {
+        return new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split(".")[0];
+      } catch {
+        return "qcaiogphqdgfklgfbdrq";
+      }
+    })();
+    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("sb-") && key.includes("-auth-token") && !key.includes(currentRef)) {
+        localStorage.removeItem(key);
+      }
+    }
+  };
+
   const loadProfile = async (uid: string) => {
     try {
+      await (supabase as any).rpc("ensure_my_profile");
       const [{ data: p }, { data: r }] = await Promise.all([
         supabase
           .from("profiles")
@@ -70,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    cleanupLegacyAuthStorage();
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       if (s?.user) {
@@ -90,12 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .getSession()
       .then(async ({ data }) => {
         const sess = data.session;
-        if (sess?.user) {
-          // Validate the token with the Auth server. If it's expired/invalid
-          // (e.g. user was deleted, refresh token revoked), sign out cleanly
-          // instead of letting every protected query throw 401 spam.
-          const { error } = await supabase.auth.getUser();
-          if (error) {
+        if (sess?.access_token && sess?.user) {
+          const expiresAt = sess.expires_at ? sess.expires_at * 1000 : 0;
+          if (expiresAt && expiresAt < Date.now()) {
             try {
               await supabase.auth.signOut();
             } catch {

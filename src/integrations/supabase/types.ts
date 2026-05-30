@@ -243,6 +243,60 @@ export type Database = {
         }
         Relationships: []
       }
+      direct_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          read_at: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
+      friend_requests: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       generations: {
         Row: {
           created_at: string
@@ -457,7 +511,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          message_id: string
+          message_id: string | null
           reason: string | null
           reported_user_id: string
           reporter_id: string
@@ -468,7 +522,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          message_id: string
+          message_id?: string | null
           reason?: string | null
           reported_user_id: string
           reporter_id: string
@@ -479,7 +533,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          message_id?: string
+          message_id?: string | null
           reason?: string | null
           reported_user_id?: string
           reporter_id?: string
@@ -1301,6 +1355,7 @@ export type Database = {
           roblox_place_id: string | null
           roblox_universe_id: string | null
           showcase_description: string | null
+          showcase_featured_at: string | null
           showcase_likes_count: number
           showcase_published: boolean
           showcase_published_at: string | null
@@ -1324,6 +1379,7 @@ export type Database = {
           roblox_place_id?: string | null
           roblox_universe_id?: string | null
           showcase_description?: string | null
+          showcase_featured_at?: string | null
           showcase_likes_count?: number
           showcase_published?: boolean
           showcase_published_at?: string | null
@@ -1347,6 +1403,7 @@ export type Database = {
           roblox_place_id?: string | null
           roblox_universe_id?: string | null
           showcase_description?: string | null
+          showcase_featured_at?: string | null
           showcase_likes_count?: number
           showcase_published?: boolean
           showcase_published_at?: string | null
@@ -1466,6 +1523,27 @@ export type Database = {
           status?: string
           url?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      quick_changelog_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          message: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          message: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          message?: string
         }
         Relationships: []
       }
@@ -1746,6 +1824,66 @@ export type Database = {
           },
         ]
       }
+      user_badges: {
+        Row: {
+          badge: string
+          created_at: string
+          granted_by: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_chat_local_mutes: {
+        Row: {
+          created_at: string
+          muted_user_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          muted_user_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          muted_user_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+        }
+        Relationships: []
+      }
       user_mcp_servers: {
         Row: {
           auth_header: string | null
@@ -1859,6 +1997,7 @@ export type Database = {
         Args: { _credits: number; _submission_id: string }
         Returns: undefined
       }
+      admin_chat_announce: { Args: { _content: string }; Returns: string }
       admin_chat_clear_all: { Args: never; Returns: number }
       admin_chat_delete_message: {
         Args: { _message_id: string }
@@ -1878,6 +2017,15 @@ export type Database = {
         Args: { _reason: string; _user_id: string }
         Returns: string
       }
+      admin_feature_project: {
+        Args: { _project_id: string }
+        Returns: undefined
+      }
+      admin_grant_badge: {
+        Args: { _badge: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_quick_changelog: { Args: { _message: string }; Returns: string }
       admin_reject_payment: {
         Args: { _reason: string; _request_id: string }
         Returns: undefined
@@ -1906,6 +2054,7 @@ export type Database = {
       check_and_record_ai_usage: { Args: never; Returns: Json }
       claim_daily_credits: { Args: never; Returns: Json }
       claim_discord_credits: { Args: never; Returns: Json }
+      ensure_my_profile: { Args: never; Returns: undefined }
       get_ai_usage: { Args: never; Returns: Json }
       grant_credits_service: {
         Args: { _amount: number; _reason: string; _user_id: string }
@@ -1947,6 +2096,10 @@ export type Database = {
       }
       remix_showcase_project: {
         Args: { _new_name: string; _source_id: string }
+        Returns: string
+      }
+      report_chat_user: {
+        Args: { _reason: string; _reported_user_id: string }
         Returns: string
       }
       send_global_chat_message: { Args: { _content: string }; Returns: string }

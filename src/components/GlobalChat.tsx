@@ -36,6 +36,7 @@ type Author = {
   display_name: string | null;
   avatar_url: string | null;
   roles: Role[];
+  badges: string[];
   chat_name_gradient: string[] | null;
   chat_text_gradient: string[] | null;
   chat_icon: string | null;
@@ -88,7 +89,7 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
 }
 
 export function GlobalChat() {
-  const { user, isAdmin, roles } = useAuth();
+  const { user, profile, isAdmin, roles, refresh } = useAuth();
   const { prefs, update: updatePrefs } = useChatPrefs();
   const moderate = useServerFn(moderateChatMessage);
 
@@ -108,6 +109,7 @@ export function GlobalChat() {
   const [showMod, setShowMod] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Map<string, number>>(new Map());
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<{ id: string; reason: string | null }[]>([]);
@@ -132,17 +134,24 @@ export function GlobalChat() {
   const loadAuthors = useCallback(async (ids: string[]) => {
     const need = ids.filter((id) => id && !authors.has(id));
     if (!need.length) return;
-    const [{ data: profs }, { data: rs }] = await Promise.all([
+    const [{ data: profs }, { data: rs }, { data: badges }] = await Promise.all([
       supabase.from("profiles").select(
         "id,display_name,avatar_url,chat_name_gradient,chat_text_gradient,chat_icon",
       ).in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
+      (supabase as any).from("user_badges").select("user_id,badge").in("user_id", need),
     ]);
     const rolesByUser = new Map<string, Role[]>();
     ((rs ?? []) as { user_id: string; role: Role }[]).forEach((r) => {
       const arr = rolesByUser.get(r.user_id) ?? [];
       arr.push(r.role);
       rolesByUser.set(r.user_id, arr);
+    });
+    const badgesByUser = new Map<string, string[]>();
+    ((badges ?? []) as { user_id: string; badge: string }[]).forEach((b) => {
+      const arr = badgesByUser.get(b.user_id) ?? [];
+      arr.push(b.badge);
+      badgesByUser.set(b.user_id, arr);
     });
     setAuthors((prev) => {
       const next = new Map(prev);
@@ -151,6 +160,7 @@ export function GlobalChat() {
           display_name: p.display_name,
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
+          badges: badgesByUser.get(p.id) ?? [],
           chat_name_gradient: sanitizeGradient(p.chat_name_gradient),
           chat_text_gradient: sanitizeGradient(p.chat_text_gradient),
           chat_icon: sanitizeIcon(p.chat_icon),
@@ -165,7 +175,7 @@ export function GlobalChat() {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes] = await Promise.all([
+      const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes] = await Promise.all([
         supabase.from("global_chat_messages")
           .select("id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged")
           .is("deleted_at", null).order("created_at", { ascending: true }).limit(100),
@@ -174,6 +184,7 @@ export function GlobalChat() {
         (supabase as any).from("global_chat_reactions").select("id,message_id,user_id,emoji").limit(500),
         (supabase as any).from("global_chat_blocked_words").select("word"),
         (supabase as any).from("global_chat_warnings").select("id,reason").eq("user_id", user.id).is("acknowledged_at", null),
+        (supabase as any).from("user_chat_local_mutes").select("muted_user_id").eq("user_id", user.id),
       ]);
       if (cancelled) return;
       const rows = (msgRes.data ?? []) as DbMessage[];
@@ -184,6 +195,7 @@ export function GlobalChat() {
       setReactions((reactRes.data ?? []) as Reaction[]);
       setBlockedWords(((wordsRes.data ?? []) as any[]).map((w) => String(w.word).toLowerCase()));
       setWarnings((warnRes.data ?? []) as any);
+      setLocalMuted(new Set(((localMuteRes.data ?? []) as any[]).map((r) => String(r.muted_user_id))));
       await loadAuthors(Array.from(new Set(rows.map((r) => r.user_id))));
     })();
     return () => { cancelled = true; };
@@ -404,17 +416,60 @@ export function GlobalChat() {
     if (!m) return;
     const cmd = m[1].toLowerCase();
     const args = (m[2] ?? "").trim();
+    const findMention = (input: string) => {
+      const mm = input.match(/@([A-Za-z0-9_ .-]{2,40})/);
+      const q = mm?.[1]?.trim().toLowerCase();
+      if (!q) return null;
+      for (const [id, a] of authors) if (a.display_name?.toLowerCase() === q) return { id, name: a.display_name };
+      return null;
+    };
+    const staffOnly = () => {
+      if (!isAdmin) { toast.error("Owner/staff command only"); return false; }
+      return true;
+    };
     if (cmd === "help") {
       pushEphemeralBot([
-        "Commands:",
-        "/help — this menu",
-        "/me <action> — emote",
-        "/shrug — ¯\\_(ツ)_/¯",
-        "/clear-mine — clear your own messages",
-        ...(isAdmin ? ["/slow <sec>","/clear — clear all"] : []),
+        "BloxBot commands:",
+        "/rules, /credits, /daily, /profile, /badges, /rank, /project, /publish, /plugin, /models, /updates",
+        "/report @user reason, /mute @user, /follow @user, /friend @user, /dm @user message, /online, /staff",
+        "/me <action>, /shrug, /clear-mine",
+        ...(isAdmin ? ["Staff: /announce, /givecredits, /takecredits, /badge, /role, /warn, /timeout, /ban, /unban, /feature, /changelog, /slow, /clear"] : []),
       ].join("\n"));
       return;
     }
+    if (cmd === "rules") { pushEphemeralBot("Rules: be kind, keep it Roblox/BloxSmith related, no spam, no harassment, no NSFW, no scams, and follow staff directions."); return; }
+    if (cmd === "credits") { pushEphemeralBot(`Credit balance: ${roles.includes("owner") ? "unlimited (owner)" : `${profile?.credits ?? 0} credits`}.`); return; }
+    if (cmd === "daily") { const { data, error } = await (supabase as any).rpc("claim_daily_credits"); if (error) toast.error(error.message); else { await refresh(); pushEphemeralBot((data as any)?.claimed ? `Daily claimed: +${(data as any).amount} credits. Balance: ${(data as any).credits}.` : "Daily already claimed today."); } return; }
+    if (cmd === "profile") { pushEphemeralBot(`Profile: ${profile?.display_name ?? user?.email ?? "Builder"}\nRank: ${roles.join(", ") || "user"}\nCredits: ${profile?.credits ?? 0}`); return; }
+    if (cmd === "badges") { pushEphemeralBot(`Badges: ${(authors.get(user!.id)?.badges ?? []).join(", ") || "none yet"}.`); return; }
+    if (cmd === "rank") { pushEphemeralBot(`Rank: ${roles.includes("owner") ? "Owner" : roles.includes("admin") ? "Staff/Admin" : "Member"}.`); return; }
+    if (cmd === "project") { const id = location.pathname.match(/\/project\/([^/]+)/)?.[1]; pushEphemeralBot(id ? `Current project ID: ${id}` : "Open a project page to see current project info."); return; }
+    if (cmd === "publish") { pushEphemeralBot("To publish: open a project, polish the build, use the project publish/showcase controls, add a title/description/thumbnail, then submit it to Published Creations."); return; }
+    if (cmd === "plugin") { pushEphemeralBot("Plugin setup: open /plugin, install the Roblox Studio plugin, sign in, copy/connect your token, then use Sync in Studio to pull BloxSmith commands."); return; }
+    if (cmd === "models") { pushEphemeralBot("AI features: Roblox game builder, Luau scripting, UI Generator, image/clothing generation, toolbox assets, project planning, fixes, and plugin sync."); return; }
+    if (cmd === "updates") { pushEphemeralBot("Latest update: auth/session cleanup, AI Help removed, Global Chat kept, and BloxBot command upgrades. Open /changelog for the full list."); return; }
+    if (["report", "mute", "follow", "friend", "dm"].includes(cmd)) {
+      const target = findMention(args); if (!target) { pushEphemeralBot("I couldn't find that @user in this chat session."); return; }
+      const rest = args.replace(/@([A-Za-z0-9_ .-]{2,40})/, "").trim();
+      if (cmd === "report") { const { error } = await (supabase as any).rpc("report_chat_user", { _reported_user_id: target.id, _reason: rest || "Reported from BloxBot" }); if (error) toast.error(error.message); else toast.success("Report sent"); return; }
+      if (cmd === "mute") { await (supabase as any).from("user_chat_local_mutes").upsert({ user_id: user!.id, muted_user_id: target.id }); setLocalMuted((s) => new Set([...s, target.id])); pushEphemeralBot(`${target.name} muted locally.`); return; }
+      if (cmd === "follow") { const { error } = await (supabase as any).from("user_follows").upsert({ follower_id: user!.id, following_id: target.id }); if (error) toast.error(error.message); else pushEphemeralBot(`You now follow ${target.name}.`); return; }
+      if (cmd === "friend") { const { error } = await (supabase as any).from("friend_requests").upsert({ requester_id: user!.id, addressee_id: target.id, status: "pending" }); if (error) toast.error(error.message); else pushEphemeralBot(`Friend request sent to ${target.name}.`); return; }
+      if (cmd === "dm") { const { error } = await (supabase as any).from("direct_messages").insert({ sender_id: user!.id, recipient_id: target.id, content: rest || "👋" }); if (error) toast.error(error.message); else pushEphemeralBot(`DM sent to ${target.name}.`); return; }
+    }
+    if (cmd === "online") { pushEphemeralBot(`Online: ${onlineUsers.map((id) => authors.get(id)?.display_name ?? id.slice(0, 6)).join(", ") || "none"}.`); return; }
+    if (cmd === "staff") { pushEphemeralBot(`Staff online: ${onlineUsers.filter((id) => authors.get(id)?.roles.some((r) => r === "owner" || r === "admin")).map((id) => authors.get(id)?.display_name ?? "Staff").join(", ") || "none visible"}.`); return; }
+    if (cmd === "announce") { if (!staffOnly()) return; const { error } = await (supabase as any).rpc("admin_chat_announce", { _content: args }); if (error) toast.error(error.message); return; }
+    if (["givecredits", "takecredits", "badge", "role", "warn", "timeout", "ban", "unban"].includes(cmd)) { if (!staffOnly()) return; const target = findMention(args); if (!target) return toast.error("Use @user"); const rest = args.replace(/@([A-Za-z0-9_ .-]{2,40})/, "").trim(); const [first, ...tail] = rest.split(/\s+/); const reason = tail.join(" ") || "BloxBot staff command";
+      if (cmd === "givecredits" || cmd === "takecredits") { const amount = Math.abs(parseInt(first, 10)); if (!amount) return toast.error("Enter amount"); const { error } = await (supabase as any).rpc("admin_adjust_credits", { _user_id: target.id, _amount: cmd === "takecredits" ? -amount : amount, _reason: reason }); if (error) toast.error(error.message); else toast.success("Credits updated"); return; }
+      if (cmd === "badge") { const { error } = await (supabase as any).rpc("admin_grant_badge", { _user_id: target.id, _badge: first }); if (error) toast.error(error.message); else toast.success("Badge granted"); return; }
+      if (cmd === "role") { const role = first === "owner" ? "admin" : first; const { error } = await (supabase as any).rpc("admin_set_role", { _user_id: target.id, _role: role, _grant: true }); if (error) toast.error(error.message); else toast.success("Role updated"); return; }
+      if (cmd === "warn") { const { error } = await (supabase as any).rpc("admin_chat_warn", { _user_id: target.id, _reason: rest || "Warning" }); if (error) toast.error(error.message); else toast.success("Warned"); return; }
+      if (cmd === "timeout") { const minutes = parseInt(first, 10) || 5; await muteUser(target.id, minutes, reason); return; }
+      if (cmd === "ban" || cmd === "unban") { const { error } = await (supabase as any).rpc("admin_set_ban", { _user_id: target.id, _banned: cmd === "ban", _reason: reason }); if (error) toast.error(error.message); else toast.success(cmd === "ban" ? "Banned" : "Unbanned"); return; }
+    }
+    if (cmd === "feature") { if (!staffOnly()) return; const { error } = await (supabase as any).rpc("admin_feature_project", { _project_id: args }); if (error) toast.error(error.message); else toast.success("Project featured"); return; }
+    if (cmd === "changelog") { if (!staffOnly()) return; const { error } = await (supabase as any).rpc("admin_quick_changelog", { _message: args }); if (error) toast.error(error.message); else toast.success("Changelog note added"); return; }
     if (cmd === "me") { await sendRaw(`_${args || "…"}_`); return; }
     if (cmd === "shrug") { await sendRaw(`¯\\_(ツ)_/¯ ${args}`); return; }
     if (cmd === "clear-mine") {
