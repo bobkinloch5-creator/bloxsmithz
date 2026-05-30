@@ -38,6 +38,13 @@ type UserLevel = {
   chat_credits_earned: number;
 };
 
+function uniqueAchievementChannel(userId: string) {
+  const id = typeof globalThis.crypto?.randomUUID === "function"
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `achievements-${userId}-${id}`;
+}
+
 function AchievementsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<Achievement[]>([]);
@@ -70,7 +77,7 @@ function AchievementsPage() {
 
     // Realtime: refresh on unlocks / XP changes for this user
     const channel = supabase
-      .channel(`achievements-${user.id}`)
+      .channel(uniqueAchievementChannel(user.id))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_achievements", filter: `user_id=eq.${user.id}` },
