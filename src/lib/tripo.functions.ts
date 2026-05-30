@@ -6,12 +6,19 @@ import { isGeneratorOwner, spendCreditsAfterSuccess } from "./generator-credits.
 const InputSchema = z.object({
   projectId: z.string().uuid().optional(),
   prompt: z.string().min(3).max(1024),
+  quality: z.enum(["turbo", "standard", "detailed"]).default("turbo"),
+  format: z.enum(["GLB", "OBJ", "FBX"]).default("GLB"),
+  faceLimit: z.number().int().min(1000).max(50000).default(10000),
+  texture: z.boolean().default(true),
+  style: z.string().max(64).optional(),
 });
 
 export type Generate3DResult =
   | {
       ok: true;
       fileUrl: string;
+      previewGlbUrl?: string;
+      format: "GLB" | "OBJ" | "FBX";
       renderedImageUrl?: string;
       creditsSpent: number;
       importTip: string;
@@ -20,7 +27,7 @@ export type Generate3DResult =
   | { ok: false; error: string; nextAvailable?: string };
 
 // Heavy credit cost — 3D generation is expensive. Owners/admins pay 0.
-const MODEL_3D_CREDIT_COST = Number(process.env.MODEL_3D_CREDIT_COST || "75");
+const MODEL_3D_CREDIT_COST = Number(process.env.MODEL_3D_CREDIT_COST || "25");
 
 // One generation per rolling 7 days per user (owners/admins exempt).
 const WEEKLY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -84,8 +91,16 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
       }
     }
 
-    // 3. Generate (text → model → OBJ → stored file).
-    const result = await generate3DModel({ userId, prompt: data.prompt });
+    // 3. Generate (text → model → chosen format → stored file + preview GLB).
+    const result = await generate3DModel({
+      userId,
+      prompt: data.prompt,
+      quality: data.quality,
+      format: data.format,
+      faceLimit: data.faceLimit,
+      texture: data.texture,
+      style: data.style ?? null,
+    });
     if (!result.ok) {
       return { ok: false, error: `${result.error} (No credits were charged.)` };
     }
@@ -124,6 +139,8 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
     return {
       ok: true,
       fileUrl: result.fileUrl,
+      previewGlbUrl: result.previewGlbUrl,
+      format: result.format,
       renderedImageUrl: result.renderedImageUrl,
       creditsSpent: isOwner ? 0 : MODEL_3D_CREDIT_COST,
       importTip:
@@ -131,3 +148,65 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
       nextAvailable,
     };
   });
+
+// Lightweight status check so the page can show the weekly lockout + ETA and
+// the credit cost before the user attempts a generation.
+export const get3DStatusFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(
+    async ({
+      context,
+    }): Promise<{
+      canGenerate: boolean;
+      isOwner: boolean;
+      credits: number;
+      cost: number;
+      nextAvailable: string | null;
+    }> => {
+      const { userId, supabase } = context as {
+        userId: string;
+        supabase: import("@supabase/supabase-js").SupabaseClient;
+      };
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const isOwner = await isGeneratorOwner(userId, supabase);
+
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("credits")
+        .eq("id", userId)
+        .maybeSingle();
+      const credits = Number(profile?.credits ?? 0);
+
+      if (isOwner) {
+        return { canGenerate: true, isOwner, credits, cost: 0, nextAvailable: null };
+      }
+
+      const since = new Date(Date.now() - WEEKLY_WINDOW_MS).toISOString();
+      const { data: recent } = await supabaseAdmin
+        .from("model_generations_3d")
+        .select("created_at")
+        .eq("user_id", userId)
+        .eq("status", "success")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (recent && recent.length > 0) {
+        const next = new Date(new Date(recent[0].created_at).getTime() + WEEKLY_WINDOW_MS);
+        return {
+          canGenerate: false,
+          isOwner,
+          credits,
+          cost: MODEL_3D_CREDIT_COST,
+          nextAvailable: next.toISOString(),
+        };
+      }
+      return {
+        canGenerate: true,
+        isOwner,
+        credits,
+        cost: MODEL_3D_CREDIT_COST,
+        nextAvailable: null,
+      };
+    },
+  );

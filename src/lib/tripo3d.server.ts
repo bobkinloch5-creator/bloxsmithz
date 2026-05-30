@@ -19,16 +19,29 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const TRIPO_BASE = "https://api.tripo3d.ai/v2/openapi";
 
-// Turbo tier — fast + cheap, the chosen default. If Tripo renames the model
-// version, update this single constant.
-const TRIPO_MODEL_VERSION = "Turbo-v1.0-20250506";
+export type Tripo3DOptions = {
+  userId: string;
+  prompt: string;
+  quality?: "turbo" | "standard" | "detailed";
+  format?: "GLB" | "OBJ" | "FBX";
+  faceLimit?: number;
+  style?: string | null;
+  texture?: boolean;
+};
+
+const MODEL_VERSION_BY_QUALITY: Record<string, string> = {
+  turbo: "Turbo-v1.0-20250506",
+  standard: "v2.5-20250123",
+  detailed: "v3.0",
+};
 
 export type Tripo3DResult =
   | {
       ok: true;
-      fileUrl: string; // permanent public URL in our storage bucket
+      fileUrl: string; // permanent public URL of the chosen download format
       filePath: string; // path inside the bucket
-      format: "OBJ";
+      format: "GLB" | "OBJ" | "FBX";
+      previewGlbUrl?: string; // permanent GLB URL for the WebGL preview
       tripoTaskId: string;
       renderedImageUrl?: string;
     }
@@ -115,60 +128,104 @@ async function storeModelFile(
 }
 
 /**
- * Generate a 3D model from a text prompt, convert to OBJ, store it, and return
- * a permanent URL. This is the heavy, slow path — callers must enforce the
- * weekly limit + credit charge around it.
+ * Generate a 3D model from a text prompt with options, store the chosen
+ * download format AND a GLB for the WebGL preview, and return permanent URLs.
+ * Heavy/slow — callers must enforce the weekly limit + credit charge.
  */
-export async function generate3DModel(opts: {
-  userId: string;
-  prompt: string;
-}): Promise<Tripo3DResult> {
+export async function generate3DModel(opts: Tripo3DOptions): Promise<Tripo3DResult> {
   try {
-    // 1. text_to_model (Turbo)
-    const genTaskId = await createTask({
+    const quality = opts.quality ?? "turbo";
+    const downloadFormat = opts.format ?? "GLB";
+    const faceLimit = Math.min(Math.max(opts.faceLimit ?? 10000, 1000), 50000);
+    const modelVersion = MODEL_VERSION_BY_QUALITY[quality] ?? MODEL_VERSION_BY_QUALITY.turbo;
+
+    // 1. text_to_model with the chosen quality tier.
+    const genBody: Record<string, unknown> = {
       type: "text_to_model",
-      model_version: TRIPO_MODEL_VERSION,
+      model_version: modelVersion,
       prompt: opts.prompt.slice(0, 1024),
-    });
-    const gen = await pollTask(genTaskId, { timeoutMs: 150_000 });
+      texture: opts.texture !== false,
+    };
+    if (opts.style) genBody.style = opts.style;
+    const genTaskId = await createTask(genBody);
+    const gen = await pollTask(genTaskId, { timeoutMs: 180_000 });
     const renderedImageUrl: string | undefined = gen.output?.rendered_image;
 
-    // 2. convert_model → OBJ (best for Studio's importer). face_limit keeps it
-    //    Roblox-friendly; flatten_bottom helps it sit on the ground.
+    // The base text_to_model output is a GLB — store it for the WebGL preview.
+    const rawGlbUrl: string =
+      gen.output?.pbr_model || gen.output?.model || gen.output?.base_model || "";
+    let previewGlbUrl: string | undefined;
+    if (rawGlbUrl) {
+      try {
+        const glb = await storeModelFile(opts.userId, rawGlbUrl, "glb");
+        previewGlbUrl = glb.fileUrl;
+      } catch (e) {
+        console.warn("[tripo] preview GLB store failed:", String(e).slice(0, 120));
+      }
+    }
+
+    // 2. If the user wants GLB, the download IS the preview file — done.
+    if (downloadFormat === "GLB") {
+      if (!previewGlbUrl) {
+        if (!rawGlbUrl)
+          return { ok: false, error: "Tripo finished but returned no downloadable model." };
+        const stored = await storeModelFile(opts.userId, rawGlbUrl, "glb");
+        previewGlbUrl = stored.fileUrl;
+        return {
+          ok: true,
+          fileUrl: stored.fileUrl,
+          filePath: stored.filePath,
+          format: "GLB",
+          previewGlbUrl,
+          tripoTaskId: genTaskId,
+          renderedImageUrl,
+        };
+      }
+      return {
+        ok: true,
+        fileUrl: previewGlbUrl,
+        filePath: "",
+        format: "GLB",
+        previewGlbUrl,
+        tripoTaskId: genTaskId,
+        renderedImageUrl,
+      };
+    }
+
+    // 3. Otherwise convert to the requested format (OBJ/FBX) for download.
     let fileUrl = "";
-    let ext = "obj";
+    let ext = downloadFormat.toLowerCase();
     try {
       const convTaskId = await createTask({
         type: "convert_model",
-        format: "OBJ",
+        format: downloadFormat,
         original_model_task_id: genTaskId,
-        face_limit: 10000,
+        face_limit: faceLimit,
         flatten_bottom: true,
         pivot_to_center_bottom: true,
       });
-      const conv = await pollTask(convTaskId, { timeoutMs: 120_000 });
-      // OBJ conversions are delivered as a packaged file (model + mtl + texture)
-      // under output.model (a .zip in practice).
+      const conv = await pollTask(convTaskId, { timeoutMs: 150_000 });
       fileUrl = conv.output?.model || conv.output?.pbr_model || conv.output?.base_model || "";
-      ext = "zip";
+      ext = "zip"; // OBJ/FBX come packaged with textures
     } catch (convErr) {
-      // If conversion fails, fall back to the raw GLB so the user still gets a
-      // usable file (Studio's importer also accepts GLB).
-      console.warn("[tripo] OBJ conversion failed, falling back to GLB:", String(convErr).slice(0, 160));
-      fileUrl = gen.output?.pbr_model || gen.output?.model || gen.output?.base_model || "";
+      console.warn(
+        "[tripo] conversion failed, falling back to GLB:",
+        String(convErr).slice(0, 160),
+      );
+      fileUrl = rawGlbUrl;
       ext = "glb";
     }
 
     if (!fileUrl) return { ok: false, error: "Tripo finished but returned no downloadable model." };
 
-    // 3. Download within the 5-min expiry window and store permanently.
     const stored = await storeModelFile(opts.userId, fileUrl, ext);
 
     return {
       ok: true,
       fileUrl: stored.fileUrl,
       filePath: stored.filePath,
-      format: "OBJ",
+      format: ext === "glb" ? "GLB" : downloadFormat,
+      previewGlbUrl,
       tripoTaskId: genTaskId,
       renderedImageUrl,
     };

@@ -154,6 +154,11 @@ end
     };
   }
 
+  // Map / world / tycoon / city → build a REAL procedural layout, not a folder.
+  if (/\b(map|world|city|town|island|tycoon|lobby|arena|plot|base|kingdom|village)\b/.test(p)) {
+    return getProceduralMapFallback(p);
+  }
+
   // Generic build we can't template — still return a clear, non-empty message
   // and a starter folder so the user always sees a result and a next step.
   return {
@@ -169,6 +174,169 @@ end
         properties: {},
       },
     ],
+  };
+}
+
+// A genuine procedural map/tycoon: ground, spawn, central hub, player plots,
+// and connecting paths. Used when the model fails on a map/world/tycoon prompt
+// so the user gets a real, usable build instead of an empty folder.
+function getProceduralMapFallback(
+  p: string,
+): { message: string; files: GenFile[]; actions: GenAction[] } {
+  const isTycoon = /\btycoon\b/.test(p);
+  const plotCount = isTycoon ? 6 : 4;
+  const actions: GenAction[] = [];
+
+  const v3 = (x: number, y: number, z: number) => ({ __t: "Vector3", x, y, z });
+  const color = (r: number, g: number, b: number) => ({ __t: "Color3", r, g, b });
+  const mat = (m: string) => ({ __t: "Enum", enum: "Material", value: m });
+
+  // Folders
+  actions.push({ type: "create", className: "Folder", name: "Map", parent: "Workspace", properties: {} });
+  actions.push({ type: "create", className: "Folder", name: "Plots", parent: "Workspace/Map", properties: {} });
+  actions.push({ type: "create", className: "Folder", name: "Paths", parent: "Workspace/Map", properties: {} });
+
+  // Big ground
+  actions.push({
+    type: "create",
+    className: "Part",
+    name: "Ground",
+    parent: "Workspace/Map",
+    properties: {
+      Size: v3(512, 2, 512),
+      Position: v3(0, -1, 0),
+      Anchored: true,
+      Material: mat("Grass"),
+      Color: color(70, 110, 60),
+      TopSurface: { __t: "Enum", enum: "SurfaceType", value: "Smooth" },
+    },
+  });
+
+  // Central hub (round-ish platform + pillar)
+  actions.push({
+    type: "create",
+    className: "Part",
+    name: "CentralHub",
+    parent: "Workspace/Map",
+    properties: {
+      Shape: { __t: "Enum", enum: "PartType", value: "Cylinder" },
+      Size: v3(4, 60, 60),
+      Position: v3(0, 1, 0),
+      Anchored: true,
+      Material: mat("Concrete"),
+      Color: color(120, 125, 135),
+      Orientation: v3(0, 0, 90),
+    },
+    children: [
+      { className: "PointLight", name: "HubLight", properties: { Brightness: 2, Range: 40, Color: color(255, 240, 200) } },
+    ],
+  });
+  actions.push({
+    type: "create",
+    className: "Part",
+    name: "HubPillar",
+    parent: "Workspace/Map",
+    properties: {
+      Size: v3(8, 24, 8),
+      Position: v3(0, 14, 0),
+      Anchored: true,
+      Material: mat("Neon"),
+      Color: color(90, 170, 255),
+    },
+  });
+
+  // Spawn on the hub
+  actions.push({
+    type: "create",
+    className: "SpawnLocation",
+    name: "Spawn",
+    parent: "Workspace/Map",
+    properties: {
+      Size: v3(12, 1, 12),
+      Position: v3(0, 2.5, 0),
+      Anchored: true,
+      Material: mat("Metal"),
+      Color: color(90, 170, 255),
+      Neutral: true,
+    },
+  });
+
+  // Player plots in a ring + paths leading to the hub
+  const radius = 140;
+  for (let i = 0; i < plotCount; i++) {
+    const angle = (i / plotCount) * Math.PI * 2;
+    const px = Math.round(Math.cos(angle) * radius);
+    const pz = Math.round(Math.sin(angle) * radius);
+    actions.push({
+      type: "create",
+      className: "Part",
+      name: `Plot${i + 1}`,
+      parent: "Workspace/Map/Plots",
+      properties: {
+        Size: v3(80, 1, 80),
+        Position: v3(px, 0.5, pz),
+        Anchored: true,
+        Material: mat("WoodPlanks"),
+        Color: color(150, 120, 90),
+      },
+      children: [
+        {
+          className: "BillboardGui",
+          name: "Label",
+          properties: { Size: { __t: "UDim2", xs: 0, xo: 200, ys: 0, yo: 50 }, StudsOffset: v3(0, 8, 0), AlwaysOnTop: true },
+          children: [
+            {
+              className: "TextLabel",
+              name: "Text",
+              properties: {
+                Size: { __t: "UDim2", xs: 1, xo: 0, ys: 1, yo: 0 },
+                BackgroundTransparency: 1,
+                Text: `Plot ${i + 1}`,
+                TextScaled: true,
+                Font: { __t: "Enum", enum: "Font", value: "GothamBold" },
+                TextColor3: color(255, 255, 255),
+              },
+            },
+          ],
+        },
+      ],
+    });
+    // Path from plot toward hub
+    actions.push({
+      type: "create",
+      className: "Part",
+      name: `Path${i + 1}`,
+      parent: "Workspace/Map/Paths",
+      properties: {
+        Size: v3(Math.max(8, radius - 50), 0.4, 10),
+        Position: v3(Math.round(px / 2), 0.3, Math.round(pz / 2)),
+        Anchored: true,
+        Material: mat("Slate"),
+        Color: color(90, 90, 95),
+        Orientation: v3(0, Math.round((-angle * 180) / Math.PI), 0),
+      },
+    });
+  }
+
+  // Lighting for a clean daytime look
+  actions.push({
+    type: "lighting",
+    properties: {
+      ClockTime: 14,
+      Brightness: 2,
+      Ambient: color(70, 70, 80),
+      OutdoorAmbient: color(120, 120, 130),
+    },
+  });
+
+  actions.push({ type: "select", path: "Workspace.Map.CentralHub" });
+
+  return {
+    message: isTycoon
+      ? `Queued a classic tycoon map — a central hub with a spawn, ${plotCount} player plots in a ring, and stone paths connecting each plot to the center. Push to Studio, then tell me what to add to each plot (droppers, buttons, walls) and I'll build the tycoon logic.`
+      : `Queued a starter map — large ground, a central hub with spawn, ${plotCount} zones, and connecting paths. Push to Studio, then tell me what to put in each zone.`,
+    files: [],
+    actions,
   };
 }
 
@@ -361,7 +529,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
     }
 
     const { generateText, Output, stepCountIs } = await import("ai");
-    const { SYSTEM_PROMPT } = await import("./ai-gateway.server");
+    const { SYSTEM_PROMPT, SLIM_SYSTEM_PROMPT } = await import("./ai-gateway.server");
     const { getModelProfile, resolveAiGateway, createProvider } = await import(
       "./ai-providers.server"
     );
@@ -415,6 +583,19 @@ export const generateWithAI = createServerFn({ method: "POST" })
       thinking,
       heavyBuild: isComplex,
     });
+
+    // The full SYSTEM_PROMPT is very large. Small/fast models (e.g.
+    // gemini-3-flash, haiku) have a tight input budget — pairing the full
+    // prompt with project context can overflow and cause an empty/garbled
+    // completion (the "every build returns nothing" symptom). Use the slim
+    // prompt unless this is a heavy build on a roomy model.
+    const modelIdLc = String(resolved.modelName).toLowerCase();
+    const isSmallModel =
+      /flash|haiku|mini|nano|8b|9b|gpt-5\.1(?!-codex-max)/.test(modelIdLc) && !isComplex;
+    const activeSystemPrompt = isSmallModel ? SLIM_SYSTEM_PROMPT : SYSTEM_PROMPT;
+    console.log(
+      `[generateWithAI] model=${resolved.modelName} complex=${isComplex} slimPrompt=${isSmallModel}`,
+    );
 
     const [liveContextResult, allFilesResult, memoryBlock, studioErrorBlock] = await Promise.all([
       supabase
@@ -528,7 +709,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
         generateText,
         {
           model,
-          system: SYSTEM_PROMPT,
+          system: activeSystemPrompt,
           prompt: fullPrompt,
           ...(Object.keys(tools).length > 0
             ? {
@@ -548,8 +729,12 @@ export const generateWithAI = createServerFn({ method: "POST" })
         "generateWithAI",
       );
       // Parse JSON from the raw text response (robust to fences/prose/commas).
+      console.log(
+        `[generateWithAI] raw output: ${(rawText ?? "").length} chars; preview=${JSON.stringify((rawText ?? "").slice(0, 220))}`,
+      );
       const parsed = extractBuildJson(rawText);
       if (!parsed) {
+        console.warn("[generateWithAI] extractBuildJson returned null — no JSON found in output.");
         result = {
           message: rawText.trim(),
           files: [],
@@ -560,6 +745,9 @@ export const generateWithAI = createServerFn({ method: "POST" })
       }
       result.files = result.files ?? [];
       result.actions = result.actions ?? [];
+      console.log(
+        `[generateWithAI] parsed result: files=${result.files.length} actions=${result.actions.length} msgLen=${(result.message ?? "").length}`,
+      );
     } catch (err: any) {
       const msg = String(err?.message ?? err);
 
@@ -592,7 +780,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
               generateText,
               {
                 model: fallbackModel(NEOKENS_SAFE_FALLBACK_MODEL),
-                system: SYSTEM_PROMPT,
+                system: activeSystemPrompt,
                 prompt: fullPrompt,
                 maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 9000 : 4500),
                 maxRetries: 0,
