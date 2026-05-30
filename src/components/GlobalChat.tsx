@@ -190,6 +190,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [robloxCaption, setRobloxCaption] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
+  const [chatBubbles, setChatBubbles] = useState<{ id: string; userId: string; name: string; color: string | null; avatar: string | null; content: string }[]>([]);
   const [typingUsers, setTypingUsers] = useState<Map<string, number>>(new Map());
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<{ id: string; reason: string | null }[]>([]);
@@ -321,6 +322,25 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           const mentioned = mentionsMe(row.content, authorsRef.current.get(user.id)?.display_name);
           if (p.sound_enabled && (p.notify_mode === "all" || (p.notify_mode === "mentions" && mentioned))) {
             playPing();
+          }
+          // Floating chat bubble popup
+          if (p.show_bubbles && !row.deleted_at && row.content?.trim()) {
+            const a = authorsRef.current.get(row.user_id);
+            const bubbleId = `${row.id}-${Date.now()}`;
+            setChatBubbles((prev) => [
+              ...prev.slice(-3),
+              {
+                id: bubbleId,
+                userId: row.user_id,
+                name: a?.chat_nickname ?? a?.display_name ?? "Someone",
+                color: a?.chat_name_gradient?.[0] ?? null,
+                avatar: a?.avatar_url ?? null,
+                content: row.content.slice(0, 140),
+              },
+            ]);
+            setTimeout(() => {
+              setChatBubbles((prev) => prev.filter((b) => b.id !== bubbleId));
+            }, 5000);
           }
           if (mentioned && p.notify_mode !== "off") {
             const a = authorsRef.current.get(row.user_id);
@@ -930,6 +950,34 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   return (
     <>
+      {/* Floating chat bubble popups */}
+      {chatBubbles.length > 0 && (
+        <div className="pointer-events-none fixed z-[9997] top-20 right-4 flex w-[min(320px,calc(100vw-2rem))] flex-col gap-2">
+          {chatBubbles.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => { setOpen(true); setChatBubbles((prev) => prev.filter((x) => x.id !== b.id)); }}
+              className="pointer-events-auto group flex items-start gap-2 rounded-2xl border border-border bg-surface-elevated/95 px-3 py-2 text-left shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 fade-in duration-300 hover:border-primary hover:bg-surface-elevated"
+            >
+              {b.avatar ? (
+                <img src={b.avatar} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+              ) : (
+                <div className="h-8 w-8 shrink-0 rounded-full bg-primary/20" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-bold leading-tight" style={b.color ? { color: b.color } : undefined}>
+                  {b.name}
+                </div>
+                <div className="line-clamp-2 text-[12px] leading-snug text-muted-foreground group-hover:text-foreground">
+                  {b.content}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
       {!inline && !open && (
         <button
           type="button"

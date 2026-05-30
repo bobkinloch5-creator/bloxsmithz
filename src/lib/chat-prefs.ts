@@ -11,6 +11,7 @@ export type ChatPrefs = {
   notify_mode: "off" | "mentions" | "all";
   theme_accent: string | null;
   show_system: boolean;
+  show_bubbles: boolean;
   // Background (local-only)
   bg_style: ChatBgStyle;
   bg_color: string;
@@ -25,6 +26,7 @@ export const DEFAULT_PREFS: ChatPrefs = {
   notify_mode: "mentions",
   theme_accent: null,
   show_system: true,
+  show_bubbles: true,
   bg_style: "default",
   bg_color: "#0b1220",
   bg_color2: "#1e1b4b",

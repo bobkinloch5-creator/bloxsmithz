@@ -91,6 +91,16 @@ export function ChatSettingsPanel({
             onChange={(v) => onChange({ show_system: v === "on" })}
           />
         </Row>
+        <Row label="Chat bubbles (popups on new messages)">
+          <ButtonGroup
+            value={prefs.show_bubbles ? "on" : "off"}
+            options={[
+              { v: "on", l: "On" },
+              { v: "off", l: "Off" },
+            ]}
+            onChange={(v) => onChange({ show_bubbles: v === "on" })}
+          />
+        </Row>
         <Row label="Notifications">
           <ButtonGroup
             value={prefs.notify_mode}
