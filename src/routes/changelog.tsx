@@ -31,6 +31,88 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.1.0",
+    date: "May 30, 2026",
+    title: "Community Lockdown, Chat Customization & Real UI Previews",
+    description:
+      "Community and browse areas are now members-only, with proper redirects and a clean login gate. Chat got gradient names, message colors, and preset icons. The UI Generator now renders real AI image previews. Plus a sweep of bug fixes across auth, themes, AI Help, payments, and the Roblox plugin pipeline.",
+    updates: [
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Browse & Community Pages Now Require Login",
+        detail:
+          "Showcase, Showcase detail, Templates, Ideas, Project editor, and Clothing Studio all now require an account. Logged-out visitors see a clean \"Please log in to view and interact with community content\" gate and are redirected to /login with a return path so they land back where they were after signing in. Private projects stay private — only published showcase entries appear in browse, backed by RLS on the database.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Interaction Guardrails",
+        detail:
+          "Likes, comments, follows, friends, messages, remixing, and publishing are all gated behind authentication on both the UI and the backend. RLS policies remain the source of truth so the data is protected even if the UI is bypassed.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Palette,
+        title: "Chat Name & Message Customization",
+        detail:
+          "Personalize how you appear in Global Chat: choose a solid color or up to a 4-stop gradient for your name and message text, and pick from a curated set of clean preset icons (Sparkles, Crown, Rocket, and more). Live preview in Account → Chat Style.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Sparkles,
+        title: "Real Image Previews in UI Generator",
+        detail:
+          "The UI Generator now renders a real AI image preview alongside the Luau code, streaming partial images as it generates so you can see the design come together. Regenerate any time from the Image tab.",
+      },
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "AI Help & Global Chat Visibility Fixes",
+        detail:
+          "Fixed layout issues that hid the AI Help launcher and Global Chat on certain pages. Both now appear consistently across the app once signed in.",
+      },
+      {
+        category: "Backend",
+        tagColor: tagStyles.backend,
+        icon: CreditCard,
+        title: "Payments & Manual Verification Improvements",
+        detail:
+          "Cleaner approval/rejection flow for manual PayPal verification, with credits granted atomically and tracked in the credit ledger.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Auth & OAuth Polish",
+        detail:
+          "Hardened Google sign-in via the Lovable broker, fixed the OAuth callback route, and tightened login redirect handling so deep links survive a sign-in round trip.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Palette,
+        title: "Theme Consistency Sweep",
+        detail:
+          "Resolved theme inconsistencies on browse, account, and tool pages — every surface now uses the design tokens in both light and dark mode.",
+      },
+      {
+        category: "Plugin",
+        tagColor: tagStyles.plugin,
+        icon: FileCode,
+        title: "Roblox Plugin Insertion Fixes",
+        detail:
+          "Hardened the Bloxsmith Studio plugin pipeline so UI Generator output and template scripts insert reliably into the active place.",
+      },
+    ],
+  },
+  {
+
     version: "v3.0.0",
     date: "May 29, 2026",
     title: "Toolbox Overhaul, Stay-Signed-In & UI Generator",
