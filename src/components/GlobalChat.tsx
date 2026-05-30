@@ -435,6 +435,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         _reply_to_id: replyTo?.id ?? null,
         _attachment_url: attachment_url,
         _attachment_type: attachment_type,
+        _channel_id: currentChannel,
       });
       if (error) {
         const m = String(error.message || "Failed to send");
