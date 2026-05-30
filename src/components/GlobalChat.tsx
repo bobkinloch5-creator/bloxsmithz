@@ -226,6 +226,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         (supabase as any).from("global_chat_blocked_words").select("word"),
         (supabase as any).from("global_chat_warnings").select("id,reason").eq("user_id", user.id).is("acknowledged_at", null),
         (supabase as any).from("user_chat_local_mutes").select("muted_user_id").eq("user_id", user.id),
+        (supabase as any).from("chat_channels").select("slug,name,description,view_role,post_role,icon,position").order("position"),
       ]);
       if (cancelled) return;
       const rows = (msgRes.data ?? []) as DbMessage[];
@@ -237,6 +238,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       setBlockedWords(((wordsRes.data ?? []) as any[]).map((w) => String(w.word).toLowerCase()));
       setWarnings((warnRes.data ?? []) as any);
       setLocalMuted(new Set(((localMuteRes.data ?? []) as any[]).map((r) => String(r.muted_user_id))));
+      setChannels(((chanRes as any)?.data ?? []) as Channel[]);
       await loadAuthors(Array.from(new Set(rows.map((r) => r.user_id))));
     })();
     return () => { cancelled = true; };
