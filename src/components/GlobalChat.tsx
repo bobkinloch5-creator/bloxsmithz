@@ -654,7 +654,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
   return (
     <>
-      {!open && (
+      {!open && !inline && (
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -675,7 +675,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         <aside
           role="dialog"
           aria-label="Global chat"
-          className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] flex h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]"
+          className={cn(
+            "flex flex-col overflow-hidden border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl",
+            inline
+              ? "relative h-[min(80dvh,820px)] w-full rounded-2xl border"
+              : "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] rounded-2xl border md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:h-[min(720px,calc(100dvh-2.5rem))] md:w-[480px] lg:w-[540px]",
+          )}
           style={{
             ...(chatBackgroundStyle(prefs) ?? {}),
             ...(accent ? ({ ["--chat-accent" as any]: accent } as React.CSSProperties) : {}),
