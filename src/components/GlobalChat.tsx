@@ -435,7 +435,25 @@ export function GlobalChat() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-xs font-semibold">{name}</span>
+                      {!isBot && author?.chat_icon && CHAT_ICON_MAP[author.chat_icon] ? (
+                        (() => {
+                          const Ico = CHAT_ICON_MAP[author.chat_icon!];
+                          const stops = author.chat_name_gradient;
+                          return (
+                            <Ico
+                              className="h-3.5 w-3.5 shrink-0"
+                              style={stops?.length ? { color: stops[0] } : undefined}
+                              aria-hidden
+                            />
+                          );
+                        })()
+                      ) : null}
+                      <span
+                        className="truncate text-xs font-semibold"
+                        style={!isBot ? gradientTextStyle(author?.chat_name_gradient) : undefined}
+                      >
+                        {name}
+                      </span>
                       {isBot ? (
                         <span className="rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
                           BOT
@@ -458,7 +476,10 @@ export function GlobalChat() {
                         />
                       )}
                     </div>
-                    <div className="mt-0.5 break-words text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                    <div
+                      className="mt-0.5 break-words text-sm leading-relaxed whitespace-pre-wrap text-foreground"
+                      style={!isBot ? gradientTextStyle(author?.chat_text_gradient) : undefined}
+                    >
                       {m.content}
                     </div>
                   </div>
