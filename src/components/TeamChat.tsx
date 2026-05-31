@@ -64,7 +64,7 @@ export function TeamChat({ projectId }: { projectId: string }) {
           if (m.user_id !== user.id) {
             const { data: prof } = await supabase
               .from("profiles")
-              .select("id,display_name,email")
+              .select("id,display_name")
               .eq("id", m.user_id)
               .maybeSingle();
             m.author = prof ?? undefined;
