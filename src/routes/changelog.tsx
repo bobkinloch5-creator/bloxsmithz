@@ -45,6 +45,47 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.8.2",
+    date: "May 31, 2026",
+    title: "Custom Chat Emotes & Reaction Packs",
+    description:
+      "Global Chat and DMs now have a much larger BloxSmith emote system with BloxBot, builder, Roblox, status, reaction, and fun packs users can personalize.",
+    updates: [
+      {
+        category: "Chat",
+        tagColor: tagStyles.ui,
+        icon: MessageSquare,
+        title: "Categorized Emote Picker",
+        detail:
+          "Added searchable BloxSmith emote categories for BloxBot, Roblox builds, builder tools, statuses, reactions, and fun chat moments.",
+      },
+      {
+        category: "Chat",
+        tagColor: tagStyles.ui,
+        icon: Bot,
+        title: "More BloxBot Emotes",
+        detail:
+          "Expanded BloxBot tokens with wave, think, build, win, oof, happy, cool, love, fire, party, and GG options.",
+      },
+      {
+        category: "Customization",
+        tagColor: tagStyles.tools,
+        icon: Palette,
+        title: "Custom Quick Reactions",
+        detail:
+          "Chat preferences now let users choose their own quick reaction bar using regular emoji or BloxSmith tokens like :blox_happy:, :tycoon:, and :script:.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Sparkles,
+        title: "Custom Emote Rendering",
+        detail:
+          "Custom image and token emotes now render inside messages, DM markdown, quick reaction buttons, and reaction pills with smoother animated styling.",
+      },
+    ],
+  },
+  {
     version: "v3.8.1",
     date: "May 31, 2026",
     title: "MCP & Provider Secret Vault Migration",

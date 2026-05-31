@@ -1,10 +1,27 @@
 import { useState } from "react";
 import { Smile } from "lucide-react";
 
-const EMOJIS = [
-  "😀","😂","😍","😎","🤔","😢","😡","🤯","🥳","😴",
-  "👍","👎","🙏","👏","🔥","💯","🎉","❤️","💔","✨",
-  "🚀","🎮","🤖","👀","💀","🤡","💩","🦾","🧠","☕",
+const EMOJI_GROUPS = [
+  {
+    name: "Faces",
+    emojis: ["😀", "😄", "😂", "🤣", "😊", "😍", "😎", "🤔", "😮", "😢", "😡", "🤯", "🥳", "😴"],
+  },
+  {
+    name: "React",
+    emojis: ["👍", "👎", "🙏", "👏", "🙌", "💪", "🔥", "💯", "🎉", "❤️", "💔", "✨", "👀", "✅"],
+  },
+  {
+    name: "Build",
+    emojis: ["🎮", "🤖", "🧱", "📜", "🧩", "🛠️", "💾", "📡", "🖥️", "🚀", "⚙️", "🔧", "🧠", "💡"],
+  },
+  {
+    name: "Roblox",
+    emojis: ["🟩", "🏭", "⚔️", "🏰", "🐾", "🏁", "🚪", "💎", "💰", "🪙", "⭐", "🏆", "🛡️", "👑"],
+  },
+  {
+    name: "Fun",
+    emojis: ["☕", "🍕", "🍔", "🍩", "🍿", "🎵", "🎧", "🌟", "🌈", "🌊", "🌋", "❄️", "🌙", "☀️"],
+  },
 ];
 
 export function EmojiPicker({
@@ -15,6 +32,9 @@ export function EmojiPicker({
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [group, setGroup] = useState(EMOJI_GROUPS[0].name);
+  const active = EMOJI_GROUPS.find((g) => g.name === group) ?? EMOJI_GROUPS[0];
+
   return (
     <div className="relative">
       <button
@@ -31,20 +51,38 @@ export function EmojiPicker({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-9 right-0 z-50 grid w-[220px] grid-cols-6 gap-1 rounded-lg border border-border bg-surface-elevated p-2 shadow-xl">
-            {EMOJIS.map((e) => (
-              <button
-                type="button"
-                key={e}
-                onClick={() => {
-                  onPick(e);
-                  setOpen(false);
-                }}
-                className="grid h-7 w-7 place-items-center rounded text-lg transition hover:bg-surface"
-              >
-                {e}
-              </button>
-            ))}
+          <div className="absolute bottom-9 right-0 z-50 w-[260px] rounded-xl border border-border bg-surface-elevated p-2 shadow-xl">
+            <div className="mb-2 flex gap-1 overflow-x-auto pb-1">
+              {EMOJI_GROUPS.map((g) => (
+                <button
+                  type="button"
+                  key={g.name}
+                  onClick={() => setGroup(g.name)}
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                    group === g.name
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border text-muted-foreground hover:bg-surface"
+                  }`}
+                >
+                  {g.name}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {active.emojis.map((e) => (
+                <button
+                  type="button"
+                  key={e}
+                  onClick={() => {
+                    onPick(e);
+                    setOpen(false);
+                  }}
+                  className="grid h-8 w-8 place-items-center rounded text-lg transition hover:bg-surface"
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
           </div>
         </>
       )}
@@ -52,4 +90,4 @@ export function EmojiPicker({
   );
 }
 
-export const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉", "👀"];
+export const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉", ":blox_gg:"];

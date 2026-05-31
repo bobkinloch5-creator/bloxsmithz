@@ -50,7 +50,7 @@ import {
 } from "@/lib/chat-customization";
 import { EmojiPicker, QUICK_REACTIONS } from "@/components/chat/EmojiPicker";
 import { EmotePicker } from "@/components/chat/EmotePicker";
-import { EMOTE_MAP } from "@/lib/emotes";
+import { EMOTE_MAP, isEmoteToken } from "@/lib/emotes";
 import { ChatSettingsPanel } from "@/components/chat/ChatSettingsPanel";
 import { ChatModerationPanel } from "@/components/chat/ChatModerationPanel";
 import { useChatPrefs, fontSizeClass, densityClass, chatBackgroundStyle } from "@/lib/chat-prefs";
@@ -274,7 +274,12 @@ function formatTime(iso: string) {
 }
 
 // Tiny safe markdown: **bold**, *italic*, `code`, links + @mentions
-function renderRich(text: string, currentUserName: string | null, accent?: string | null) {
+function renderRich(
+  text: string,
+  currentUserName: string | null,
+  accent?: string | null,
+  emoteSize: "compact" | "normal" | "large" = "normal",
+) {
   const parts: Array<{
     t: "text" | "b" | "i" | "code" | "link" | "mention" | "emote";
     v: string;
@@ -301,6 +306,10 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
   if (last < text.length) parts.push({ t: "text", v: text.slice(last) });
   // If the entire message is just a single emote token, render it larger.
   const onlyEmote = parts.length === 1 && parts[0].t === "emote";
+  const inlineEmoteClass =
+    emoteSize === "compact" ? "h-5 w-5" : emoteSize === "large" ? "h-8 w-8" : "h-6 w-6";
+  const soloEmoteClass =
+    emoteSize === "compact" ? "h-12 w-12" : emoteSize === "large" ? "h-20 w-20" : "h-16 w-16";
   return parts.map((p, i) => {
     if (p.t === "b") return <strong key={i}>{p.v}</strong>;
     if (p.t === "i") return <em key={i}>{p.v}</em>;
@@ -324,6 +333,17 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
       );
     if (p.t === "emote") {
       const e = EMOTE_MAP[p.v];
+      if (!e.src) {
+        return (
+          <span
+            key={i}
+            title={`:${e.name}:`}
+            className={cn("inline-block select-none", onlyEmote ? "text-5xl" : "text-[1.25em]")}
+          >
+            {e.emoji}
+          </span>
+        );
+      }
       return (
         <img
           key={i}
@@ -333,7 +353,7 @@ function renderRich(text: string, currentUserName: string | null, accent?: strin
           loading="lazy"
           className={cn(
             "inline-block align-[-0.35em] object-contain select-none",
-            onlyEmote ? "h-16 w-16" : "h-6 w-6",
+            onlyEmote ? soloEmoteClass : inlineEmoteClass,
           )}
         />
       );
@@ -2208,7 +2228,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                     <Pin className="h-3 w-3 text-primary shrink-0" />
                     <span className="font-semibold">{a?.display_name ?? "User"}:</span>
                     <span className="truncate text-muted-foreground">
-                      {renderRich(p.content, myName, accent)}
+                      {renderRich(p.content, myName, accent, "compact")}
                     </span>
                     {canModerate && (
                       <button
@@ -2389,6 +2409,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                             setReplyTo(m);
                             inputRef.current?.focus();
                           }}
+                          quickReactions={prefs.quick_reactions}
                           onReact={(e) => toggleReaction(m.id, e)}
                           onReport={() => reportMessage(m)}
                           onDelete={() => deleteMessage(m.id)}
@@ -2414,7 +2435,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                             : undefined
                         }
                       >
-                        {renderRich(m.content, myName, accent)}
+                        {renderRich(m.content, myName, accent, prefs.emote_size)}
                       </div>
                     )}
                     {!isBot &&
@@ -2509,7 +2530,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                                 : "border-border bg-surface/50 hover:border-primary/35 hover:bg-surface",
                             )}
                           >
-                            <span className="chat-reaction-emoji">{emoji}</span>
+                            <ReactionSymbol value={emoji} />
                             <span className="text-muted-foreground">{g.count}</span>
                           </button>
                         ))}
@@ -3195,10 +3216,32 @@ function displayAuthorName(author: Author | null | undefined, id: string) {
   );
 }
 
+function ReactionSymbol({ value }: { value: string }) {
+  const emote = isEmoteToken(value);
+  if (!emote) return <span className="chat-reaction-emoji">{value}</span>;
+  if (emote.src) {
+    return (
+      <img
+        src={emote.src}
+        alt={value}
+        title={value}
+        loading="lazy"
+        className="chat-reaction-emoji h-5 w-5 object-contain"
+      />
+    );
+  }
+  return (
+    <span className="chat-reaction-emoji" title={value}>
+      {emote.emoji}
+    </span>
+  );
+}
+
 function MsgActions({
   isAdmin,
   isSelf,
   pinned,
+  quickReactions,
   onReply,
   onReact,
   onReport,
@@ -3211,6 +3254,7 @@ function MsgActions({
   isAdmin: boolean;
   isSelf: boolean;
   pinned: boolean;
+  quickReactions: string[];
   onReply: () => void;
   onReact: (e: string) => void;
   onReport: () => void;
@@ -3246,7 +3290,7 @@ function MsgActions({
       </button>
       {pickReact && (
         <div className="absolute right-0 top-7 z-50 flex gap-0.5 rounded-lg border border-border bg-surface-elevated p-1 shadow-xl">
-          {QUICK_REACTIONS.map((e) => (
+          {(quickReactions.length ? quickReactions : QUICK_REACTIONS).map((e) => (
             <button
               key={e}
               type="button"
@@ -3254,9 +3298,10 @@ function MsgActions({
                 onReact(e);
                 setPickReact(false);
               }}
+              title={e}
               className="grid h-7 w-7 place-items-center rounded text-base hover:bg-surface"
             >
-              {e}
+              <ReactionSymbol value={e} />
             </button>
           ))}
         </div>

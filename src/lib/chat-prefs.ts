@@ -23,11 +23,13 @@ export type ChatBgStyle =
 export type ChatPrefs = {
   font_size: "sm" | "md" | "lg";
   density: "compact" | "cozy" | "comfy";
+  emote_size: "compact" | "normal" | "large";
   sound_enabled: boolean;
   notify_mode: "off" | "mentions" | "all";
   theme_accent: string | null;
   show_system: boolean;
   show_bubbles: boolean;
+  quick_reactions: string[];
   // Background (local-only)
   bg_style: ChatBgStyle;
   bg_color: string;
@@ -39,11 +41,13 @@ export type ChatPrefs = {
 export const DEFAULT_PREFS: ChatPrefs = {
   font_size: "md",
   density: "cozy",
+  emote_size: "normal",
   sound_enabled: true,
   notify_mode: "mentions",
   theme_accent: null,
   show_system: true,
   show_bubbles: true,
+  quick_reactions: ["👍", "❤️", "😂", "🔥", "🎉", ":blox_gg:"],
   bg_style: "default",
   bg_color: "#0b1220",
   bg_color2: "#1e1b4b",
@@ -62,7 +66,7 @@ export function useChatPrefs() {
     if (typeof localStorage === "undefined") return DEFAULT_PREFS;
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (raw) return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
+      if (raw) return normalizePrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
     } catch {}
     return DEFAULT_PREFS;
   });
@@ -86,17 +90,23 @@ export function useChatPrefs() {
           notify_mode: (data.notify_mode as any) ?? prev.notify_mode,
           theme_accent: (data.theme_accent as any) ?? prev.theme_accent,
         };
-        try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch {}
+        try {
+          localStorage.setItem(LS_KEY, JSON.stringify(next));
+        } catch {}
         return next;
       });
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [user?.id]);
 
   async function update(patch: Partial<ChatPrefs>) {
-    const next = { ...prefs, ...patch };
+    const next = normalizePrefs({ ...prefs, ...patch });
     setPrefs(next);
-    try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch {}
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(next));
+    } catch {}
     if (!user) return;
     // Only persist DB fields if they changed
     const dbPatch: Record<string, unknown> = {};
@@ -108,6 +118,23 @@ export function useChatPrefs() {
   }
 
   return { prefs, update };
+}
+
+function normalizePrefs(input: ChatPrefs): ChatPrefs {
+  const quick = Array.isArray(input.quick_reactions)
+    ? input.quick_reactions
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .slice(0, 10)
+    : DEFAULT_PREFS.quick_reactions;
+  return {
+    ...input,
+    emote_size: ["compact", "normal", "large"].includes(input.emote_size)
+      ? input.emote_size
+      : DEFAULT_PREFS.emote_size,
+    quick_reactions: quick.length ? quick : DEFAULT_PREFS.quick_reactions,
+  };
 }
 
 export function fontSizeClass(size: ChatPrefs["font_size"]) {

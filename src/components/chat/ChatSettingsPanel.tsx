@@ -1,9 +1,22 @@
 import { useRef } from "react";
-import { Settings2, Volume2, VolumeX, Bell, BellOff, AtSign, X, Image as ImageIcon, Upload, Trash2 } from "lucide-react";
+import {
+  Settings2,
+  Volume2,
+  VolumeX,
+  Bell,
+  BellOff,
+  AtSign,
+  X,
+  Image as ImageIcon,
+  Upload,
+  Trash2,
+  SmilePlus,
+} from "lucide-react";
 import { type ChatPrefs, type ChatBgStyle, chatBackgroundStyle } from "@/lib/chat-prefs";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isEmoteToken } from "@/lib/emotes";
 
 const BG_STYLES: { v: ChatBgStyle; l: string }[] = [
   { v: "default", l: "Default" },
@@ -29,7 +42,10 @@ const PRESETS: { name: string; patch: Partial<ChatPrefs> }[] = [
   { name: "Ocean", patch: { bg_style: "mesh", bg_color: "#0ea5e9", bg_color2: "#6366f1" } },
   { name: "Forest", patch: { bg_style: "mesh", bg_color: "#064e3b", bg_color2: "#84cc16" } },
   { name: "Neon", patch: { bg_style: "aurora-anim", bg_color: "#a855f7", bg_color2: "#22d3ee" } },
-  { name: "Studio", patch: { bg_style: "roblox-studio", bg_color: "#0e1726", bg_color2: "#1a2a4a" } },
+  {
+    name: "Studio",
+    patch: { bg_style: "roblox-studio", bg_color: "#0e1726", bg_color2: "#1a2a4a" },
+  },
   { name: "Cyber", patch: { bg_style: "neon-city", bg_color: "#ec4899", bg_color2: "#06b6d4" } },
   { name: "Lava", patch: { bg_style: "lava", bg_color: "#f97316", bg_color2: "#dc2626" } },
   { name: "Stars", patch: { bg_style: "stars", bg_color: "#03040a", bg_color2: "#ffffff" } },
@@ -86,6 +102,17 @@ export function ChatSettingsPanel({
             onChange={(v) => onChange({ density: v as any })}
           />
         </Row>
+        <Row label="Emote size">
+          <ButtonGroup
+            value={prefs.emote_size}
+            options={[
+              { v: "compact", l: "Compact" },
+              { v: "normal", l: "Normal" },
+              { v: "large", l: "Large" },
+            ]}
+            onChange={(v) => onChange({ emote_size: v })}
+          />
+        </Row>
         <Row label="Sound">
           <ButtonGroup
             value={prefs.sound_enabled ? "on" : "off"}
@@ -127,28 +154,50 @@ export function ChatSettingsPanel({
             onChange={(v) => onChange({ notify_mode: v as any })}
           />
         </Row>
+        <Row
+          label={
+            <>
+              <SmilePlus className="mr-1 inline h-3 w-3" />
+              Quick reactions
+            </>
+          }
+        >
+          <QuickReactionEditor
+            value={prefs.quick_reactions}
+            onChange={(quick_reactions) => onChange({ quick_reactions })}
+          />
+        </Row>
         <Row label="Accent color">
           <div className="flex flex-wrap gap-1.5">
-            {[null, "#8b5cf6", "#06b6d4", "#22c55e", "#f59e0b", "#ec4899", "#ef4444"].map((c, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onChange({ theme_accent: c })}
-                className={`h-6 w-6 rounded-full border-2 ${
-                  prefs.theme_accent === c ? "border-foreground" : "border-border"
-                }`}
-                style={{ background: c ?? "transparent" }}
-                aria-label={c ?? "Default"}
-              >
-                {c === null && <span className="text-[10px]">∅</span>}
-              </button>
-            ))}
+            {[null, "#8b5cf6", "#06b6d4", "#22c55e", "#f59e0b", "#ec4899", "#ef4444"].map(
+              (c, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onChange({ theme_accent: c })}
+                  className={`h-6 w-6 rounded-full border-2 ${
+                    prefs.theme_accent === c ? "border-foreground" : "border-border"
+                  }`}
+                  style={{ background: c ?? "transparent" }}
+                  aria-label={c ?? "Default"}
+                >
+                  {c === null && <span className="text-[10px]">∅</span>}
+                </button>
+              ),
+            )}
           </div>
         </Row>
 
         <div className="h-px bg-border" />
 
-        <Row label={<><ImageIcon className="mr-1 inline h-3 w-3" />Background style</>}>
+        <Row
+          label={
+            <>
+              <ImageIcon className="mr-1 inline h-3 w-3" />
+              Background style
+            </>
+          }
+        >
           <div className="flex flex-wrap gap-1">
             {BG_STYLES.map((s) => (
               <button
@@ -180,8 +229,16 @@ export function ChatSettingsPanel({
           <>
             <Row label="Background colors">
               <div className="flex items-center gap-3">
-                <ColorInput label="Primary" value={prefs.bg_color} onChange={(v) => onChange({ bg_color: v })} />
-                <ColorInput label="Accent" value={prefs.bg_color2} onChange={(v) => onChange({ bg_color2: v })} />
+                <ColorInput
+                  label="Primary"
+                  value={prefs.bg_color}
+                  onChange={(v) => onChange({ bg_color: v })}
+                />
+                <ColorInput
+                  label="Accent"
+                  value={prefs.bg_color2}
+                  onChange={(v) => onChange({ bg_color2: v })}
+                />
               </div>
             </Row>
 
@@ -197,7 +254,9 @@ export function ChatSettingsPanel({
                       className="group flex flex-col items-stretch gap-1 rounded-md border border-border p-1 hover:border-primary"
                     >
                       <div className="h-10 w-full rounded" style={preview} />
-                      <span className="text-[10px] text-muted-foreground group-hover:text-foreground">{p.name}</span>
+                      <span className="text-[10px] text-muted-foreground group-hover:text-foreground">
+                        {p.name}
+                      </span>
                     </button>
                   );
                 })}
@@ -215,11 +274,61 @@ export function ChatSettingsPanel({
           </Row>
         )}
 
-
         <p className="pt-2 text-[11px] text-muted-foreground">
           Name color, message gradient, and icon are set in your profile.
         </p>
       </div>
+    </div>
+  );
+}
+
+function QuickReactionEditor({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (value: string[]) => void;
+}) {
+  const rows = [...value.slice(0, 10)];
+  while (rows.length < 6) rows.push("");
+
+  function update(index: number, next: string) {
+    const clean = next.trim().slice(0, 32);
+    const copy = [...rows];
+    copy[index] = clean;
+    onChange(copy.filter(Boolean).slice(0, 10));
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+        {rows.slice(0, 6).map((item, index) => {
+          const emote = isEmoteToken(item);
+          return (
+            <label
+              key={index}
+              className="flex min-w-0 flex-col gap-1 rounded-lg border border-border bg-background/40 p-1.5"
+            >
+              <span className="grid h-8 place-items-center rounded bg-surface/60 text-lg">
+                {emote?.src ? (
+                  <img src={emote.src} alt="" className="h-6 w-6 object-contain" />
+                ) : (
+                  emote?.emoji || item || "＋"
+                )}
+              </span>
+              <input
+                value={item}
+                onChange={(event) => update(index, event.target.value)}
+                placeholder={index === 5 ? ":blox_gg:" : "🔥"}
+                className="w-full rounded border border-border bg-background px-1 py-0.5 text-center text-[10px] outline-none focus:border-primary"
+              />
+            </label>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        Use normal emoji or BloxSmith tokens like :blox_happy:, :tycoon:, :script:, and :owner:.
+      </p>
     </div>
   );
 }
@@ -317,7 +426,15 @@ function Row({ label, children }: { label: React.ReactNode; children: React.Reac
   );
 }
 
-function ColorInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ColorInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <label className="flex items-center gap-1.5 text-xs">
       <input
@@ -348,7 +465,9 @@ function ButtonGroup<T extends string>({
           type="button"
           onClick={() => onChange(o.v)}
           className={`flex items-center gap-1 rounded px-2 py-1 text-xs ${
-            value === o.v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface"
+            value === o.v
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-surface"
           }`}
         >
           {o.icon}
