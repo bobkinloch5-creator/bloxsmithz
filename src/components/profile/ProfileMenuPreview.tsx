@@ -74,6 +74,13 @@ function safeHex(value: unknown, fallback: string) {
   return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
 }
 
+function menuChromeStyle(cardColor: string) {
+  return {
+    ...cardChromeStyle(cardColor),
+    background: `linear-gradient(180deg, ${cardColor}f5, ${cardColor}ee 34%, #02060cfb 100%)`,
+  };
+}
+
 export function getProfileMenuEffects(profile?: ProfileMenuSource | null): ProfileMenuEffects {
   return {
     accent: safeHex(profile?.profile_accent, "#7c3cff"),
@@ -195,8 +202,8 @@ export function ProfileMenuPreview({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border shadow-2xl ${className}`}
-      style={cardChromeStyle(effects.cardColor)}
+      className={`relative overflow-hidden rounded-xl border shadow-2xl backdrop-blur-xl ${className}`}
+      style={menuChromeStyle(effects.cardColor)}
     >
       <ProfileCardEffect effect={effects.cardEffect} color={effects.cardColor} />
       <div className="relative h-28 overflow-hidden bg-gradient-brand">
@@ -217,7 +224,7 @@ export function ProfileMenuPreview({
         <div className="absolute inset-0 bg-gradient-to-t from-surface-elevated via-surface-elevated/45 to-transparent" />
       </div>
 
-      <div className="relative z-10 -mt-9 border-b border-border/40 px-5 pb-4">
+      <div className="relative z-10 -mt-9 border-b border-border/40 bg-[#02060c]/95 px-5 pb-4 backdrop-blur-xl">
         <ProfileMenuAvatar
           src={avatarUrl}
           fallback={fallbackAvatar}
