@@ -70,6 +70,7 @@ export function ProfileCustomizationCard() {
     profile_decoration: (p.profile_decoration ?? "none") as string,
   });
   const [saving, setSaving] = useState(false);
+  const [subTab, setSubTab] = useState<"identity" | "style" | "cosmetics" | "privacy">("identity");
 
   // Re-sync when profile reloads (e.g., after another device pushes changes).
   useEffect(() => {
@@ -227,7 +228,7 @@ export function ProfileCustomizationCard() {
                 className={`ml-auto inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] font-medium`}
                 title={STATUSES.find((s) => s.id === state.presence_status)?.label}
               >
-                <span className={`h-2 w-2 rounded-full ${STATUSES.find((s) => s.id === state.presence_status)?.color}`} />
+                <span className={`h-2.5 w-2.5 rounded-full ${STATUSES.find((s) => s.id === state.presence_status)?.color}`} />
                 {STATUSES.find((s) => s.id === state.presence_status)?.label}
               </span>
             </div>
@@ -242,411 +243,468 @@ export function ProfileCustomizationCard() {
         </div>
       </ProfileCardChrome>
 
-      {/* IDENTITY */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Display name">
-          <input
-            value={state.display_name}
-            onChange={(e) => set("display_name", e.target.value.slice(0, 64))}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            placeholder="What others see"
-          />
-        </Field>
-        <Field label="Pronouns">
-          <input
-            value={state.pronouns}
-            onChange={(e) => set("pronouns", e.target.value.slice(0, 32))}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            placeholder="they/them, she/her, ..."
-          />
-        </Field>
-        <Field label="Location">
-          <input
-            value={state.location}
-            onChange={(e) => set("location", e.target.value.slice(0, 64))}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            placeholder="Earth"
-          />
-        </Field>
-        <Field label="Status">
-          <input
-            value={state.status_message}
-            onChange={(e) => set("status_message", e.target.value.slice(0, 100))}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            placeholder="Working on something cool..."
-          />
-        </Field>
-        <Field label="Bio" className="sm:col-span-2">
-          <textarea
-            value={state.bio}
-            onChange={(e) => set("bio", e.target.value.slice(0, 500))}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[72px] resize-y"
-            placeholder="Tell people about yourself"
-          />
-          <div className="text-[10px] text-muted-foreground text-right">
-            {(state.bio?.length ?? 0)} / 500
-          </div>
-        </Field>
+      {/* SUB TABS SELECTION */}
+      <div className="flex border-b border-border/30 gap-1 sm:gap-2 overflow-x-auto scrollbar-none pb-px">
+        <button
+          type="button"
+          onClick={() => setSubTab("identity")}
+          className={`inline-flex items-center gap-1.5 pb-3 pt-1 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+            subTab === "identity"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <CircleUserRound className="h-4 w-4" />
+          Identity
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab("style")}
+          className={`inline-flex items-center gap-1.5 pb-3 pt-1 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+            subTab === "style"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Palette className="h-4 w-4" />
+          Theme & Colors
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab("cosmetics")}
+          className={`inline-flex items-center gap-1.5 pb-3 pt-1 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+            subTab === "cosmetics"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          Cosmetics
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab("privacy")}
+          className={`inline-flex items-center gap-1.5 pb-3 pt-1 px-3 text-xs font-bold uppercase tracking-wider border-b-2 transition ${
+            subTab === "privacy"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Lock className="h-4 w-4" />
+          Privacy & Status
+        </button>
       </div>
 
-      {/* BACKGROUNDS */}
-      <Section icon={<ImagePlus className="h-4 w-4" />} title="Background theme">
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7">
-          {PROFILE_BACKGROUNDS.map((b) => {
-            const active = state.profile_background === b.id;
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => set("profile_background", b.id)}
-                className={`group relative h-16 overflow-hidden rounded-lg border transition ${
-                  active ? "border-primary ring-2 ring-primary/40" : "border-border/60 hover:border-border"
-                }`}
-                title={b.label}
-              >
-                <ProfileBackground id={b.id} />
-                {b.id === "none" && (
-                  <div className="absolute inset-0 grid place-items-center text-[10px] text-muted-foreground">
-                    None
-                  </div>
-                )}
-                <span className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-center text-[10px] font-medium text-white">
-                  {b.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* CUSTOM UPLOAD TILE inside background section */}
-        <CustomBackgroundUploader
-          userId={user?.id ?? null}
-          url={state.custom_background_url}
-          active={state.profile_background === "custom"}
-          onPick={() => {
-            if (state.custom_background_url) set("profile_background", "custom");
-          }}
-          onChange={(url) => {
-            setState((s) => ({
-              ...s,
-              custom_background_url: url,
-              profile_background: url ? "custom" : s.profile_background === "custom" ? "none" : s.profile_background,
-            }));
-            refresh();
-          }}
-        />
-      </Section>
-
-      {/* LAYOUT */}
-      <Section icon={<LayoutPanelTop className="h-4 w-4" />} title="Layout">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {LAYOUTS.map((l) => {
-            const active = state.profile_layout === l.id;
-            return (
-              <button
-                key={l.id}
-                type="button"
-                onClick={() => set("profile_layout", l.id)}
-                className={`rounded-lg border px-3 py-3 text-left transition ${
-                  active
-                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                    : "border-border/60 bg-background/40 hover:border-border"
-                }`}
-              >
-                <div className="text-sm font-semibold">{l.label}</div>
-                <div className="text-[10px] text-muted-foreground">{l.hint}</div>
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      {/* PFP RING */}
-      <Section icon={<CircleUserRound className="h-4 w-4" />} title="Avatar ring effect">
-        <div className="flex flex-wrap items-center gap-3">
-          {PFP_EFFECTS.map((e) => {
-            const active = state.pfp_effect === e.id;
-            return (
-              <button
-                key={e.id}
-                type="button"
-                onClick={() => set("pfp_effect", e.id)}
-                className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 transition ${
-                  active
-                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                    : "border-border/60 bg-background/40 hover:border-border"
-                }`}
-                title={e.label}
-              >
-                <PfpRing effect={e.id} size={40}>
-                  {p.avatar_url ? (
-                    <img src={p.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
-                  ) : (
-                    <span className="text-sm font-bold text-muted-foreground">{initial}</span>
-                  )}
-                </PfpRing>
-                <span className="text-[10px] text-muted-foreground">{e.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      {/* AVATAR DECORATION */}
-      <Section icon={<Sparkles className="h-4 w-4" />} title="Avatar decoration">
-        <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
-          Add premium animated overlays around your avatar. Animated and Pro items move on your public profile too.
-        </p>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-          {PROFILE_DECORATIONS.map((d) => {
-            const active = state.profile_decoration === d.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => set("profile_decoration", d.id)}
-                className={`relative flex flex-col items-center justify-end gap-1 rounded-xl border px-2 pb-2 pt-5 transition ${
-                  active
-                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                    : "border-border/60 bg-background/40 hover:border-border"
-                }`}
-                title={d.label}
-              >
-                {(d.premium || d.animated) && (
-                  <span className="absolute right-1.5 top-1.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary-glow">
-                    {d.animated ? "Anim" : "Pro"}
-                  </span>
-                )}
-                <div className="h-12 grid place-items-center">
-                  <AvatarDecoration id={d.id} size={36}>
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 grid place-items-center text-[10px] text-muted-foreground">
-                      {initial}
-                    </div>
-                  </AvatarDecoration>
-                </div>
-                <span className="text-[10px] text-muted-foreground">{d.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      {/* ACCENT + ANIMATED EFFECT */}
-      <Section icon={<Palette className="h-4 w-4" />} title="Profile card color">
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="text-xs text-muted-foreground mr-1">Card</span>
-          {CARD_COLORS.map((c) => {
-            const active = state.profile_card_color?.toLowerCase() === c.toLowerCase();
-            return (
-              <button
-                key={c}
-                type="button"
-                onClick={() => set("profile_card_color", c)}
-                className={`h-8 w-8 rounded-lg border border-white/10 ring-offset-2 ring-offset-background transition ${
-                  active ? "ring-2 ring-foreground" : "hover:scale-105"
-                }`}
-                style={{ background: `linear-gradient(135deg, ${c}, ${state.profile_accent})` }}
-                title={c}
-              />
-            );
-          })}
-          <input
-            type="text"
-            value={state.profile_card_color}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (/^#[0-9a-fA-F]{0,6}$/.test(v)) set("profile_card_color", v);
-            }}
-            onBlur={(e) => {
-              if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) set("profile_card_color", "#0f172a");
-            }}
-            className="ml-1 w-24 rounded-lg border border-border bg-background px-2 py-1 text-xs"
-            placeholder="#0f172a"
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-          {PROFILE_CARD_EFFECTS.map((e) => {
-            const active = state.profile_card_effect === e.id;
-            return (
-              <button
-                key={e.id}
-                type="button"
-                onClick={() => set("profile_card_effect", e.id)}
-                className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                  active
-                    ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
-                    : "border-border/60 bg-background/40 text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                {e.label}
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      <Section icon={<Wand2 className="h-4 w-4" />} title="Accent + animated banner effect">
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="text-xs text-muted-foreground mr-1">Accent</span>
-          {ACCENTS.map((c) => {
-            const active = state.profile_accent?.toLowerCase() === c.toLowerCase();
-            return (
-              <button
-                key={c}
-                type="button"
-                onClick={() => set("profile_accent", c)}
-                className={`h-7 w-7 rounded-full ring-offset-2 ring-offset-background transition ${
-                  active ? "ring-2 ring-foreground" : "hover:scale-110"
-                }`}
-                style={{ background: c }}
-                title={c}
-              />
-            );
-          })}
-          <input
-            type="text"
-            value={state.profile_accent}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (/^#[0-9a-fA-F]{0,6}$/.test(v)) set("profile_accent", v);
-            }}
-            onBlur={(e) => {
-              if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) set("profile_accent", "#7c3cff");
-            }}
-            className="ml-1 w-24 rounded-lg border border-border bg-background px-2 py-1 text-xs"
-            placeholder="#7c3cff"
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-          {PROFILE_EFFECTS.map((e) => {
-            const active = state.profile_effect === e.id;
-            return (
-              <button
-                key={e.id}
-                type="button"
-                onClick={() => set("profile_effect", e.id)}
-                className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                  active
-                    ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
-                    : "border-border/60 bg-background/40 text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                {e.label}
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      {/* BADGES */}
-      <Section icon={<Award className="h-4 w-4" />} title={`Badges (${previewBadgeIds.length}/12)`}>
-        <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
-          Pick display badges for your profile. Special badges unlock from onboarding, generation activity, 3D models, Discord, invites, milestones, and account roles.
-        </p>
-        {earnedRoleBadgeIds.length > 0 && (
-          <div className="mb-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary-glow">
-              Earned badges
+      {/* TAB CONTENT */}
+      {subTab === "identity" && (
+        <div className="grid gap-3 sm:grid-cols-2 animate-in fade-in duration-200">
+          <Field label="Display name">
+            <input
+              value={state.display_name}
+              onChange={(e) => set("display_name", e.target.value.slice(0, 64))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              placeholder="What others see"
+            />
+          </Field>
+          <Field label="Pronouns">
+            <input
+              value={state.pronouns}
+              onChange={(e) => set("pronouns", e.target.value.slice(0, 32))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              placeholder="they/them, she/her, ..."
+            />
+          </Field>
+          <Field label="Location">
+            <input
+              value={state.location}
+              onChange={(e) => set("location", e.target.value.slice(0, 64))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              placeholder="Earth"
+            />
+          </Field>
+          <Field label="Status">
+            <input
+              value={state.status_message}
+              onChange={(e) => set("status_message", e.target.value.slice(0, 100))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              placeholder="Working on something cool..."
+            />
+          </Field>
+          <Field label="Bio" className="sm:col-span-2">
+            <textarea
+              value={state.bio}
+              onChange={(e) => set("bio", e.target.value.slice(0, 500))}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[72px] resize-y"
+              placeholder="Tell people about yourself"
+            />
+            <div className="text-[10px] text-muted-foreground text-right">
+              {(state.bio?.length ?? 0)} / 500
             </div>
-            <ProfileBadgeRow ids={earnedRoleBadgeIds} size={28} />
-          </div>
-        )}
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-9">
-          {PROFILE_BADGES.filter((b) => SELECTABLE_PROFILE_BADGE_IDS.includes(b.id)).map((b) => {
-            const active = state.profile_badges.includes(b.id);
-            const atLimit = !active && state.profile_badges.length >= selectableBadgeLimit;
-            return (
-              <button
-                key={b.id}
-                type="button"
-                disabled={atLimit}
-                onClick={() =>
-                  setState((s) => ({
-                    ...s,
-                    profile_badges: active
-                      ? s.profile_badges.filter((x) => x !== b.id)
-                      : [...s.profile_badges, b.id],
-                  }))
-                }
-                className={`group relative flex flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2 transition disabled:opacity-40 ${
-                  active
-                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                    : "border-border/60 bg-background/40 hover:border-border hover:bg-background/70"
-                }`}
-                title={`${b.label} — ${b.description}`}
-              >
-                <ProfileBadgeIcon id={b.id} size={30} />
-                <span className="text-[10px] font-medium leading-tight text-center text-foreground/90 line-clamp-1 w-full px-0.5">
-                  {b.label}
-                </span>
-                {active && (
-                  <span className="absolute -top-1.5 -right-1.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow">
-                    ✓
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          </Field>
         </div>
-      </Section>
+      )}
 
+      {subTab === "style" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <Section icon={<Palette className="h-4 w-4" />} title="Profile card color">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-xs text-muted-foreground mr-1">Card</span>
+              {CARD_COLORS.map((c) => {
+                const active = state.profile_card_color?.toLowerCase() === c.toLowerCase();
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => set("profile_card_color", c)}
+                    className={`h-8 w-8 rounded-lg border border-white/10 ring-offset-2 ring-offset-background transition ${
+                      active ? "ring-2 ring-foreground" : "hover:scale-105"
+                    }`}
+                    style={{ background: `linear-gradient(135deg, ${c}, ${state.profile_accent})` }}
+                    title={c}
+                  />
+                );
+              })}
+              <input
+                type="text"
+                value={state.profile_card_color}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^#[0-9a-fA-F]{0,6}$/.test(v)) set("profile_card_color", v);
+                }}
+                onBlur={(e) => {
+                  if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) set("profile_card_color", "#0f172a");
+                }}
+                className="ml-1 w-24 rounded-lg border border-border bg-background px-2 py-1 text-xs"
+                placeholder="#0f172a"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {PROFILE_CARD_EFFECTS.map((e) => {
+                const active = state.profile_card_effect === e.id;
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => set("profile_card_effect", e.id)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                      active
+                        ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
+                        : "border-border/60 bg-background/40 text-muted-foreground hover:border-border hover:text-foreground"
+                    }`}
+                  >
+                    {e.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
 
-      {/* PRIVACY + PRESENCE */}
-      <Section icon={<Lock className="h-4 w-4" />} title="Privacy & Presence">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <ToggleRow
-            checked={state.private_profile}
-            onChange={(v) => set("private_profile", v)}
-            title="Private profile"
-            description="Only friends can see your full profile, achievements, and Roblox info."
-          />
-          <ToggleRow
-            checked={state.hide_email}
-            onChange={(v) => set("hide_email", v)}
-            title="Hide email"
-            description="Don't show your email address on your public profile."
-          />
-          <ToggleRow
-            checked={state.presence_enabled}
-            onChange={(v) => set("presence_enabled", v)}
-            title="Show online status"
-            description="Let others see when you're online or were last active."
-          />
-          <ToggleRow
-            checked={state.show_activity}
-            onChange={(v) => set("show_activity", v)}
-            title="Show activity"
-            description="Display what you're working on (project, chat...)."
-          />
+          <Section icon={<Wand2 className="h-4 w-4" />} title="Profile accent color">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-xs text-muted-foreground mr-1">Accent</span>
+              {ACCENTS.map((c) => {
+                const active = state.profile_accent?.toLowerCase() === c.toLowerCase();
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => set("profile_accent", c)}
+                    className={`h-7 w-7 rounded-full ring-offset-2 ring-offset-background transition ${
+                      active ? "ring-2 ring-foreground" : "hover:scale-110"
+                    }`}
+                    style={{ background: c }}
+                    title={c}
+                  />
+                );
+              })}
+              <input
+                type="text"
+                value={state.profile_accent}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^#[0-9a-fA-F]{0,6}$/.test(v)) set("profile_accent", v);
+                }}
+                onBlur={(e) => {
+                  if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) set("profile_accent", "#7c3cff");
+                }}
+                className="ml-1 w-24 rounded-lg border border-border bg-background px-2 py-1 text-xs"
+                placeholder="#7c3cff"
+              />
+            </div>
+          </Section>
+
+          <Section icon={<LayoutPanelTop className="h-4 w-4" />} title="Layout template">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {LAYOUTS.map((l) => {
+                const active = state.profile_layout === l.id;
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => set("profile_layout", l.id)}
+                    className={`rounded-lg border px-3 py-3 text-left transition ${
+                      active
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                        : "border-border/60 bg-background/40 hover:border-border"
+                    }`}
+                  >
+                    <div className="text-sm font-semibold">{l.label}</div>
+                    <div className="text-[10px] text-muted-foreground">{l.hint}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
         </div>
+      )}
 
-        <div className="mt-4">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Activity className="h-3.5 w-3.5" /> Status indicator
-          </label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {STATUSES.map((s) => {
-              const active = state.presence_status === s.id;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={!state.presence_enabled}
-                  onClick={() => set("presence_status", s.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${
-                    active
-                      ? "border-primary bg-primary/10"
-                      : "border-border/60 bg-background/40 hover:border-border"
-                  }`}
-                >
-                  <span className={`h-2.5 w-2.5 rounded-full ${s.color}`} />
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
+      {subTab === "cosmetics" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <Section icon={<ImagePlus className="h-4 w-4" />} title="Background theme">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-7">
+              {PROFILE_BACKGROUNDS.map((b) => {
+                const active = state.profile_background === b.id;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => set("profile_background", b.id)}
+                    className={`group relative h-16 overflow-hidden rounded-lg border transition ${
+                      active ? "border-primary ring-2 ring-primary/40" : "border-border/60 hover:border-border"
+                    }`}
+                    title={b.label}
+                  >
+                    <ProfileBackground id={b.id} />
+                    {b.id === "none" && (
+                      <div className="absolute inset-0 grid place-items-center text-[10px] text-muted-foreground">
+                        None
+                      </div>
+                    )}
+                    <span className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-center text-[10px] font-medium text-white">
+                      {b.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <CustomBackgroundUploader
+              userId={user?.id ?? null}
+              url={state.custom_background_url}
+              active={state.profile_background === "custom"}
+              onPick={() => {
+                if (state.custom_background_url) set("profile_background", "custom");
+              }}
+              onChange={(url) => {
+                setState((s) => ({
+                  ...s,
+                  custom_background_url: url,
+                  profile_background: url ? "custom" : s.profile_background === "custom" ? "none" : s.profile_background,
+                }));
+                refresh();
+              }}
+            />
+          </Section>
+
+          <Section icon={<Wand2 className="h-4 w-4" />} title="Animated banner effect">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {PROFILE_EFFECTS.map((e) => {
+                const active = state.profile_effect === e.id;
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => set("profile_effect", e.id)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                      active
+                        ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
+                        : "border-border/60 bg-background/40 text-muted-foreground hover:border-border hover:text-foreground"
+                    }`}
+                  >
+                    {e.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+
+          <Section icon={<CircleUserRound className="h-4 w-4" />} title="Avatar ring effect">
+            <div className="flex flex-wrap items-center gap-3">
+              {PFP_EFFECTS.map((e) => {
+                const active = state.pfp_effect === e.id;
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => set("pfp_effect", e.id)}
+                    className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 transition ${
+                      active
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                        : "border-border/60 bg-background/40 hover:border-border"
+                    }`}
+                    title={e.label}
+                  >
+                    <PfpRing effect={e.id} size={40}>
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-sm font-bold text-muted-foreground">{initial}</span>
+                      )}
+                    </PfpRing>
+                    <span className="text-[10px] text-muted-foreground">{e.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+
+          <Section icon={<Sparkles className="h-4 w-4" />} title="Avatar decoration">
+            <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+              Add premium animated overlays around your avatar. Animated and Pro items move on your public profile too.
+            </p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {PROFILE_DECORATIONS.map((d) => {
+                const active = state.profile_decoration === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => set("profile_decoration", d.id)}
+                    className={`relative flex flex-col items-center justify-end gap-1 rounded-xl border px-2 pb-2 pt-5 transition ${
+                      active
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                        : "border-border/60 bg-background/40 hover:border-border"
+                    }`}
+                    title={d.label}
+                  >
+                    {(d.premium || d.animated) && (
+                      <span className="absolute right-1.5 top-1.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary-glow">
+                        {d.animated ? "Anim" : "Pro"}
+                      </span>
+                    )}
+                    <div className="h-12 grid place-items-center">
+                      <AvatarDecoration id={d.id} size={36}>
+                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 grid place-items-center text-[10px] text-muted-foreground">
+                          {initial}
+                        </div>
+                      </AvatarDecoration>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">{d.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+
+          <Section icon={<Award className="h-4 w-4" />} title={`Display badges (${previewBadgeIds.length}/12)`}>
+            <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
+              Pick display badges for your profile. Special badges unlock from onboarding, generation activity, 3D models, Discord, invites, milestones, and account roles.
+            </p>
+            {earnedRoleBadgeIds.length > 0 && (
+              <div className="mb-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+                <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary-glow">
+                  Earned badges
+                </div>
+                <ProfileBadgeRow ids={earnedRoleBadgeIds} size={28} />
+              </div>
+            )}
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-9">
+              {PROFILE_BADGES.filter((b) => SELECTABLE_PROFILE_BADGE_IDS.includes(b.id)).map((b) => {
+                const active = state.profile_badges.includes(b.id);
+                const atLimit = !active && state.profile_badges.length >= selectableBadgeLimit;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    disabled={atLimit}
+                    onClick={() =>
+                      setState((s) => ({
+                        ...s,
+                        profile_badges: active
+                          ? s.profile_badges.filter((x) => x !== b.id)
+                          : [...s.profile_badges, b.id],
+                      }))
+                    }
+                    className={`group relative flex flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2 transition disabled:opacity-40 ${
+                      active
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                        : "border-border/60 bg-background/40 hover:border-border hover:bg-background/70"
+                    }`}
+                    title={`${b.label} — ${b.description}`}
+                  >
+                    <ProfileBadgeIcon id={b.id} size={30} />
+                    <span className="text-[10px] font-medium leading-tight text-center text-foreground/90 line-clamp-1 w-full px-0.5">
+                      {b.label}
+                    </span>
+                    {active && (
+                      <span className="absolute -top-1.5 -right-1.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
         </div>
-      </Section>
+      )}
+
+      {subTab === "privacy" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <Section icon={<Lock className="h-4 w-4" />} title="Privacy options">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ToggleRow
+                checked={state.private_profile}
+                onChange={(v) => set("private_profile", v)}
+                title="Private profile"
+                description="Only friends can see your full profile, achievements, and Roblox info."
+              />
+              <ToggleRow
+                checked={state.hide_email}
+                onChange={(v) => set("hide_email", v)}
+                title="Hide email"
+                description="Don't show your email address on your public profile."
+              />
+              <ToggleRow
+                checked={state.presence_enabled}
+                onChange={(v) => set("presence_enabled", v)}
+                title="Show online status"
+                description="Let others see when you're online or were last active."
+              />
+              <ToggleRow
+                checked={state.show_activity}
+                onChange={(v) => set("show_activity", v)}
+                title="Show activity"
+                description="Display what you're working on (project, chat...)."
+              />
+            </div>
+          </Section>
+
+          <Section icon={<Activity className="h-4 w-4" />} title="Online status indicator">
+            <div className="flex flex-wrap gap-2">
+              {STATUSES.map((s) => {
+                const active = state.presence_status === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={!state.presence_enabled}
+                    onClick={() => set("presence_status", s.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${
+                      active
+                        ? "border-primary bg-primary/10"
+                        : "border-border/60 bg-background/40 hover:border-border"
+                    }`}
+                  >
+                    <span className={`h-2.5 w-2.5 rounded-full ${s.color}`} />
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+        </div>
+      )}
     </section>
   );
 }
