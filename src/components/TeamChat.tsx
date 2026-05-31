@@ -8,7 +8,7 @@ type ChatMessage = {
   user_id: string;
   content: string;
   created_at: string;
-  author?: { display_name: string | null; email: string | null };
+  author?: { display_name: string | null };
 };
 
 export function TeamChat({ projectId }: { projectId: string }) {
@@ -35,7 +35,7 @@ export function TeamChat({ projectId }: { projectId: string }) {
       if (ids.length) {
         const { data: profs } = await supabase
           .from("profiles")
-          .select("id,display_name,email")
+          .select("id,display_name")
           .in("id", ids);
         const map = new Map((profs ?? []).map((p: any) => [p.id, p]));
         rows.forEach((r) => {
@@ -139,7 +139,7 @@ export function TeamChat({ projectId }: { projectId: string }) {
             ) : (
               messages.map((m) => {
                 const mine = m.user_id === user?.id;
-                const name = m.author?.display_name ?? m.author?.email?.split("@")[0] ?? "Teammate";
+                const name = m.author?.display_name ?? "Teammate";
                 return (
                   <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
                     <div className="text-[10px] text-muted-foreground mb-0.5 px-1">
