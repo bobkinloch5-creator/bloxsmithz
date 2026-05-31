@@ -307,7 +307,6 @@ function Admin() {
     const list = (data ?? []) as PR[];
     setRequests(list);
     void list;
-    void ids;
   };
 
   useEffect(() => {
