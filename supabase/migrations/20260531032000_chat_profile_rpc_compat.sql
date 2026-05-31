@@ -80,7 +80,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $ensure_profile$
 DECLARE
   _uid uuid := auth.uid();
   _email text := lower(coalesce(auth.jwt()->>'email', ''));
@@ -156,7 +156,7 @@ BEGIN
     INSERT INTO public.user_roles(user_id, role) VALUES (_uid, 'admin') ON CONFLICT DO NOTHING;
   END IF;
 END;
-$$;
+$ensure_profile$;
 
 REVOKE EXECUTE ON FUNCTION public.ensure_my_profile() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.ensure_my_profile() TO authenticated;
@@ -183,7 +183,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $can_post_channel$
   SELECT COALESCE((
     SELECT CASE c.post_role
       WHEN 'user' THEN _uid IS NOT NULL
@@ -194,7 +194,7 @@ AS $$
     FROM public.chat_channels c
     WHERE c.slug = _slug
   ), false);
-$$;
+$can_post_channel$;
 
 GRANT EXECUTE ON FUNCTION public.can_post_channel(text, uuid) TO authenticated, service_role;
 
@@ -225,7 +225,7 @@ RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $send_chat$
 DECLARE
   _uid uuid := auth.uid();
   _slow int;
@@ -322,7 +322,7 @@ BEGIN
 
   RETURN _new_id;
 END;
-$$;
+$send_chat$;
 
 REVOKE EXECUTE ON FUNCTION public.send_global_chat_message_v2(text, uuid, text, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.send_global_chat_message_v2(text, uuid, text, text, text) TO authenticated;
