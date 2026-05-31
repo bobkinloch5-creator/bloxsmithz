@@ -487,7 +487,9 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
       importTip:
         data.generationKind === "model"
           ? "Download the file, then in Roblox Studio open the 3D Importer (Avatar tab -> Import 3D) and select it. The mesh drops into your Workspace ready to position."
-          : "Download the Lua package or open the selected project in Studio with the BloxSmith plugin to insert this generated Roblox asset.",
+          : data.generationKind === "animation"
+            ? "Download the Lua ModuleScript, put it in ReplicatedStorage/GeneratedAnimations, recreate or publish the keyframes in Roblox Animation Editor, then paste the uploaded animation id into the included ControllerSnippet."
+            : "Download the Lua package or open the selected project in Studio with the BloxSmith plugin to insert this generated Roblox asset.",
       nextAvailable,
       generationKind: data.generationKind,
       studioScript,

@@ -42,6 +42,10 @@ type PR = {
   pack_id: string;
   credits: number;
   amount: number;
+  original_amount: number | null;
+  discounted_amount: number | null;
+  discount_code: string | null;
+  discount_percent: number | null;
   paypal_transaction_id: string;
   paypal_note: string | null;
   status: string;
@@ -50,7 +54,11 @@ type PR = {
 type Promo = {
   id: string;
   code: string;
+  promo_type: string;
   credits: number;
+  discount_percent: number | null;
+  minimum_amount: number;
+  applies_to: string;
   max_redemptions: number | null;
   redemption_count: number;
   expires_at: string | null;
@@ -97,7 +105,11 @@ function Admin() {
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [promos, setPromos] = useState<Promo[]>([]);
   const [newCode, setNewCode] = useState("");
+  const [newPromoType, setNewPromoType] = useState<"credits" | "purchase_discount">("credits");
   const [newCredits, setNewCredits] = useState(50);
+  const [newDiscountPercent, setNewDiscountPercent] = useState(20);
+  const [newMinimumAmount, setNewMinimumAmount] = useState(0);
+  const [newAppliesTo, setNewAppliesTo] = useState("all");
   const [newMax, setNewMax] = useState<string>("");
   const [newExpires, setNewExpires] = useState<string>("");
   const [promoSubs, setPromoSubs] = useState<PromoSub[]>([]);
@@ -295,7 +307,7 @@ function Admin() {
       .from("promo_codes")
       .select("*")
       .order("created_at", { ascending: false });
-    setPromos((data ?? []) as Promo[]);
+    setPromos((data ?? []) as unknown as Promo[]);
   };
 
   const loadRequests = async () => {
@@ -304,7 +316,7 @@ function Admin() {
       .select("*")
       .eq("status", "pending")
       .order("created_at", { ascending: false });
-    const list = (data ?? []) as PR[];
+    const list = (data ?? []) as unknown as PR[];
     setRequests(list);
     void list;
   };
@@ -334,25 +346,45 @@ function Admin() {
   const createPromo = async () => {
     const code = newCode.trim().toUpperCase();
     if (!code) return toast.error("Code required");
-    if (!Number.isFinite(newCredits) || newCredits <= 0) return toast.error("Credits must be > 0");
+    if (newPromoType === "credits" && (!Number.isFinite(newCredits) || newCredits <= 0)) {
+      return toast.error("Credits must be > 0");
+    }
+    if (
+      newPromoType === "purchase_discount" &&
+      (!Number.isFinite(newDiscountPercent) || newDiscountPercent <= 0 || newDiscountPercent > 95)
+    ) {
+      return toast.error("Discount must be between 1% and 95%.");
+    }
     const payload: {
       code: string;
+      promo_type: "credits" | "purchase_discount";
       credits: number;
+      discount_percent: number | null;
+      minimum_amount: number;
+      applies_to: string;
       max_redemptions: number | null;
       expires_at: string | null;
       created_by: string | undefined;
     } = {
       code,
-      credits: newCredits,
+      promo_type: newPromoType,
+      credits: newPromoType === "credits" ? newCredits : 1,
+      discount_percent: newPromoType === "purchase_discount" ? newDiscountPercent : null,
+      minimum_amount: Math.max(0, Number(newMinimumAmount) || 0),
+      applies_to: newAppliesTo.trim() || "all",
       max_redemptions: newMax ? parseInt(newMax, 10) : null,
       expires_at: newExpires ? new Date(newExpires).toISOString() : null,
       created_by: user?.id,
     };
-    const { error } = await supabase.from("promo_codes").insert(payload);
+    const { error } = await (supabase as any).from("promo_codes").insert(payload);
     if (error) return toast.error(error.message);
     toast.success(`Promo ${code} created`);
     setNewCode("");
+    setNewPromoType("credits");
     setNewCredits(50);
+    setNewDiscountPercent(20);
+    setNewMinimumAmount(0);
+    setNewAppliesTo("all");
     setNewMax("");
     setNewExpires("");
     loadPromos();
@@ -498,6 +530,15 @@ function Admin() {
                         <span className="font-semibold">${r.amount}</span> for{" "}
                         <span className="font-semibold">{r.credits} credits</span>
                       </div>
+                      {r.discount_code && (
+                        <div className="text-xs text-emerald-300">
+                          Discount {r.discount_code} ({r.discount_percent}%):{" "}
+                          <span className="line-through text-muted-foreground">
+                            ${Number(r.original_amount ?? r.amount).toFixed(2)}
+                          </span>{" "}
+                          {"->"} ${Number(r.discounted_amount ?? r.amount).toFixed(2)}
+                        </div>
+                      )}
                       <div>
                         <span className="text-muted-foreground">PayPal Tx:</span>{" "}
                         <code className="bg-surface-elevated px-1 rounded">
@@ -836,21 +877,72 @@ function Admin() {
 
         {isOwner && (
           <section className="glass rounded-2xl p-6">
-            <h2 className="font-semibold mb-3">Promo codes</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-4">
+            <div className="mb-3">
+              <h2 className="font-semibold">Promo and discount codes</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Credit promos grant free credits. Purchase discounts reduce PayPal checkout totals
+                for limited-time credit sales.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-2 mb-4 sm:grid-cols-6">
               <input
                 value={newCode}
                 onChange={(e) => setNewCode(e.target.value)}
                 placeholder="CODE"
                 className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm uppercase"
               />
-              <input
-                type="number"
-                value={newCredits}
-                onChange={(e) => setNewCredits(parseInt(e.target.value || "0", 10))}
-                placeholder="Credits"
+              <select
+                value={newPromoType}
+                onChange={(e) => setNewPromoType(e.target.value as "credits" | "purchase_discount")}
                 className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
-              />
+              >
+                <option value="credits">Free credits</option>
+                <option value="purchase_discount">Purchase discount</option>
+              </select>
+              {newPromoType === "credits" ? (
+                <input
+                  type="number"
+                  value={newCredits}
+                  onChange={(e) => setNewCredits(parseInt(e.target.value || "0", 10))}
+                  placeholder="Credits"
+                  className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
+                />
+              ) : (
+                <input
+                  type="number"
+                  min={1}
+                  max={95}
+                  value={newDiscountPercent}
+                  onChange={(e) => setNewDiscountPercent(parseInt(e.target.value || "0", 10))}
+                  placeholder="Discount %"
+                  className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
+                />
+              )}
+              {newPromoType === "purchase_discount" && (
+                <>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={newMinimumAmount}
+                    onChange={(e) => setNewMinimumAmount(Number(e.target.value || "0"))}
+                    placeholder="Min $"
+                    className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
+                  />
+                  <select
+                    value={newAppliesTo}
+                    onChange={(e) => setNewAppliesTo(e.target.value)}
+                    className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
+                  >
+                    <option value="all">All packs</option>
+                    <option value="starter">Starter only</option>
+                    <option value="builder">Builder only</option>
+                    <option value="pro">Pro only</option>
+                    <option value="studio">Studio only</option>
+                    <option value="custom">Custom checkout</option>
+                  </select>
+                </>
+              )}
               <input
                 type="number"
                 value={newMax}
@@ -879,7 +971,8 @@ function Admin() {
                   <thead className="text-left text-xs uppercase text-muted-foreground">
                     <tr>
                       <th className="py-2">Code</th>
-                      <th>Credits</th>
+                      <th>Type</th>
+                      <th>Value</th>
                       <th>Uses</th>
                       <th>Expires</th>
                       <th>Status</th>
@@ -890,7 +983,17 @@ function Admin() {
                     {promos.map((p) => (
                       <tr key={p.id} className="border-t border-border">
                         <td className="py-2 font-mono">{p.code}</td>
-                        <td>{p.credits}</td>
+                        <td className="capitalize">
+                          {p.promo_type === "purchase_discount" ? "discount" : "credits"}
+                        </td>
+                        <td>
+                          {p.promo_type === "purchase_discount"
+                            ? `${p.discount_percent ?? 0}% off${p.minimum_amount ? `, min $${Number(p.minimum_amount).toFixed(2)}` : ""}`
+                            : `${p.credits} credits`}
+                          {p.promo_type === "purchase_discount" && p.applies_to !== "all" && (
+                            <div className="text-[10px] text-muted-foreground">Applies: {p.applies_to}</div>
+                          )}
+                        </td>
                         <td>
                           {p.redemption_count}
                           {p.max_redemptions ? ` / ${p.max_redemptions}` : ""}

@@ -20,12 +20,26 @@ export const CUSTOM_RATE = 0.05; // $0.05 per credit
 const MIN_CREDITS = 50;
 const MAX_CREDITS = 20000;
 
+type DiscountPreview = {
+  valid: boolean;
+  code?: string;
+  reason?: string;
+  discountPercent?: number;
+  discountAmount?: number;
+  originalAmount?: number;
+  finalAmount?: number;
+  remainingUses?: number | null;
+};
+
 function CustomCheckout() {
   const { user, loading } = useAuth();
   const nav = useNavigate();
   const [credits, setCredits] = useState<number>(200);
   const [txId, setTxId] = useState("");
   const [note, setNote] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [discount, setDiscount] = useState<DiscountPreview | null>(null);
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -35,7 +49,38 @@ function CustomCheckout() {
 
   const safeCredits = Math.max(MIN_CREDITS, Math.min(MAX_CREDITS, Math.floor(credits || 0)));
   const price = useMemo(() => Math.round(safeCredits * CUSTOM_RATE * 100) / 100, [safeCredits]);
-  const paypalUrl = `https://www.paypal.com/paypalme/${PAYPAL_HANDLE}/${price}USD`;
+  const finalPrice = discount?.valid ? Number(discount.finalAmount ?? price) : price;
+  const paypalUrl = `https://www.paypal.com/paypalme/${PAYPAL_HANDLE}/${finalPrice.toFixed(2)}USD`;
+
+  useEffect(() => {
+    setDiscount(null);
+  }, [safeCredits]);
+
+  const applyDiscount = async () => {
+    const code = discountCode.trim();
+    if (!code) return toast.error("Enter a discount code first.");
+    setCheckingDiscount(true);
+    const { data, error } = await (supabase as any).rpc("validate_purchase_discount", {
+      _code: code,
+      _amount: price,
+      _pack_id: `custom_${safeCredits}`,
+    });
+    setCheckingDiscount(false);
+    if (error) {
+      setDiscount(null);
+      toast.error(error.message);
+      return;
+    }
+    const preview = data as DiscountPreview;
+    if (!preview?.valid) {
+      setDiscount(null);
+      toast.error(discountMessage(preview?.reason));
+      return;
+    }
+    setDiscount(preview);
+    setDiscountCode(preview.code ?? code.toUpperCase());
+    toast.success(`${preview.discountPercent}% discount applied.`);
+  };
 
   const submit = async () => {
     if (!user) return;
@@ -50,12 +95,19 @@ function CustomCheckout() {
       _amount: price,
       _paypal_transaction_id: txId.trim(),
       _paypal_note: note.trim() || null,
+      _discount_code: discount?.valid ? discount.code ?? discountCode.trim() : null,
     });
     setSubmitting(false);
     if (error) {
       const messages: Record<string, string> = {
         transaction_id_already_submitted: "That PayPal transaction ID has already been submitted.",
         invalid_transaction_id: "Enter the PayPal transaction ID from your receipt.",
+        discount_code_not_found: "That discount code was not found.",
+        discount_code_disabled: "That discount code is disabled.",
+        discount_code_expired: "That discount code expired.",
+        discount_code_used_up: "That discount code has no uses left.",
+        discount_not_for_pack: "That discount code is not for custom checkout.",
+        discount_minimum_not_met: "That discount code needs a higher purchase amount.",
       };
       toast.error(messages[error.message] ?? error.message);
       return;
@@ -111,15 +163,47 @@ function CustomCheckout() {
             </div>
             <div className="text-right">
               <div className="text-xs text-muted-foreground">You pay</div>
-              <div className="text-2xl font-bold text-primary">${price.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-primary">${finalPrice.toFixed(2)}</div>
+              {discount?.valid && (
+                <div className="text-xs text-emerald-300 line-through">${price.toFixed(2)}</div>
+              )}
             </div>
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-6 space-y-3">
+          <h2 className="font-semibold">Limited-time discount code</h2>
+          {discount?.valid && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+              Code {discount.code}: -${Number(discount.discountAmount ?? 0).toFixed(2)} (
+              {discount.discountPercent}% off).
+            </div>
+          )}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={discountCode}
+              onChange={(e) => {
+                setDiscountCode(e.target.value.toUpperCase());
+                setDiscount(null);
+              }}
+              placeholder="ENTER CODE"
+              className="min-w-0 flex-1 rounded-lg bg-surface-elevated border border-border px-3 py-2 text-sm uppercase"
+            />
+            <button
+              type="button"
+              onClick={applyDiscount}
+              disabled={checkingDiscount || !discountCode.trim()}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              {checkingDiscount ? "Checking..." : "Apply"}
+            </button>
           </div>
         </div>
 
         <div className="glass rounded-2xl p-6 space-y-4">
           <h2 className="font-semibold">Step 1 — Send payment</h2>
           <p className="text-sm text-muted-foreground">
-            Pay <span className="font-semibold text-foreground">${price.toFixed(2)} USD</span> via
+            Pay <span className="font-semibold text-foreground">${finalPrice.toFixed(2)} USD</span> via
             PayPal. The link below pre-fills the amount.
           </p>
           <a
@@ -128,7 +212,7 @@ function CustomCheckout() {
             rel="noreferrer"
             className="block w-full text-center rounded-xl bg-[#ffc439] text-black font-semibold py-3 hover:opacity-90"
           >
-            Pay ${price.toFixed(2)} on paypal.me/{PAYPAL_HANDLE}
+            Pay ${finalPrice.toFixed(2)} on paypal.me/{PAYPAL_HANDLE}
           </a>
           <p className="text-xs text-muted-foreground">
             In the PayPal note, include:{" "}
@@ -195,4 +279,18 @@ function CustomCheckout() {
       <Footer />
     </div>
   );
+}
+
+function discountMessage(reason?: string) {
+  const messages: Record<string, string> = {
+    empty_code: "Enter a discount code first.",
+    code_not_found: "That discount code was not found.",
+    code_disabled: "That discount code is disabled.",
+    code_expired: "That discount code expired.",
+    code_used_up: "That discount code has no uses left.",
+    minimum_not_met: "That discount code needs a higher purchase amount.",
+    not_for_this_pack: "That discount code is not for custom checkout.",
+    not_a_discount: "That code is not a purchase discount.",
+  };
+  return messages[reason ?? ""] ?? "That discount code could not be applied.";
 }

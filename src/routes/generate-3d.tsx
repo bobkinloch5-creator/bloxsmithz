@@ -71,6 +71,32 @@ const animationPrompts = [
   "A victory dance with two arm pumps and a playful spin",
 ];
 
+const modelTypeImages: Record<string, string> = {
+  pet: "/template-previews/pet-real.webp",
+  character: "/template-previews/roleplay-real.webp",
+  weapon: "/template-previews/fighting-real.webp",
+  prop: "/template-previews/simulator-real.webp",
+  building: "/template-previews/tycoon-real.webp",
+  vehicle: "/template-previews/racing-real.webp",
+  "simulator item": "/template-previews/simulator-real.webp",
+  "map piece": "/template-previews/obby-real.webp",
+  accessory: "/template-previews/roleplay-real.webp",
+  tool: "/template-previews/mining-real.webp",
+};
+
+const themeImages: Record<string, string> = {
+  neon: "/og-bloxsmith.jpg",
+  fantasy: "/template-previews/roleplay-real.webp",
+  "sci-fi": "/template-previews/simulator-real.webp",
+  city: "/template-previews/tycoon-real.webp",
+  horror: "/template-previews/horror-real.webp",
+  cute: "/template-previews/pet-real.webp",
+  medieval: "/template-previews/roleplay-real.webp",
+  pirate: "/template-previews/racing-real.webp",
+  space: "/template-previews/tower-defense-real.webp",
+  premium: "/template-previews/fighting-real.webp",
+};
+
 const copy = {
   model: {
     title: "3D Model",
@@ -167,38 +193,160 @@ function AnimationPreview({
   looped: boolean;
   duration: number;
 }) {
+  const motionClass = `preview-motion-${animationTypes.includes(type) ? type : "idle"}`;
+  const speed = Math.max(0.7, Math.min(4, duration || 2));
+  const power = Math.max(0.25, Math.min(1.25, intensity / 80));
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(20,241,149,0.18),transparent_32%),linear-gradient(180deg,#071017,#05070a)]">
-      <div className="absolute inset-x-10 bottom-16 h-px bg-primary/30" />
-      <div className="absolute left-1/2 top-1/2 h-28 w-20 -translate-x-1/2 -translate-y-1/2">
-        <div
-          className="absolute left-1/2 top-0 h-10 w-10 -translate-x-1/2 rounded-full border border-primary/45 bg-primary/15 shadow-[0_0_28px_rgba(20,241,149,0.25)]"
-          style={{ animation: `bloxHead ${Math.max(0.8, duration)}s ease-in-out infinite` }}
-        />
-        <div
-          className="absolute left-1/2 top-10 h-16 w-8 -translate-x-1/2 rounded-full border border-cyan-300/30 bg-cyan-300/15"
-          style={{ animation: `bloxBody ${Math.max(0.8, duration)}s ease-in-out infinite` }}
-        />
-        <div
-          className="absolute left-3 top-12 h-14 w-3 origin-top rounded-full bg-primary/70"
-          style={{ animation: `bloxArmLeft ${Math.max(0.8, duration)}s ease-in-out infinite` }}
-        />
-        <div
-          className="absolute right-3 top-12 h-14 w-3 origin-top rounded-full bg-sky-300/80"
-          style={{ animation: `bloxArmRight ${Math.max(0.8, duration)}s ease-in-out infinite` }}
-        />
+    <div
+      className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(20,241,149,0.2),transparent_34%),linear-gradient(180deg,#071017,#05070a)]"
+      style={{ ["--preview-speed" as string]: `${speed}s`, ["--preview-power" as string]: String(power) }}
+    >
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(20,241,149,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(20,241,149,0.08)_1px,transparent_1px)] bg-[length:34px_34px]" />
+      <div className="absolute inset-x-8 bottom-14 h-12 rounded-[50%] bg-primary/10 blur-xl" />
+      <div className={`roblox-preview-rig ${motionClass} ${looped ? "is-looped" : "is-once"}`} aria-hidden="true">
+        <div className="rig-shadow" />
+        <div className="rig-part rig-head">
+          <span className="rig-eye rig-eye-left" />
+          <span className="rig-eye rig-eye-right" />
+          <span className="rig-smile" />
+        </div>
+        <div className="rig-part rig-torso" />
+        <div className="rig-part rig-arm rig-arm-left" />
+        <div className="rig-part rig-arm rig-arm-right" />
+        <div className="rig-part rig-leg rig-leg-left" />
+        <div className="rig-part rig-leg rig-leg-right" />
       </div>
       <div className="absolute bottom-5 left-5 right-5 rounded-xl border border-border/70 bg-background/70 p-3 backdrop-blur">
         <div className="flex items-center justify-between gap-3 text-xs">
-          <span className="font-semibold capitalize">{type} / {style}</span>
+          <span className="font-semibold capitalize">Roblox demo rig: {type} / {style}</span>
           <span className="text-muted-foreground">{looped ? "Looped" : "One-shot"} / {intensity}%</span>
         </div>
       </div>
       <style>{`
-        @keyframes bloxHead { 0%,100%{ transform:translate(-50%,0) rotate(-3deg) } 50%{ transform:translate(-50%,-8px) rotate(5deg) } }
-        @keyframes bloxBody { 0%,100%{ transform:translate(-50%,0) scaleY(1) } 50%{ transform:translate(-50%,6px) scaleY(.94) } }
-        @keyframes bloxArmLeft { 0%,100%{ transform:rotate(-${12 + intensity * 0.18}deg) } 50%{ transform:rotate(${18 + intensity * 0.22}deg) } }
-        @keyframes bloxArmRight { 0%,100%{ transform:rotate(${14 + intensity * 0.18}deg) } 50%{ transform:rotate(-${22 + intensity * 0.22}deg) } }
+        .roblox-preview-rig {
+          position: absolute;
+          left: 50%;
+          top: 46%;
+          width: 118px;
+          height: 188px;
+          transform: translate(-50%, -50%);
+          transform-origin: 50% 80%;
+          animation: rigRoot var(--preview-speed) ease-in-out infinite;
+        }
+        .roblox-preview-rig.is-once {
+          animation-iteration-count: 1;
+        }
+        .rig-part {
+          position: absolute;
+          border: 2px solid rgba(255,255,255,.22);
+          background: linear-gradient(145deg, #2dd4bf, #14f195 46%, #0f766e);
+          box-shadow: inset -10px -12px 18px rgba(0,0,0,.24), 0 16px 40px rgba(20,241,149,.18);
+        }
+        .rig-head {
+          left: 36px;
+          top: 0;
+          width: 46px;
+          height: 46px;
+          border-radius: 8px;
+          background: linear-gradient(145deg, #f8d47b, #e8a74c);
+          animation: rigHead var(--preview-speed) ease-in-out infinite;
+        }
+        .rig-eye {
+          position: absolute;
+          top: 17px;
+          width: 5px;
+          height: 5px;
+          border-radius: 99px;
+          background: #111827;
+        }
+        .rig-eye-left { left: 14px; }
+        .rig-eye-right { right: 14px; }
+        .rig-smile {
+          position: absolute;
+          left: 16px;
+          top: 28px;
+          width: 14px;
+          height: 6px;
+          border-bottom: 2px solid #111827;
+          border-radius: 0 0 999px 999px;
+        }
+        .rig-torso {
+          left: 33px;
+          top: 52px;
+          width: 52px;
+          height: 68px;
+          border-radius: 7px;
+          background: linear-gradient(145deg, #1d4ed8, #2563eb 44%, #0f172a);
+          animation: rigTorso var(--preview-speed) ease-in-out infinite;
+        }
+        .rig-arm {
+          top: 56px;
+          width: 24px;
+          height: 68px;
+          border-radius: 7px;
+          transform-origin: 50% 10%;
+          animation: rigArm var(--preview-speed) ease-in-out infinite;
+        }
+        .rig-arm-left { left: 5px; }
+        .rig-arm-right { right: 5px; animation-name: rigArmOpposite; }
+        .rig-leg {
+          top: 126px;
+          width: 27px;
+          height: 58px;
+          border-radius: 7px;
+          background: linear-gradient(145deg, #1e293b, #334155);
+          transform-origin: 50% 0;
+          animation: rigLeg var(--preview-speed) ease-in-out infinite;
+        }
+        .rig-leg-left { left: 31px; }
+        .rig-leg-right { right: 31px; animation-name: rigLegOpposite; }
+        .rig-shadow {
+          position: absolute;
+          left: 16px;
+          right: 16px;
+          bottom: -12px;
+          height: 18px;
+          border-radius: 999px;
+          background: rgba(0,0,0,.38);
+          filter: blur(4px);
+          animation: rigShadow var(--preview-speed) ease-in-out infinite;
+        }
+        .preview-motion-walk .rig-arm-left, .preview-motion-run .rig-arm-left { animation-name: rigWalkArm; }
+        .preview-motion-walk .rig-arm-right, .preview-motion-run .rig-arm-right { animation-name: rigWalkArmOpposite; }
+        .preview-motion-walk .rig-leg-left, .preview-motion-run .rig-leg-left { animation-name: rigWalkLeg; }
+        .preview-motion-walk .rig-leg-right, .preview-motion-run .rig-leg-right { animation-name: rigWalkLegOpposite; }
+        .preview-motion-run { animation-name: rigRunRoot; }
+        .preview-motion-attack .rig-arm-right { animation-name: rigAttackArm; }
+        .preview-motion-attack .rig-torso { animation-name: rigAttackTorso; }
+        .preview-motion-dance .rig-arm-left { animation-name: rigDanceArmLeft; }
+        .preview-motion-dance .rig-arm-right { animation-name: rigDanceArmRight; }
+        .preview-motion-emote .rig-arm-left, .preview-motion-emote .rig-arm-right { animation-name: rigEmoteArm; }
+        .preview-motion-jump { animation-name: rigJumpRoot; }
+        .preview-motion-pet { transform: translate(-50%, -45%) scale(.78); animation-name: rigPetBounce; }
+        .preview-motion-tool .rig-arm-right { animation-name: rigToolArm; }
+        .preview-motion-npc .rig-head { animation-name: rigNpcHead; }
+        @keyframes rigRoot { 0%,100%{ transform:translate(-50%,-50%) rotate(calc(-2deg * var(--preview-power))) } 50%{ transform:translate(-50%,calc(-50% - 8px * var(--preview-power))) rotate(calc(3deg * var(--preview-power))) } }
+        @keyframes rigRunRoot { 0%,100%{ transform:translate(-54%,-50%) rotate(calc(-5deg * var(--preview-power))) } 50%{ transform:translate(-46%,calc(-50% - 12px * var(--preview-power))) rotate(calc(5deg * var(--preview-power))) } }
+        @keyframes rigJumpRoot { 0%,100%{ transform:translate(-50%,-42%) scaleY(.96) } 45%{ transform:translate(-50%,calc(-64% - 18px * var(--preview-power))) scaleY(1.03) } }
+        @keyframes rigPetBounce { 0%,100%{ transform:translate(-50%,-44%) scale(.78) } 50%{ transform:translate(-50%,calc(-51% - 10px * var(--preview-power))) scale(.82) } }
+        @keyframes rigHead { 0%,100%{ transform:rotate(calc(-4deg * var(--preview-power))) } 50%{ transform:rotate(calc(5deg * var(--preview-power))) } }
+        @keyframes rigTorso { 0%,100%{ transform:rotate(0) } 50%{ transform:rotate(calc(3deg * var(--preview-power))) } }
+        @keyframes rigArm { 0%,100%{ transform:rotate(calc(-15deg * var(--preview-power))) } 50%{ transform:rotate(calc(24deg * var(--preview-power))) } }
+        @keyframes rigArmOpposite { 0%,100%{ transform:rotate(calc(17deg * var(--preview-power))) } 50%{ transform:rotate(calc(-25deg * var(--preview-power))) } }
+        @keyframes rigLeg { 0%,100%{ transform:rotate(calc(7deg * var(--preview-power))) } 50%{ transform:rotate(calc(-8deg * var(--preview-power))) } }
+        @keyframes rigLegOpposite { 0%,100%{ transform:rotate(calc(-7deg * var(--preview-power))) } 50%{ transform:rotate(calc(8deg * var(--preview-power))) } }
+        @keyframes rigWalkArm { 0%,100%{ transform:rotate(calc(28deg * var(--preview-power))) } 50%{ transform:rotate(calc(-28deg * var(--preview-power))) } }
+        @keyframes rigWalkArmOpposite { 0%,100%{ transform:rotate(calc(-28deg * var(--preview-power))) } 50%{ transform:rotate(calc(28deg * var(--preview-power))) } }
+        @keyframes rigWalkLeg { 0%,100%{ transform:rotate(calc(-16deg * var(--preview-power))) } 50%{ transform:rotate(calc(18deg * var(--preview-power))) } }
+        @keyframes rigWalkLegOpposite { 0%,100%{ transform:rotate(calc(18deg * var(--preview-power))) } 50%{ transform:rotate(calc(-16deg * var(--preview-power))) } }
+        @keyframes rigAttackArm { 0%,100%{ transform:rotate(-18deg) translateY(0) } 35%{ transform:rotate(-92deg) translateY(-8px) } 55%{ transform:rotate(72deg) translateY(6px) } }
+        @keyframes rigAttackTorso { 0%,100%{ transform:rotate(0) } 45%{ transform:rotate(calc(-11deg * var(--preview-power))) } }
+        @keyframes rigDanceArmLeft { 0%,100%{ transform:rotate(-80deg) } 50%{ transform:rotate(24deg) } }
+        @keyframes rigDanceArmRight { 0%,100%{ transform:rotate(80deg) } 50%{ transform:rotate(-24deg) } }
+        @keyframes rigEmoteArm { 0%,100%{ transform:rotate(-8deg) } 50%{ transform:rotate(-110deg) } }
+        @keyframes rigToolArm { 0%,100%{ transform:rotate(18deg) } 45%{ transform:rotate(-62deg) translateY(-6px) } }
+        @keyframes rigNpcHead { 0%,100%{ transform:rotate(-8deg) } 50%{ transform:rotate(8deg) } }
+        @keyframes rigShadow { 0%,100%{ transform:scaleX(.9); opacity:.55 } 50%{ transform:scaleX(1.18); opacity:.32 } }
       `}</style>
     </div>
   );
@@ -634,7 +782,7 @@ function Generate3DPage() {
 
               {kind === "model" && (
                 <>
-                  <Group label="Model type"><Chips value={modelType} set={setModelType} items={modelTypes} /></Group>
+                  <Group label="Model type"><VisualChips value={modelType} set={setModelType} items={modelTypes} images={modelTypeImages} /></Group>
                   <Group label="Roblox style"><Chips value={robloxStyle} set={setRobloxStyle} items={styles} /></Group>
                 </>
               )}
@@ -674,7 +822,7 @@ function Generate3DPage() {
                 </>
               )}
 
-              <Group label="Theme"><Chips value={theme} set={setTheme} items={themes} /></Group>
+              <Group label="Theme"><VisualChips value={theme} set={setTheme} items={themes} images={themeImages} compact /></Group>
               <Group label="Material"><Chips value={material} set={setMaterial} items={materials} /></Group>
               <div className="grid grid-cols-2 gap-2">
                 <ColorInput label="Primary color" value={primaryColor} onChange={setPrimaryColor} />
@@ -723,7 +871,9 @@ function Generate3DPage() {
 
               <div className="flex gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                Safety checks run before paid generation. Credits are charged only after a file is created.
+                {kind === "animation"
+                  ? "Animation generation downloads a Roblox Lua ModuleScript with keyframes and a controller snippet after the file is created."
+                  : "Safety checks run before paid generation. Credits are charged only after a file is created."}
               </div>
             </div>
 
@@ -940,6 +1090,51 @@ function Chips({ value, set, items }: { value: string; set: (v: any) => void; it
           }`}
         >
           {item}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function VisualChips({
+  value,
+  set,
+  items,
+  images,
+  compact = false,
+}: {
+  value: string;
+  set: (v: string) => void;
+  items: string[];
+  images: Record<string, string>;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`grid gap-2 ${compact ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"}`}>
+      {items.map((item) => (
+        <button
+          key={item}
+          type="button"
+          onClick={() => set(item)}
+          aria-pressed={value === item}
+          className={`group overflow-hidden rounded-xl border text-left transition ${
+            value === item
+              ? "border-primary/70 bg-primary/15 shadow-[0_0_0_1px_rgba(20,241,149,0.25)]"
+              : "border-border bg-background/40 hover:border-primary/45"
+          }`}
+        >
+          <div className={`${compact ? "h-14" : "h-20"} relative overflow-hidden`}>
+            <img
+              src={images[item] ?? "/og-bloxsmith.jpg"}
+              alt={`${item} Roblox preview`}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+            <span className="absolute bottom-2 left-2 right-2 truncate text-xs font-bold capitalize text-white drop-shadow">
+              {item}
+            </span>
+          </div>
         </button>
       ))}
     </div>

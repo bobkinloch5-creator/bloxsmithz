@@ -46,6 +46,39 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.8.6",
+    date: "May 31, 2026",
+    title: "Roblox Animation Previews & Discount Codes",
+    description:
+      "The 3D studio now uses real visual choices and a Roblox-style animation preview, and checkout supports owner-created limited-time discount codes.",
+    updates: [
+      {
+        category: "3D",
+        tagColor: tagStyles.tools,
+        icon: Box,
+        title: "Real Visual Generator Choices",
+        detail:
+          "Model type and theme controls now show real Roblox-style preview images instead of text-only pills, making the generator easier to scan.",
+      },
+      {
+        category: "Animation",
+        tagColor: tagStyles.ui,
+        icon: Play,
+        title: "Roblox Demo Rig Preview",
+        detail:
+          "Animation mode now previews every animation type on a blocky Roblox-style demo character with live loop, speed, and intensity changes.",
+      },
+      {
+        category: "Payments",
+        tagColor: tagStyles.backend,
+        icon: CreditCard,
+        title: "Purchase Discount Codes",
+        detail:
+          "Owners can create limited-use, expiring checkout discount codes from the admin panel, and buyers can apply them on credit pack or custom checkout pages.",
+      },
+    ],
+  },
+  {
     version: "v3.8.5",
     date: "May 31, 2026",
     title: "3D Studio Animation Creator",
