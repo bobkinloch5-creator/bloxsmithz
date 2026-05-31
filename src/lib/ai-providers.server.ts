@@ -12,6 +12,7 @@ import {
 import {
   SITE_PROVIDER_DEFAULT_MODEL,
   SITE_PROVIDER_MODELS,
+  getModelToolCapabilities,
   resolveCometModel,
   resolveNeokensModel,
 } from "./ai-models";
@@ -171,6 +172,7 @@ export function getModelProfile(
   const isGemini = provider === "google" || id.includes("gemini");
   const isOpenAI = provider === "openai" || id.includes("gpt-");
   const isClaude = provider === "anthropic" || id.includes("claude");
+  const toolCaps = getModelToolCapabilities(modelName);
 
   const inputTokenBudget = isHuge ? 100_000 : isSmall ? 12_000 : 32_000;
   const maxOutputTokens = opts.thinking
@@ -207,7 +209,10 @@ export function getModelProfile(
     // "empty bubble" bug). Give non-tiny models enough headroom to research AND
     // finalize. The generateTextWithToolFallback finalize step is the backstop.
     stopSteps: opts.thinking ? 12 : opts.heavyBuild ? 10 : isSmall ? 4 : 8,
-    supportsTools: !opts.retry && !(provider === "groq" && id.includes("gemma")),
+    supportsTools:
+      !opts.retry &&
+      !(provider === "groq" && id.includes("gemma")) &&
+      (provider !== "comet" || toolCaps.tools),
     supportsVision:
       isGemini ||
       isClaude ||

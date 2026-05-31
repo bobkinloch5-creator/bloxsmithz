@@ -9,6 +9,7 @@ import {
   SITE_PROVIDER_LABELS,
   SITE_PROVIDER_MODELS,
   getModelCreditMultiplier,
+  getModelToolCapabilities,
   type SiteProviderId,
 } from "@/lib/ai-models";
 
@@ -74,6 +75,7 @@ export function ModelPicker({
   const shortModel = currentModel.length > 22 ? currentModel.slice(0, 22) + "…" : currentModel;
 
   const currentMult = getModelCreditMultiplier(currentModel);
+  const currentCaps = getModelToolCapabilities(currentModel);
   const currentStatusLabel = currentHealth?.label ?? "Available";
 
   return (
@@ -92,6 +94,11 @@ export function ModelPicker({
         <span className="text-muted-foreground">
           {SITE_PROVIDER_LABELS[currentProvider]} · {shortModel}
         </span>
+        {currentCaps.webSearch && (
+          <span className="rounded-full bg-sky-500/15 px-1.5 py-px text-[9px] font-semibold text-sky-500 dark:text-sky-300">
+            Web
+          </span>
+        )}
         {currentHealth?.disabled && (
           <span className="rounded-full bg-destructive/15 px-1.5 py-px text-[9px] font-semibold text-destructive">
             Down
@@ -125,6 +132,7 @@ export function ModelPicker({
                 const active = p === currentProvider && m === currentModel;
                 const desc = SITE_MODEL_DESCRIPTIONS[m];
                 const mult = getModelCreditMultiplier(m);
+                const caps = getModelToolCapabilities(m);
                 const modelHealth = getHealth(p, m);
                 const disabled = saving || Boolean(modelHealth?.disabled);
                 const tone =
@@ -178,6 +186,21 @@ export function ModelPicker({
                         >
                           {modelHealth?.disabled ? modelHealth.label : "Online"}
                         </span>
+                        {caps.webSearch ? (
+                          <span
+                            className="rounded-full bg-sky-500/15 px-1.5 py-px text-[9px] font-semibold text-sky-500 dark:text-sky-300"
+                            title="This model is intended for web_search, fetch_url, Roblox docs, and other tool calls."
+                          >
+                            Web/tools
+                          </span>
+                        ) : caps.tools ? (
+                          <span
+                            className="rounded-full bg-cyan-500/15 px-1.5 py-px text-[9px] font-semibold text-cyan-500 dark:text-cyan-300"
+                            title="This model can use basic BloxSmith tools, but is not the first pick for web search."
+                          >
+                            Tools
+                          </span>
+                        ) : null}
                         <span
                           className={`rounded-full px-1.5 py-px text-[9px] font-semibold ${tone}`}
                           title={`Uses ${mult}× the base credit cost for each generation with this model`}
@@ -206,6 +229,10 @@ export function ModelPicker({
             <div>Credits per generation = base cost × the model's multiplier.</div>
             <div className="text-muted-foreground/70">
               Green means available. Red means temporarily down and cannot be selected.
+            </div>
+            <div className="text-muted-foreground/70">
+              Web/tools models can call web_search, fetch_url, Roblox docs, and toolbox tools when
+              the prompt needs current facts.
             </div>
             <div className="text-muted-foreground/70">
               Base: chat 1 · plan 1 · fix 2 · build 3 · autopilot 10. Owners pay 0.

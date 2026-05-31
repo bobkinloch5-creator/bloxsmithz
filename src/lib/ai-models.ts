@@ -52,21 +52,21 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
   "gpt-5.4-nano":
     "Cheapest BloxSmith AI model for quick chat, tiny Roblox edits, short bug fixes, prompt cleanup, and simple UI copy. Best when users need fast help without burning many credits.",
   "deepseek-v4-flash":
-    "Budget coding workhorse for Roblox/Luau. Strong for RemoteEvents, leaderstats, shops, tycoon loops, compact ModuleScripts, and fixing common Studio errors.",
+    "Budget coding workhorse for Roblox/Luau with web/tools enabled. Strong for RemoteEvents, leaderstats, shops, tycoon loops, compact ModuleScripts, and checking current Roblox docs.",
   "minimax-m2.7":
     "Cheap long-context builder for bigger Roblox prompts. Good for reading more project context, planning several scripts at once, and keeping output fast.",
   "qwen3.6-plus":
-    "Low-cost structured coding model. Good for clean Luau formatting, JSON-style build outputs, admin commands, small combat systems, and precise edits.",
+    "Low-cost structured coding model with web/tools enabled. Good for clean Luau formatting, JSON-style build outputs, admin commands, small combat systems, and precise edits.",
   "gpt-5.4-mini":
-    "Balanced BloxSmith AI model for medium Roblox systems with better reasoning than nano while staying budget-friendly. Good default for most users.",
+    "Balanced BloxSmith AI model with web/tools enabled for medium Roblox systems, current API checks, and better reasoning than nano while staying budget-friendly.",
   "qwen3.7-max":
-    "Smart mid-price model for larger Roblox scripts, UI logic, economy balancing, and refactors where clean structure matters.",
+    "Smart mid-price web/tool-capable model for larger Roblox scripts, UI logic, economy balancing, refactors, and agentic research workflows.",
   "gemini-3.5-flash":
-    "Latest fast Gemini option in the BloxSmith AI pool. Good for grounded answers, visual/screenshot-style reasoning, long project context, and quick build planning.",
+    "Latest fast Gemini option in the BloxSmith AI pool with web/tools enabled. Good for grounded answers, visual/screenshot-style reasoning, long project context, and quick build planning.",
   "grok-4.3":
-    "Creative reasoning model for Roblox game ideas, mechanics, naming, quests, monetization concepts, and agentic tool-use style tasks.",
+    "Creative web/tool-capable reasoning model for Roblox game ideas, mechanics, naming, quests, monetization concepts, and current-trend research.",
   "deepseek-v4-pro":
-    "Higher-quality DeepSeek option for harder Roblox coding, multi-file systems, deeper debugging, and larger architecture decisions.",
+    "Higher-quality DeepSeek option with web/tools enabled for harder Roblox coding, multi-file systems, deeper debugging, and larger architecture decisions.",
   "claude-haiku-4-5":
     "Cheap Claude-style cleanup model for careful refactors, readable Luau explanations, script tidying, and comments.",
   "claude-opus-4-7-thinking":
@@ -136,6 +136,103 @@ export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
 };
 
 export const DEFAULT_MODEL_CREDIT_MULTIPLIER = 1;
+
+export const MODEL_TOOL_CAPABILITIES: Record<
+  string,
+  { tools: boolean; webSearch: boolean; label: string }
+> = {
+  "gpt-5.4-nano": {
+    tools: true,
+    webSearch: false,
+    label: "Basic tools",
+  },
+  "deepseek-v4-flash": {
+    tools: true,
+    webSearch: true,
+    label: "Web + Roblox docs",
+  },
+  "minimax-m2.7": {
+    tools: true,
+    webSearch: false,
+    label: "Long context",
+  },
+  "qwen3.6-plus": {
+    tools: true,
+    webSearch: true,
+    label: "Web + structured tools",
+  },
+  "gpt-5.4-mini": {
+    tools: true,
+    webSearch: true,
+    label: "Web + coding",
+  },
+  "qwen3.7-max": {
+    tools: true,
+    webSearch: true,
+    label: "Web + agent tools",
+  },
+  "gemini-3-flash": {
+    tools: true,
+    webSearch: true,
+    label: "Web + docs",
+  },
+  "gemini-3.5-flash": {
+    tools: true,
+    webSearch: true,
+    label: "Web + vision",
+  },
+  "gemini-3.1-pro": {
+    tools: true,
+    webSearch: true,
+    label: "Web + large context",
+  },
+  "grok-4.3": {
+    tools: true,
+    webSearch: true,
+    label: "Web + creative",
+  },
+  "deepseek-v4-pro": {
+    tools: true,
+    webSearch: true,
+    label: "Web + deep coding",
+  },
+  "claude-haiku-4-5": {
+    tools: true,
+    webSearch: false,
+    label: "Careful tools",
+  },
+  "claude-sonnet-4-6-thinking": {
+    tools: true,
+    webSearch: true,
+    label: "Web + reasoning",
+  },
+  "claude-opus-4-7-thinking": {
+    tools: true,
+    webSearch: true,
+    label: "Web + premium",
+  },
+  "claude-opus-4-8-thinking": {
+    tools: true,
+    webSearch: true,
+    label: "Web + elite",
+  },
+};
+
+export function getModelToolCapabilities(modelName: string | null | undefined) {
+  if (!modelName) return { tools: true, webSearch: false, label: "Tools" };
+  const direct = MODEL_TOOL_CAPABILITIES[modelName];
+  if (direct) return direct;
+  if (modelName.endsWith("-thinking")) {
+    const base = modelName.slice(0, -"-thinking".length);
+    const baseCaps = MODEL_TOOL_CAPABILITIES[base];
+    if (baseCaps) return baseCaps;
+  }
+  return {
+    tools: true,
+    webSearch: /\b(gemini|grok|deepseek|qwen|sonnet|opus|gpt-5\.[45]-mini)\b/i.test(modelName),
+    label: "Tools",
+  };
+}
 
 /**
  * Look up the credit-cost multiplier for a UI model id. Falls back to 1x

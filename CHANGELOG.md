@@ -9,6 +9,7 @@
 - Added more Roblox-ready BloxSmith AI models including DeepSeek V4 Flash/Pro, MiniMax-M2.7, Qwen 3.6/3.7, Grok 4.3, Gemini 3.5 Flash, and Gemini 3.1 Pro.
 - Made Claude Opus 4.8 a very expensive protected model with a separate daily cap for normal users.
 - Disabled the project chat/build composer when the daily AI timer is used up so users cannot type messages that cannot be sent.
+- Marked web-search-capable models in the picker so users know which BloxSmith AI models can call web search, fetch URLs, Roblox docs, and toolbox tools.
 - Added BloxSmith AI image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
 - Added a 24-hour AI usage timer and server-side request limit for normal users, with owner/admin/moderator bypass.
 - Added Supabase migration support for BloxSmith AI provider settings and the new AI rate-limit event table.
