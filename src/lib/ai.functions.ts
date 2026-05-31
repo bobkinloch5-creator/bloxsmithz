@@ -1782,6 +1782,19 @@ function pickChatTools(prompt: string, allTools: Record<string, any>): Record<st
     add("roblox_asset_info");
     add("roblox_asset_thumbnail");
   }
+  if (
+    /\b(generate|create|make|draw|design)\b[\s\S]{0,80}\b(image|picture|photo|art|artwork|thumbnail|icon|logo|decal|poster|banner|loading screen)\b/i.test(
+      lower,
+    ) ||
+    /\b(image|picture|photo|artwork|thumbnail|icon|logo|decal|poster|banner|loading screen)\b[\s\S]{0,80}\b(generate|create|make|draw|design)\b/i.test(
+      lower,
+    ) ||
+    /\b(draw|illustrate)\b[\s\S]{0,80}\b(dog|cat|pet|character|avatar|scene|thumbnail|icon|logo|poster|banner|decal|art)\b/i.test(
+      lower,
+    )
+  ) {
+    add("generate_image");
+  }
 
   return picked;
 }
@@ -1901,6 +1914,7 @@ CHAT MODE RULES - never break these:
 - Be conversational and helpful. Use Markdown.
 - When you give code, ALWAYS wrap it in fenced code blocks with a language tag like \`\`\`lua, \`\`\`luau, or \`\`\`json. Each block gets a copy button in the UI, so split distinct snippets into separate blocks.
 - Keep answers focused. If something is best built (not chatted about), say so and suggest switching off Chat mode.
+- IMAGE GENERATION: If the user asks you to make, create, draw, or generate an image/picture/photo/artwork/logo/icon/decal/thumbnail/banner/poster, call the generate_image tool. Do not merely describe the image. After the tool returns, embed the markdown image it gives you and add a short "Download PNG" link using the returned image URL.
 - VISION: When the user attaches screenshots of Roblox Studio, their game, error popups, or reference images, analyze them in detail. Call out broken hierarchies, missing services, malformed Luau, UI layout issues, lighting/material problems, and red error text by exact wording. Tie every observation back to a concrete fix the user can apply.
 - MCP CONTEXT: If the user has connected MCP servers (Roblox docs, n8n, custom tools), reference relevant facts those servers expose. Cite which server you're drawing from so the user can trust the answer.
 - MEMORY: Use project memory for durable preferences, names, genre, style, and recent context. If it conflicts with the user's latest message or live project files, follow the latest message and live state.

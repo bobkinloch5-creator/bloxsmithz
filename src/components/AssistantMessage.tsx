@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Download, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -36,6 +36,71 @@ function CodeBlock({ lang, content }: { lang: string; content: string }) {
   );
 }
 
+function GeneratedImage({ src, alt }: { src?: string; alt?: string }) {
+  const [downloading, setDownloading] = useState(false);
+  if (!src) return null;
+
+  const onDownload = async () => {
+    try {
+      setDownloading(true);
+      const response = await fetch(src);
+      if (!response.ok) throw new Error("download failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bloxsmith-image-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Image download started");
+    } catch {
+      toast.error("Could not download image");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <figure className="my-3 overflow-hidden rounded-xl border border-border bg-background/60 shadow-sm">
+      <a href={src} target="_blank" rel="noreferrer" className="block">
+        <img
+          src={src}
+          alt={alt || "Generated BloxSmith image"}
+          className="max-h-[420px] w-full object-contain bg-background"
+          loading="lazy"
+        />
+      </a>
+      <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-surface/35 px-3 py-2">
+        <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+          {alt || "Generated image"}
+        </span>
+        <span className="inline-flex gap-1.5">
+          <button
+            type="button"
+            onClick={onDownload}
+            disabled={downloading}
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {downloading ? "Downloading" : "Download PNG"}
+          </button>
+          <a
+            href={src}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open
+          </a>
+        </span>
+      </figcaption>
+    </figure>
+  );
+}
+
 export const AssistantMessage = memo(function AssistantMessage({ content }: { content: string }) {
   return (
     <div className="text-sm leading-relaxed break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
@@ -54,6 +119,7 @@ export const AssistantMessage = memo(function AssistantMessage({ content }: { co
               {children}
             </a>
           ),
+          img: ({ src, alt }) => <GeneratedImage src={src} alt={alt} />,
           strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
           blockquote: ({ children }) => (

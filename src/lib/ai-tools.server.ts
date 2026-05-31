@@ -938,12 +938,31 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
       if (!ctx.userId) {
         return { error: "Please sign in to generate images." };
       }
+      const { checkTextSafeFor3D } = await import("./content-safety.server");
+      const safety = checkTextSafeFor3D(prompt);
+      if (!safety.safe) return { error: safety.reason };
+      const { enforceAiUsageLimit, userBypassesAiLimit } = await import(
+        "./ai-usage-limits.server"
+      );
+      const bypassesLimit = await userBypassesAiLimit(ctx.userId, supabaseAdmin);
+      if (!bypassesLimit) {
+        try {
+          await enforceAiUsageLimit({
+            userId: ctx.userId,
+            supabase: supabaseAdmin,
+            source: "chat_image",
+            metadata: { aspectRatio, prompt: prompt.slice(0, 240) },
+          });
+        } catch (error) {
+          return { error: error instanceof Error ? error.message : "Image limit reached." };
+        }
+      }
       // …and apply a simple per-user hourly cap. We count the user's own
       // recent uploads in the generated-images bucket (no extra table needed).
       // This check fails OPEN — if listing errors we allow the generation so a
       // transient storage hiccup never blocks a paying user.
-      const HOURLY_LIMIT = Number(process.env.GEMINI_IMAGE_HOURLY_LIMIT || "30");
-      if (HOURLY_LIMIT > 0) {
+      const HOURLY_LIMIT = Number(process.env.GEMINI_IMAGE_HOURLY_LIMIT || "2");
+      if (!bypassesLimit && HOURLY_LIMIT > 0) {
         try {
           const { data: recent } = await supabaseAdmin.storage
             .from("generated-images")
@@ -987,6 +1006,7 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
           imageUrl: pub.publicUrl,
           aspectRatio,
           markdown: `![${prompt.slice(0, 80)}](${pub.publicUrl})`,
+          downloadMarkdown: `[Download PNG](${pub.publicUrl})`,
           tip: "Embed `markdown` in your reply so the user sees the image inline. To use it in Roblox: download the PNG, then upload it in the Creator Dashboard / Studio Asset Manager (game thumbnails accept 16:9 up to 1920x1080; the game icon is 512x512). Uploaded decals/images become an assetId.",
         };
       };

@@ -17,6 +17,7 @@
 - Added `gpt-5.5-all` as a premium BloxSmith AI option with web, tools, thinking support, a clear Roblox-focused description, and a high credit multiplier.
 - Tightened normal-user AI protection to 8 requests per 24 hours by default, 1 premium GPT use per 24 hours, and 1 Claude Opus use per 24 hours, while owner/admin/moderator accounts still bypass limits for testing.
 - Tightened image generation safety by blocking unsafe prompts/reference images server-side and limiting normal users to one image variation per request.
+- Enabled text-to-image generation directly inside project AI chat, with inline preview cards, one-click PNG downloads, server-side prompt safety, and a strict normal-user image hourly cap.
 - Added BloxSmith AI image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
 - Added a 24-hour AI usage timer and server-side request limit for normal users, with owner/admin/moderator bypass.
 - Added Supabase migration support for BloxSmith AI provider settings and the new AI rate-limit event table.
