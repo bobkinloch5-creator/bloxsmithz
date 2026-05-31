@@ -1472,22 +1472,28 @@ function coerceActionValue(key: string, val: any): any {
 async function resolveSearchQueries(actions: any[]): Promise<any[]> {
   const { searchRobloxAssets } = await import("@/lib/ai-tools.server");
   const resolved: any[] = [];
+  const usedAssetIds = new Set(
+    actions
+      .map((a) => (a?.assetId && Number.isFinite(Number(a.assetId)) ? Number(a.assetId) : null))
+      .filter((id): id is number => typeof id === "number"),
+  );
   for (const a of actions) {
     if (a && a.type === "insert_toolbox_asset" && a.searchQuery && !a.assetId) {
       try {
-        const items = await searchRobloxAssets(a.searchQuery, a.category || "Models", 5, {
+        const items = await searchRobloxAssets(a.searchQuery, a.category || "Models", 8, {
           freeOnly: true,
           verifiedOnly: false,
         });
-        if (items.length > 0) {
-          const best = items[0];
+        const best = items.find((item: any) => !usedAssetIds.has(Number(item.assetId)));
+        if (best) {
+          usedAssetIds.add(Number(best.assetId));
           resolved.push({ ...a, assetId: best.assetId, name: a.name || best.name });
           console.log(
             `[Execute API] Resolved searchQuery "${a.searchQuery}" → assetId ${best.assetId} ("${best.name}")`,
           );
           continue;
         } else {
-          console.warn(`[Execute API] No free toolbox results for "${a.searchQuery}" — skipping`);
+          console.warn(`[Execute API] No unused free toolbox results for "${a.searchQuery}" — skipping`);
         }
       } catch (err) {
         console.error("Error resolving searchQuery for insert_toolbox_asset:", err);
@@ -2530,12 +2536,17 @@ export const Route = createFileRoute("/execute")({
           // Resolve any asset search queries asynchronously server-side
           mappedActions = await resolveSearchQueries(mappedActions);
 
-          // Safety net: if the user asked for a map/world/lobby and the AI
-          // didn't queue ANY toolbox insert, auto-search and inject one so
-          // the result isn't just empty Lighting tweaks.
+          // Safety net: if the user asked for a visual build and the AI
+          // didn't queue ANY toolbox insert, auto-plan a varied Toolbox set
+          // so the result isn't just empty Lighting tweaks or repeated parts.
           const lowerPrompt = prompt.toLowerCase();
           const wantsMap =
             /\b(map|world|lobby|arena|city|town|village|island|dungeon|level|scene|environment)\b/.test(
+              lowerPrompt,
+            );
+          const wantsVisualAssets =
+            wantsMap ||
+            /\b(simulator|tycoon|obby|horror|roleplay|racing|pet|vehicle|weapon|tool|npc|building|prop|decoration|street|shop|forest|base|zone)\b/.test(
               lowerPrompt,
             );
           const hasInsert = mappedActions.some(
@@ -2564,40 +2575,23 @@ export const Route = createFileRoute("/execute")({
               });
             }
           }
-          if (wantsMap && !hasInsert) {
+          if (wantsVisualAssets && !hasInsert) {
             try {
-              const { searchRobloxAssets } = await import("@/lib/ai-tools.server");
-              // Build a focused query from the prompt (first 6 words).
-              const q =
-                prompt
-                  .replace(/[^a-zA-Z0-9 ]/g, " ")
-                  .split(/\s+/)
-                  .filter(Boolean)
-                  .slice(0, 6)
-                  .join(" ") + " map";
-              const items = await searchRobloxAssets(q, "Models", 3, {
-                freeOnly: true,
+              const { planRobloxToolboxAssets } = await import("@/lib/ai-tools.server");
+              const plan = await planRobloxToolboxAssets({
+                prompt,
+                maxPerGroup: wantsMap ? 3 : 2,
                 verifiedOnly: false,
               });
-              if (items.length > 0) {
+              const plannedActions = plan.groups.flatMap((group: any) => group.insertionActions ?? []);
+              if (plannedActions.length > 0) {
                 console.log(
-                  `[Execute API] Safety net: injected toolbox map ${items[0].assetId} ("${items[0].name}") for query "${q}"`,
+                  `[Execute API] Safety net: injected ${plannedActions.length} varied toolbox assets for "${prompt.slice(0, 80)}"`,
                 );
-                mappedActions.push({
-                  type: "insert_toolbox_asset",
-                  assetId: items[0].assetId,
-                  name: items[0].name || "ToolboxMap",
-                  parent: "Workspace/Map",
-                  position: [0, 0, 0],
-                  scanScripts: true,
-                  removeUnsafeScripts: true,
-                  removeScriptsFromDecorativeAssets: true,
-                  freeOnly: true,
-                  requiresApprovalIfScriptsFound: true,
-                } as any);
+                mappedActions.push(...plannedActions);
               }
             } catch (err) {
-              console.error("Safety net toolbox search failed:", err);
+              console.error("Safety net toolbox asset planning failed:", err);
             }
           }
 

@@ -313,7 +313,7 @@ export const listProjectsTool = defineTool({
 export const searchToolboxTool = defineTool({
   name: "search_roblox_toolbox",
   description:
-    "Search the Roblox catalog/toolbox for free assets (Models, Decals, Audio, Meshes, Animations).",
+    "Search the Roblox catalog/toolbox for free, filtered assets (Models, Decals, Audio, Meshes, Animations). Results are deduped and ranked for quality.",
   parameters: z.object({
     query: z.string().min(1).max(120),
     category: z
@@ -328,6 +328,27 @@ export const searchToolboxTool = defineTool({
       verifiedOnly: false,
     });
     return JSON.stringify({ count: items.length, items }, null, 2);
+  },
+});
+
+export const planToolboxAssetsTool = defineTool({
+  name: "plan_roblox_toolbox_assets",
+  description:
+    "Plan a varied set of safe free Roblox Toolbox assets for a full build prompt. Use for maps, cities, simulators, props, buildings, NPCs, decorations, tools, vehicles, and game objects before building.",
+  parameters: z.object({
+    prompt: z.string().min(3).max(800),
+    assetTypes: z.array(z.string().min(2).max(40)).max(12).default([]),
+    maxPerGroup: z.number().int().min(1).max(6).default(3),
+  }),
+  execute: async ({ prompt, assetTypes, maxPerGroup }) => {
+    const { planRobloxToolboxAssets } = await import("@/lib/ai-tools.server");
+    const plan = await planRobloxToolboxAssets({
+      prompt,
+      assetTypes,
+      maxPerGroup,
+      verifiedOnly: false,
+    });
+    return JSON.stringify(plan, null, 2);
   },
 });
 

@@ -86,7 +86,11 @@ When the user reports an error:
 
 ## Asset/toolbox safety rule
 When inserting free models/assets:
+- For full visual builds, use the Roblox Toolbox asset planner first so maps/games get varied free assets instead of repeated copies.
 - Prefer trusted/verified/free assets when available.
+- City/map builds must use different asset searches for roads, buildings, streetlights, vehicles, trees, signs, props, and decorations.
+- Simulator builds must use different asset searches for pets, coins/gems, zones, upgrade/shop props, tools, and theme decorations.
+- Use each assetId once unless the user asks for repeated copies, and organize every insert under Workspace/Map, Workspace/NPCs, Workspace/Interactables, StarterPack/Tools, ReplicatedStorage/Assets, or SoundService.
 - Scan inserted models for suspicious scripts.
 - Never insert backdoors, require(assetId), loadstring, obfuscated code, or unexpected HttpService calls.
 - If an asset is visual only, remove or quarantine scripts unless needed.

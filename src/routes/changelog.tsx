@@ -45,6 +45,39 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.7.0",
+    date: "May 30, 2026",
+    title: "Smarter Roblox Toolbox Asset Planning",
+    description:
+      "BloxSmith now searches the Roblox Toolbox with a real asset plan so generated maps and games use varied free assets instead of repeating the same object.",
+    updates: [
+      {
+        category: "Toolbox",
+        tagColor: tagStyles.tools,
+        icon: Library,
+        title: "Full Build Asset Plans",
+        detail:
+          "Added a Toolbox planner that searches multiple focused categories for cities, simulators, obbies, tycoons, horror maps, props, NPCs, vehicles, tools, decorations, UI icons, and audio.",
+      },
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "Less Repetition, Better Variety",
+        detail:
+          "The builder now avoids duplicate asset IDs and duplicate-looking names, then groups selected assets into the correct Roblox Studio folders before insertion.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Safer Free Asset Filtering",
+        detail:
+          "Toolbox searches now filter risky asset names, prefer free public assets, keep decorative model script scanning enabled, and strip unsafe scripts before Studio insertion.",
+      },
+    ],
+  },
+  {
     version: "v3.6.0",
     date: "May 30, 2026",
     title: "Custom 3D Generator Studio",

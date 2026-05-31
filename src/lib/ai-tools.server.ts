@@ -39,6 +39,234 @@ const RBX_HEADERS = {
   Accept: "application/json",
 };
 
+const UNSAFE_ASSET_TERMS = [
+  "admin",
+  "backdoor",
+  "ban all",
+  "bitcoin",
+  "bypass",
+  "cheat",
+  "exploit",
+  "free robux",
+  "grabber",
+  "hack",
+  "infected",
+  "infinite yield",
+  "loadstring",
+  "nsfw",
+  "require",
+  "script builder",
+  "server destroyer",
+  "virus",
+  "xxx",
+];
+
+const STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "for",
+  "from",
+  "game",
+  "generate",
+  "make",
+  "map",
+  "me",
+  "my",
+  "of",
+  "please",
+  "roblox",
+  "the",
+  "to",
+  "use",
+  "with",
+]);
+
+function cleanPromptTerms(input: string, max = 5) {
+  const words = input
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !STOP_WORDS.has(word));
+  return Array.from(new Set(words)).slice(0, max);
+}
+
+function safeAssetName(name: string, fallback = "ToolboxAsset") {
+  const cleaned = (name || fallback).replace(/[^a-zA-Z0-9 _-]/g, "").trim();
+  return (cleaned || fallback).slice(0, 64);
+}
+
+function hasUnsafeAssetTerms(item: any) {
+  const haystack = `${item?.name ?? ""} ${item?.description ?? ""} ${item?.creator ?? ""}`.toLowerCase();
+  return UNSAFE_ASSET_TERMS.some((term) => haystack.includes(term));
+}
+
+function assetQualityScore(item: any, query: string, groupLabel = "") {
+  const name = String(item?.name ?? "").toLowerCase();
+  const creator = String(item?.creator ?? "").toLowerCase();
+  const queryTerms = cleanPromptTerms(`${query} ${groupLabel}`, 8);
+  const relevance = queryTerms.reduce((sum, term) => sum + (name.includes(term) ? 18 : 0), 0);
+  const voteScore = Math.min(45, Number(item?.upVotePercent ?? 0) * Math.log10(Number(item?.voteCount ?? 0) + 1));
+  const favoriteScore = Math.min(25, Math.log10(Number(item?.favorites ?? 0) + 1) * 8);
+  const trustScore = item?.verified || creator === "roblox" ? 25 : 0;
+  const freeScore = (item?.price ?? 0) === 0 ? 20 : -100;
+  const saleScore = item?.isForSale === false ? -20 : 0;
+  const riskyPenalty = hasUnsafeAssetTerms(item) ? -250 : 0;
+  return relevance + voteScore + favoriteScore + trustScore + freeScore + saleScore + riskyPenalty;
+}
+
+function dedupeAndRankAssets(items: any[], query: string, limit: number, groupLabel = "", usedIds?: Set<number>) {
+  const seenNames = new Set<string>();
+  const ranked = items
+    .filter((item) => Number.isFinite(Number(item?.assetId)))
+    .filter((item) => (item?.price ?? 0) === 0)
+    .filter((item) => !hasUnsafeAssetTerms(item))
+    .filter((item) => {
+      const id = Number(item.assetId);
+      if (usedIds?.has(id)) return false;
+      const nameKey = String(item.name ?? "")
+        .toLowerCase()
+        .replace(/\s+\d+$/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      if (nameKey && seenNames.has(nameKey)) return false;
+      if (nameKey) seenNames.add(nameKey);
+      return true;
+    })
+    .map((item) => ({ ...item, qualityScore: assetQualityScore(item, query, groupLabel) }))
+    .sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0));
+  return ranked.slice(0, limit);
+}
+
+type ToolboxPlanGroup = {
+  label: string;
+  category: string;
+  queries: string[];
+  parent: string;
+  count: number;
+};
+
+function uniqueQueries(queries: string[]) {
+  return Array.from(new Set(queries.map((q) => q.trim()).filter(Boolean)));
+}
+
+function buildToolboxPlanGroups(prompt: string, requestedTypes: string[] = []): ToolboxPlanGroup[] {
+  const lower = prompt.toLowerCase();
+  const terms = cleanPromptTerms(prompt, 4);
+  const theme = terms.length ? terms.join(" ") : "roblox";
+  const requested = new Set(requestedTypes.map((t) => t.toLowerCase()));
+  const groups: ToolboxPlanGroup[] = [];
+  const add = (label: string, category: string, parent: string, count: number, queries: string[]) => {
+    if (requested.size && !requested.has(label.toLowerCase()) && !requested.has(category.toLowerCase())) return;
+    groups.push({ label, category, parent, count, queries: uniqueQueries(queries) });
+  };
+
+  if (/\b(city|town|roleplay|rp|street|downtown)\b/.test(lower)) {
+    add("Roads", "Models", "Workspace/Map/Roads", 3, [`${theme} road kit`, "city road", "street road pack"]);
+    add("Buildings", "Models", "Workspace/Map/Buildings", 4, [`${theme} building`, "city building", "shop building"]);
+    add("Streetlights", "Models", "Workspace/Map/Decorations", 2, ["street light", "city lamp post"]);
+    add("Vehicles", "Models", "Workspace/Vehicles", 2, ["city car", "roblox vehicle car"]);
+    add("Trees", "Models", "Workspace/Map/Nature", 2, ["city tree", "park tree"]);
+    add("Signs", "Models", "Workspace/Map/Decorations", 2, ["street sign", "city sign"]);
+  } else if (/\b(simulator|clicker|rebirth|coins|gems|pet sim)\b/.test(lower)) {
+    add("Pets", "Models", "ReplicatedStorage/Assets/Pets", 4, [`${theme} pet`, "simulator pet", "cute pet"]);
+    add("Coins", "Models", "Workspace/Interactables/Currency", 3, ["coin pickup", "gem pickup", "simulator coin"]);
+    add("Zones", "Models", "Workspace/Map/Zones", 3, [`${theme} zone`, "simulator zone", "portal gate"]);
+    add("Upgrades", "Models", "Workspace/Interactables/Upgrades", 2, ["upgrade station", "shop stand"]);
+    add("Tools", "Models", "StarterPack/Tools", 2, [`${theme} tool`, "simulator tool"]);
+  } else if (/\b(obby|parkour|tower|lava)\b/.test(lower)) {
+    add("Obby Kits", "Models", "Workspace/Map/Obby", 4, [`${theme} obby kit`, "obby obstacle", "parkour kit"]);
+    add("Checkpoints", "Models", "Workspace/Map/Checkpoints", 2, ["obby checkpoint", "checkpoint pad"]);
+    add("Hazards", "Models", "Workspace/Map/Hazards", 2, ["lava obstacle", "kill brick obstacle"]);
+  } else if (/\b(tycoon|factory|dropper|conveyor)\b/.test(lower)) {
+    add("Tycoon Kits", "Models", "Workspace/Map/Tycoon", 3, [`${theme} tycoon kit`, "tycoon dropper", "factory tycoon"]);
+    add("Droppers", "Models", "ServerStorage/Templates/Tycoon", 2, ["tycoon dropper", "ore dropper"]);
+    add("Buttons", "Models", "Workspace/Interactables/TycoonButtons", 2, ["tycoon button", "buy button"]);
+  } else if (/\b(horror|scary|monster|haunted)\b/.test(lower)) {
+    add("Horror Map", "Models", "Workspace/Map", 2, [`${theme} horror map`, "haunted house", "abandoned school"]);
+    add("Props", "Models", "Workspace/Map/Decorations", 4, ["horror props", "creepy furniture", "broken lamp"]);
+    add("NPCs", "Models", "Workspace/NPCs", 2, ["monster npc", "zombie npc"]);
+  } else {
+    add("Map Pieces", "Models", "Workspace/Map", 3, [`${theme} map`, `${theme} build kit`, `${theme} environment`]);
+    add("Props", "Models", "Workspace/Map/Props", 4, [`${theme} props`, `${theme} decoration`, "roblox props"]);
+    add("Tools", "Models", "StarterPack/Tools", 2, [`${theme} tool`, `${theme} weapon`]);
+    add("NPCs", "Models", "Workspace/NPCs", 2, [`${theme} npc`, `${theme} character`]);
+  }
+
+  add("Ambient Audio", "Audio", "SoundService/Music", 1, [`${theme} music`, "ambient loop"]);
+  add("UI Icons", "Decals", "ReplicatedStorage/Assets/Icons", 2, [`${theme} icon`, "coin icon", "button icon"]);
+
+  return groups.slice(0, 10);
+}
+
+export async function planRobloxToolboxAssets(opts: {
+  prompt: string;
+  assetTypes?: string[];
+  maxPerGroup?: number;
+  verifiedOnly?: boolean;
+}) {
+  const groups = buildToolboxPlanGroups(opts.prompt, opts.assetTypes ?? []);
+  const usedIds = new Set<number>();
+  const planned = [];
+
+  for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+    const group = groups[groupIndex];
+    const wanted = Math.min(Math.max(opts.maxPerGroup ?? group.count, 1), group.count, 6);
+    const candidates: any[] = [];
+    for (const query of group.queries.slice(0, 3)) {
+      const found = await searchRobloxAssets(query, group.category, Math.max(wanted * 3, 8), {
+        freeOnly: true,
+        verifiedOnly: opts.verifiedOnly,
+      });
+      candidates.push(...found.map((item) => ({ ...item, sourceQuery: query })));
+    }
+    const items = dedupeAndRankAssets(candidates, group.queries.join(" "), wanted, group.label, usedIds);
+    for (const item of items) usedIds.add(Number(item.assetId));
+
+    const offset = (items.length - 1) * 11;
+    const insertionActions = items.map((item, itemIndex) => ({
+      type: group.category === "Audio" ? "sound" : "insert_toolbox_asset",
+      assetId: item.assetId,
+      name: safeAssetName(item.name, group.label.replace(/\s+/g, "")),
+      parent: group.parent,
+      position: [itemIndex * 22 - offset, group.category === "Audio" ? 0 : 4, groupIndex * 28],
+      scanScripts: group.category === "Models",
+      removeUnsafeScripts: group.category === "Models",
+      removeScriptsFromDecorativeAssets: group.category === "Models",
+      freeOnly: true,
+      publicOnly: true,
+      requiresApprovalIfScriptsFound: group.category === "Models",
+      looped: group.category === "Audio" ? true : undefined,
+      volume: group.category === "Audio" ? 0.35 : undefined,
+      play: group.category === "Audio" ? false : undefined,
+    }));
+
+    planned.push({
+      ...group,
+      selectedCount: items.length,
+      items,
+      insertionActions,
+      notes:
+        items.length > 0
+          ? "Selected varied free assets and prepared safe insertion actions."
+          : "No safe free matches found for this group; generate a procedural fallback.",
+    });
+  }
+
+  return {
+    prompt: opts.prompt,
+    rules: [
+      "Use each assetId at most once unless the user explicitly asks for duplicates.",
+      "Keep decorative model scripts stripped and scanned before insertion.",
+      "Only deduct/build credits after Studio/plugin insertion succeeds.",
+      "Create missing parent folders before insertion and place assets in their listed parent.",
+    ],
+    groupCount: planned.length,
+    totalSelected: planned.reduce((sum, group) => sum + group.selectedCount, 0),
+    groups: planned,
+  };
+}
+
 async function batchToolboxDetails(ids: number[]): Promise<any[]> {
   if (ids.length === 0) return [];
   try {
@@ -139,11 +367,7 @@ export async function searchRobloxAssets(
       let items = enriched;
       if (freeOnly) items = items.filter((i) => (i.price ?? 0) === 0);
       if (verifiedOnly) items = items.filter((i) => i.verified === true);
-      items.sort(
-        (a, b) =>
-          (b.upVotePercent ?? 0) * (b.voteCount ?? 0) - (a.upVotePercent ?? 0) * (a.voteCount ?? 0),
-      );
-      return items.slice(0, limit);
+      return dedupeAndRankAssets(items, query, limit);
     } catch {
       return [];
     }
@@ -169,7 +393,7 @@ export async function searchRobloxAssets(
     }));
     if (freeOnly) items = items.filter((i: any) => (i.price ?? 0) === 0);
     if (verifiedOnly) items = items.filter((i: any) => i.verified === true);
-    return items.slice(0, limit);
+    return dedupeAndRankAssets(items, query, limit);
   } catch {
     return [];
   }
@@ -320,7 +544,7 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
   // ── Roblox catalog (verified creators only by default) ──────────────
   roblox_asset_search: tool({
     description:
-      "Search the Roblox Toolbox / Creator Store for FREE assets to insert. Returns real assetIds, names, creators. Defaults to free-only (price=0). Categories: Models, Decals, Audio, Meshes, Animations, Plugins (toolbox), or Hats/Gear/Accessories/Faces (catalog wearables).",
+      "Search the Roblox Toolbox / Creator Store for FREE assets to insert. Returns real assetIds, names, creators, and quality scores. It filters risky names, removes duplicate-looking results, and defaults to free-only (price=0). Categories: Models, Decals, Audio, Meshes, Animations, Plugins (toolbox), or Hats/Gear/Accessories/Faces (catalog wearables). For maps/games with many needed objects, prefer roblox_toolbox_asset_plan first.",
     inputSchema: z.object({
       query: z.string().min(1).max(120),
       category: z
@@ -349,6 +573,33 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
     execute: async ({ query, category, limit, verifiedOnly }) => {
       const items = await searchRobloxAssets(query, category, limit, { verifiedOnly });
       return { count: items.length, verifiedOnly, items };
+    },
+  }),
+
+  roblox_toolbox_asset_plan: tool({
+    description:
+      "Plan a varied Roblox Toolbox asset set for a full build prompt. Use this FIRST for maps, cities, simulators, tycoons, obbies, horror games, props, buildings, NPCs, tools, pets, vehicles, decorations, or any non-trivial visual build. It searches multiple targeted Toolbox queries, filters unsafe/paid/duplicate assets, groups results into correct Studio parents, and returns ready insert_toolbox_asset/sound actions.",
+    inputSchema: z.object({
+      prompt: z
+        .string()
+        .min(3)
+        .max(800)
+        .describe("The user's full Roblox build request, e.g. 'build a city map' or 'make a coin simulator'."),
+      assetTypes: z
+        .array(z.string().min(2).max(40))
+        .max(12)
+        .default([])
+        .describe(
+          "Optional focus groups such as Roads, Buildings, Streetlights, Pets, Coins, Tools, NPCs, Props, Vehicles. Leave empty to infer from prompt.",
+        ),
+      maxPerGroup: z.number().int().min(1).max(6).default(3),
+      verifiedOnly: z
+        .boolean()
+        .default(false)
+        .describe("If true, restrict to verified/Roblox creators. This can reduce variety."),
+    }),
+    execute: async ({ prompt, assetTypes, maxPerGroup, verifiedOnly }) => {
+      return planRobloxToolboxAssets({ prompt, assetTypes, maxPerGroup, verifiedOnly });
     },
   }),
 
