@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Palette,
   Play,
+  Rocket,
   ScrollText,
   Server,
   ShieldCheck,
@@ -44,6 +45,39 @@ const tagStyles = {
 };
 
 const changelogItems = [
+  {
+    version: "v3.8.3",
+    date: "May 31, 2026",
+    title: "Private Project Picker & Plugin Access",
+    description:
+      "Project sync lists now only show projects the signed-in user owns or was explicitly invited to collaborate on.",
+    updates: [
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Private Sync Project Lists",
+        detail:
+          "The plugin setup wizard now filters projects by owner and collaborator access instead of showing every project visible through broader public policies.",
+      },
+      {
+        category: "Plugin",
+        tagColor: tagStyles.plugin,
+        icon: Rocket,
+        title: "Studio Token Access Checks",
+        detail:
+          "Roblox Studio plugin auth, sync, snapshot, context, organize, report, and error routes now verify project access before returning or writing project data.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.backend,
+        icon: LayoutDashboard,
+        title: "Accurate Project Counts",
+        detail:
+          "Account stats now count only the user's own projects, keeping dashboard and profile totals private and accurate.",
+      },
+    ],
+  },
   {
     version: "v3.8.2",
     date: "May 31, 2026",

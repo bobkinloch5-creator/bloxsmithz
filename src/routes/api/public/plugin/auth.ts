@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { listPluginProjectsForUser } from "@/lib/plugin-project-access.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -62,12 +63,7 @@ export const Route = createFileRoute("/api/public/plugin/auth")({
           unlimited_credits: isOwner,
         };
 
-        const { data: ownedProjects } = await supabaseAdmin
-          .from("projects")
-          .select("id,name,game_type,updated_at")
-          .eq("user_id", profile.id)
-          .order("updated_at", { ascending: false });
-        const projects = ownedProjects ?? [];
+        const projects = await listPluginProjectsForUser(profile.id);
 
         const { data: existing } = await supabaseAdmin
           .from("plugin_connections")

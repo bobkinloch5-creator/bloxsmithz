@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getAccessiblePluginProjectIds } from "@/lib/plugin-project-access.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -44,7 +45,7 @@ export const Route = createFileRoute("/api/public/plugin/errors")({
         if (!Array.isArray(errs) || errs.length === 0)
           return new Response(JSON.stringify({ ok: true }), { headers: cors });
         const sliced = errs.slice(0, 50);
-        // Validate any provided project_id belongs to this user
+        // Validate any provided project_id is owned by or explicitly shared with this token user.
         const requestedIds = Array.from(
           new Set(
             sliced
@@ -54,12 +55,8 @@ export const Route = createFileRoute("/api/public/plugin/errors")({
         );
         const allowed = new Set<string>();
         if (requestedIds.length > 0) {
-          const { data: ownProjects } = await supabaseAdmin
-            .from("projects")
-            .select("id")
-            .eq("user_id", profile.user_id)
-            .in("id", requestedIds);
-          (ownProjects ?? []).forEach((p: { id: string }) => allowed.add(p.id));
+          const accessible = await getAccessiblePluginProjectIds(profile.user_id, requestedIds);
+          accessible.forEach((id) => allowed.add(id));
         }
         await supabaseAdmin.from("studio_errors").insert(
           sliced.map((e) => ({

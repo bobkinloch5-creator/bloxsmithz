@@ -279,6 +279,7 @@ function Account() {
     supabase
       .from("projects")
       .select("id,name,game_type,updated_at")
+      .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
       .then(({ data }) => {
         setProjects(data ?? []);

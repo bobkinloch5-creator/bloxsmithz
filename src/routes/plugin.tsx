@@ -103,16 +103,65 @@ function PluginWizard() {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const verifyTimer = useRef<number | null>(null);
 
-  // Load projects once signed in
+  // Load only projects this signed-in user owns or was explicitly invited to.
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setProjects([]);
+      return;
+    }
+    let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("projects")
-        .select("id,name,game_type,updated_at")
-        .order("updated_at", { ascending: false });
-      setProjects((data ?? []) as ProjectRow[]);
+      const [{ data: owned, error: ownedError }, { data: collabs, error: collabError }] =
+        await Promise.all([
+          supabase
+            .from("projects")
+            .select("id,name,game_type,updated_at")
+            .eq("user_id", user.id)
+            .order("updated_at", { ascending: false }),
+          (supabase as any)
+            .from("project_collaborators")
+            .select("project_id")
+            .eq("user_id", user.id),
+        ]);
+
+      if (cancelled) return;
+      if (ownedError || collabError) {
+        toast.error("Couldn't load your private projects.");
+        setProjects([]);
+        return;
+      }
+
+      const collabIds = Array.from(
+        new Set(((collabs ?? []) as { project_id: string }[]).map((row) => row.project_id)),
+      );
+      let shared: ProjectRow[] = [];
+      if (collabIds.length) {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("id,name,game_type,updated_at")
+          .in("id", collabIds)
+          .order("updated_at", { ascending: false });
+        if (cancelled) return;
+        if (error) {
+          toast.error("Couldn't load shared projects.");
+        } else {
+          shared = (data ?? []) as ProjectRow[];
+        }
+      }
+
+      const byId = new Map<string, ProjectRow>();
+      [...((owned ?? []) as ProjectRow[]), ...shared].forEach((project) =>
+        byId.set(project.id, project),
+      );
+      setProjects(
+        Array.from(byId.values()).sort(
+          (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        ),
+      );
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   // Auto-advance from "Sign in" once logged in

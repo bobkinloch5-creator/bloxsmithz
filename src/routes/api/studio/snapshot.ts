@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getPluginProjectForUser } from "@/lib/plugin-project-access.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -51,20 +52,10 @@ export const Route = createFileRoute("/api/studio/snapshot")({
             });
           }
 
-          // Verify ownership. Projects are private per account.
-          const { data: project } = await supabaseAdmin
-            .from("projects")
-            .select("id,user_id")
-            .eq("id", projectId)
-            .maybeSingle();
+          const project = await getPluginProjectForUser(userId, projectId);
           if (!project)
             return new Response(JSON.stringify({ error: "not found" }), {
               status: 404,
-              headers: cors,
-            });
-          if (project.user_id !== userId)
-            return new Response(JSON.stringify({ error: "forbidden" }), {
-              status: 403,
               headers: cors,
             });
 

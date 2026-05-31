@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getPluginProjectForUser } from "@/lib/plugin-project-access.server";
 
 // Plugin posts here after dispatching actions so the web UI can show
 // real execution status instead of just "delivered".
@@ -65,15 +66,8 @@ export const Route = createFileRoute("/api/public/plugin/report")({
 
           if (!action) continue;
 
-          const { data: project } = await supabaseAdmin
-            .from("projects")
-            .select("id,user_id")
-            .eq("id", action.project_id)
-            .maybeSingle();
-
+          const project = await getPluginProjectForUser(userId, action.project_id);
           if (!project) continue;
-
-          if (project.user_id !== userId) continue;
 
           const { error } = await supabaseAdmin
             .from("plugin_actions")
