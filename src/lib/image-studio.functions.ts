@@ -72,6 +72,21 @@ export const generateImageStudio = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<GenerateImageResult> => {
     const { supabase, userId } = context as { supabase: any; userId: string };
     const isOwner = await isGeneratorOwner(userId, supabase);
+    const { checkTextSafeFor3D, checkImageSafeFor3D } = await import("./content-safety.server");
+    const promptSafety = checkTextSafeFor3D(
+      [data.prompt, data.negativePrompt, data.stylePreset].filter(Boolean).join("\n"),
+    );
+    if (!promptSafety.safe) return { ok: false, error: promptSafety.reason };
+    if (data.referenceImageDataUrl) {
+      const imageSafety = await checkImageSafeFor3D(data.referenceImageDataUrl);
+      if (!imageSafety.safe) return { ok: false, error: imageSafety.reason };
+    }
+    if (!isOwner && data.variations > 1) {
+      return {
+        ok: false,
+        error: "Normal users can generate 1 image at a time. Staff can test multiple variations.",
+      };
+    }
     const creditsNeeded = data.variations * GENERATOR_CREDIT_COSTS.imagePerVariation;
     const { enforceAiUsageLimit } = await import("./ai-usage-limits.server");
     await enforceAiUsageLimit({

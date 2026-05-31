@@ -1962,6 +1962,15 @@ export const Route = createFileRoute("/execute")({
                   { status: 429, headers: corsHeaders },
                 );
               }
+              if (msg.includes("rate_limited_24h")) {
+                return new Response(
+                  JSON.stringify({
+                    error:
+                      "You've hit your 24-hour AI limit. Your timer is running — check the usage panel for the reset time.",
+                  }),
+                  { status: 429, headers: corsHeaders },
+                );
+              }
               return new Response(JSON.stringify({ error: "Usage check failed. Try again." }), {
                 status: 500,
                 headers: corsHeaders,

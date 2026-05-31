@@ -4,7 +4,7 @@ export type AiUsageLimitResult =
   | { limited: false; used: number; limit: number; resetAt: string | null; bypassed: boolean }
   | { limited: true; used: number; limit: number; resetAt: string; bypassed: false };
 
-const DEFAULT_DAILY_LIMIT = 40;
+const DEFAULT_DAILY_LIMIT = 8;
 const DEFAULT_WINDOW_HOURS = 24;
 const EXPENSIVE_MODEL_WINDOW_HOURS = 24;
 
@@ -17,12 +17,12 @@ const EXPENSIVE_MODEL_LIMITS = [
   {
     pattern: /claude-opus/i,
     label: "Claude Opus",
-    limit: Number(process.env.AI_CLAUDE_OPUS_DAILY_LIMIT || "2"),
+    limit: Number(process.env.AI_CLAUDE_OPUS_DAILY_LIMIT || "1"),
   },
   {
     pattern: /gpt-5\.[45]-pro|gpt-5\.5/i,
     label: "premium GPT",
-    limit: Number(process.env.AI_PREMIUM_MODEL_DAILY_LIMIT || "2"),
+    limit: Number(process.env.AI_PREMIUM_MODEL_DAILY_LIMIT || "1"),
   },
 ] as const;
 

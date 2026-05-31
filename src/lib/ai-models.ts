@@ -29,6 +29,7 @@ export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
     "minimax-m2.7",
     "qwen3.6-plus",
     "gpt-5.4-mini",
+    "gpt-5.5-all",
     "qwen3.7-max",
     "gemini-3-flash",
     "gemini-3.5-flash",
@@ -59,6 +60,8 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
     "Low-cost structured coding model with web/tools enabled. Good for clean Luau formatting, JSON-style build outputs, admin commands, small combat systems, and precise edits.",
   "gpt-5.4-mini":
     "Balanced BloxSmith AI model with web/tools enabled for medium Roblox systems, current API checks, and better reasoning than nano while staying budget-friendly.",
+  "gpt-5.5-all":
+    "Premium all-purpose BloxSmith AI model for difficult Roblox architecture, code, planning, web/tool workflows, and image-aware help when available. It is intentionally expensive and tightly capped for normal users so the shared AI balance is protected.",
   "qwen3.7-max":
     "Smart mid-price web/tool-capable model for larger Roblox scripts, UI logic, economy balancing, refactors, and agentic research workflows.",
   "gemini-3.5-flash":
@@ -112,6 +115,7 @@ export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
   "minimax-m2.7": 0.65,
   "qwen3.6-plus": 0.75,
   "gpt-5.4-mini": 0.8,
+  "gpt-5.5-all": 12,
   "qwen3.7-max": 1.5,
   "gemini-3.5-flash": 2,
   "grok-4.3": 2,
@@ -170,6 +174,12 @@ export const MODEL_TOOL_CAPABILITIES: Record<
     webSearch: true,
     thinking: false,
     label: "Web + coding",
+  },
+  "gpt-5.5-all": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + premium reasoning",
   },
   "qwen3.7-max": {
     tools: true,

@@ -70,7 +70,7 @@ export function checkTextSafeFor3D(text: string): { safe: true } | { safe: false
     if (pattern.test(clean)) {
       return {
         safe: false,
-        reason: "That request looks adult/NSFW. 3D generation is only for safe Roblox-ready assets.",
+        reason: "That request looks adult/NSFW. BloxSmith generation is only for safe Roblox-ready assets.",
       };
     }
   }
@@ -78,7 +78,7 @@ export function checkTextSafeFor3D(text: string): { safe: true } | { safe: false
   if (NORMALIZED_BLOCKED_TERMS.some((term) => normalized.includes(term))) {
     return {
       safe: false,
-      reason: "That request looks unsafe or inappropriate. 3D generation is only for safe Roblox-ready assets.",
+      reason: "That request looks unsafe or inappropriate. BloxSmith generation is only for safe Roblox-ready assets.",
     };
   }
   return { safe: true };
