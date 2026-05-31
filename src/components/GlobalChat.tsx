@@ -450,7 +450,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [showSettings, setShowSettings] = useState(false);
   const [showMod, setShowMod] = useState(false);
   const [showRules, setShowRules] = useState(false);
-  const [showUsers, setShowUsers] = useState(false);
+  const [showUsers, setShowUsers] = useState(() => {
+    if (inline) return false;
+    if (typeof window === "undefined") return false;
+    return window.matchMedia?.("(min-width: 768px)").matches ?? false;
+  });
   const [showLogs, setShowLogs] = useState(false);
   const [showRobloxShare, setShowRobloxShare] = useState(false);
   const [robloxUrl, setRobloxUrl] = useState("");
@@ -541,56 +545,68 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     if (!p?.id) return;
     setAuthors((prev) => {
       const existing = prev.get(p.id);
-      if (!existing) return prev;
       const nick =
         typeof p.chat_nickname === "string" && p.chat_nickname.trim()
           ? p.chat_nickname.trim()
           : null;
       const next = new Map(prev);
       next.set(p.id, {
-        ...existing,
-        display_name: nick ?? p.display_name ?? existing.display_name,
-        username: typeof p.username === "string" ? p.username : existing.username,
-        avatar_url: p.avatar_url ?? existing.avatar_url,
+        roles: existing?.roles ?? [],
+        badges: existing?.badges ?? [],
+        display_name: nick ?? p.display_name ?? existing?.display_name ?? null,
+        username: typeof p.username === "string" ? p.username : (existing?.username ?? null),
+        avatar_url: p.avatar_url ?? existing?.avatar_url ?? null,
         profile_badges: Array.isArray(p.profile_badges)
           ? p.profile_badges
-          : existing.profile_badges,
+          : (existing?.profile_badges ?? []),
         profile_accent:
-          typeof p.profile_accent === "string" ? p.profile_accent : existing.profile_accent,
+          typeof p.profile_accent === "string"
+            ? p.profile_accent
+            : (existing?.profile_accent ?? null),
         profile_effect:
-          typeof p.profile_effect === "string" ? p.profile_effect : existing.profile_effect,
+          typeof p.profile_effect === "string"
+            ? p.profile_effect
+            : (existing?.profile_effect ?? null),
         profile_background:
           typeof p.profile_background === "string"
             ? p.profile_background
-            : existing.profile_background,
+            : (existing?.profile_background ?? null),
         custom_background_url:
           typeof p.custom_background_url === "string"
             ? p.custom_background_url
-            : existing.custom_background_url,
+            : (existing?.custom_background_url ?? null),
         profile_card_color:
           typeof p.profile_card_color === "string"
             ? p.profile_card_color
-            : existing.profile_card_color,
+            : (existing?.profile_card_color ?? null),
         profile_card_effect:
           typeof p.profile_card_effect === "string"
             ? p.profile_card_effect
-            : existing.profile_card_effect,
-        pfp_effect: typeof p.pfp_effect === "string" ? p.pfp_effect : existing.pfp_effect,
+            : (existing?.profile_card_effect ?? null),
+        pfp_effect:
+          typeof p.pfp_effect === "string" ? p.pfp_effect : (existing?.pfp_effect ?? null),
         profile_decoration:
           typeof p.profile_decoration === "string"
             ? p.profile_decoration
-            : existing.profile_decoration,
+            : (existing?.profile_decoration ?? null),
         status_message:
-          typeof p.status_message === "string" ? p.status_message : existing.status_message,
-        presence_enabled: p.presence_enabled ?? existing.presence_enabled,
+          typeof p.status_message === "string"
+            ? p.status_message
+            : (existing?.status_message ?? null),
+        presence_enabled: p.presence_enabled ?? existing?.presence_enabled ?? null,
         presence_status:
-          typeof p.presence_status === "string" ? p.presence_status : existing.presence_status,
-        last_seen_at: typeof p.last_seen_at === "string" ? p.last_seen_at : existing.last_seen_at,
-        chat_name_gradient: sanitizeGradient(p.chat_name_gradient) ?? existing.chat_name_gradient,
-        chat_text_gradient: sanitizeGradient(p.chat_text_gradient) ?? existing.chat_text_gradient,
-        chat_icon: sanitizeIcon(p.chat_icon) ?? existing.chat_icon,
-        chat_nickname: nick ?? existing.chat_nickname,
-        chat_font: sanitizeFont(p.chat_font) ?? existing.chat_font,
+          typeof p.presence_status === "string"
+            ? p.presence_status
+            : (existing?.presence_status ?? null),
+        last_seen_at:
+          typeof p.last_seen_at === "string" ? p.last_seen_at : (existing?.last_seen_at ?? null),
+        chat_name_gradient:
+          sanitizeGradient(p.chat_name_gradient) ?? existing?.chat_name_gradient ?? null,
+        chat_text_gradient:
+          sanitizeGradient(p.chat_text_gradient) ?? existing?.chat_text_gradient ?? null,
+        chat_icon: sanitizeIcon(p.chat_icon) ?? existing?.chat_icon ?? null,
+        chat_nickname: nick ?? existing?.chat_nickname ?? null,
+        chat_font: sanitizeFont(p.chat_font) ?? existing?.chat_font ?? null,
       });
       return next;
     });
@@ -639,7 +655,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     });
     setAuthors((prev) => {
       const next = new Map(prev);
+      const hydrated = new Set<string>();
       ((profs ?? []) as HydratedAuthorProfile[]).forEach((p) => {
+        hydrated.add(p.id);
         const nick =
           typeof p.chat_nickname === "string" && p.chat_nickname.trim()
             ? p.chat_nickname.trim()
@@ -673,6 +691,34 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           chat_icon: sanitizeIcon(p.chat_icon),
           chat_nickname: nick,
           chat_font: sanitizeFont(p.chat_font),
+        });
+      });
+      need.forEach((id) => {
+        if (hydrated.has(id) || next.has(id)) return;
+        next.set(id, {
+          display_name: `Builder ${id.slice(0, 4)}`,
+          username: null,
+          avatar_url: null,
+          roles: rolesByUser.get(id) ?? [],
+          badges: badgesByUser.get(id) ?? [],
+          profile_badges: [],
+          profile_accent: null,
+          profile_effect: null,
+          profile_background: null,
+          custom_background_url: null,
+          profile_card_color: null,
+          profile_card_effect: null,
+          pfp_effect: null,
+          profile_decoration: null,
+          status_message: null,
+          presence_enabled: true,
+          presence_status: "online",
+          last_seen_at: null,
+          chat_name_gradient: null,
+          chat_text_gradient: null,
+          chat_icon: null,
+          chat_nickname: null,
+          chat_font: null,
         });
       });
       return next;
@@ -2131,6 +2177,18 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               </div>
             </div>
             <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => setShowUsers((v) => !v)}
+                aria-label="Members"
+                title="Members"
+                className={cn(
+                  "grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground",
+                  showUsers && "bg-primary/15 text-primary",
+                )}
+              >
+                <Users className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 onClick={() => {

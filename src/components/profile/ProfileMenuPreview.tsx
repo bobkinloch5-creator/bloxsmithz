@@ -139,9 +139,7 @@ export function ProfileMenuAvatar({
   }, [src, fallback]);
 
   const decoration =
-    compact && !COMPACT_DECORATION_IDS.has(effects.decoration)
-      ? "none"
-      : effects.decoration;
+    compact && !COMPACT_DECORATION_IDS.has(effects.decoration) ? "none" : effects.decoration;
   const decorationSuppressed = effects.decoration !== "none" && decoration === "none";
   const decorationSize = size + (effects.pfpEffect !== "none" ? 6 : 0);
 
@@ -206,7 +204,7 @@ export function ProfileMenuPreview({
   const displayName = profile?.display_name || "Builder";
   const handle = profileHandle(profile?.username);
   const showEmail = profile?.hide_email === false && !!profile?.email;
-  const staticEffectClass = lightweight ? "profile-effect-static" : "";
+  const staticCardEffectClass = lightweight ? "profile-effect-static" : "";
   const showFlair = hasProfileMenuFlair({
     ...profile,
     banner_url: bannerUrl ?? profile?.banner_url ?? null,
@@ -220,7 +218,7 @@ export function ProfileMenuPreview({
       <ProfileCardEffect
         effect={effects.cardEffect}
         color={effects.cardColor}
-        className={staticEffectClass}
+        className={staticCardEffectClass}
       />
       <div className="relative h-28 overflow-hidden bg-gradient-brand">
         {bannerUrl ? (
@@ -228,11 +226,7 @@ export function ProfileMenuPreview({
         ) : (
           <ProfileBackground id={effects.background} customUrl={effects.customBackgroundUrl} />
         )}
-        <ProfileEffect
-          effect={effects.profileEffect}
-          accent={effects.accent}
-          className={staticEffectClass}
-        />
+        <ProfileEffect effect={effects.profileEffect} accent={effects.accent} />
         {!bannerUrl && effects.background === "none" && (
           <div
             className="absolute inset-0"
@@ -250,7 +244,7 @@ export function ProfileMenuPreview({
           fallback={fallbackAvatar}
           profile={profile}
           size={64}
-          animated={!lightweight}
+          animated
           className="drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)]"
         />
         <div className="mt-2 flex min-w-0 items-center gap-2">
