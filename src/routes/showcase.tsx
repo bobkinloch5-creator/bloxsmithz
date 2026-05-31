@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Heart, GitFork, Sparkles, Loader2, Flame } from "lucide-react";
 import { useState } from "react";
 import { getTrendingShowcase } from "@/lib/showcase.functions";
+import { MarkdownText } from "@/components/MarkdownText";
 
 export const Route = createFileRoute("/showcase")({
   component: () => (<RequireAuth><ShowcasePage /></RequireAuth>),
@@ -155,7 +156,7 @@ function ShowcasePage() {
                 <div className="p-4">
                   <h3 className="font-semibold truncate">{p.showcase_title ?? p.name}</h3>
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-1 min-h-[2.5rem]">
-                    {p.showcase_description ?? "—"}
+                    <MarkdownText text={p.showcase_description ?? "-"} />
                   </p>
                   <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1">

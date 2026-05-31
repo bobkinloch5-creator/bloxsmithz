@@ -1296,6 +1296,26 @@ summary:active {
   button:active, a:active, [role="button"]:active { transform: none; }
 }
 
+.chat-reaction-pill {
+  animation: reaction-pop 220ms cubic-bezier(.2, .9, .2, 1.25);
+}
+.chat-reaction-pill:hover {
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 8px 22px -16px hsl(var(--primary) / .9);
+}
+.chat-reaction-pill:hover .chat-reaction-emoji {
+  animation: reaction-bounce 520ms ease-in-out;
+}
+@keyframes reaction-pop {
+  0% { transform: scale(.82); opacity: .25; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes reaction-bounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35% { transform: translateY(-3px) rotate(-8deg); }
+  70% { transform: translateY(1px) rotate(6deg); }
+}
+
 /* Profile effects */
 .profile-effect-static,
 .profile-effect-static * {

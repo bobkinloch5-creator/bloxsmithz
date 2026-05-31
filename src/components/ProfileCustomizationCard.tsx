@@ -6,14 +6,14 @@ import { useAuth } from "@/lib/auth-context";
 import { createRobloxStyleAvatar } from "@/lib/generated-avatar";
 import { useServerFn } from "@tanstack/react-start";
 import { updateProfileCustomization } from "@/lib/profile-customization.functions";
-import { setCustomBackground } from "@/lib/profile-media.functions";
+import { moderateProfileBackground, setCustomBackground } from "@/lib/profile-media.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PROFILE_BACKGROUNDS, ProfileBackground, type ProfileBackgroundId } from "./profile/ProfileBackground";
 import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
-import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award, Palette } from "lucide-react";
+import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award, Palette, ShieldCheck } from "lucide-react";
 import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow, getBadgeDef } from "./profile/ProfileBadges";
 import { PROFILE_DECORATIONS, AvatarDecoration } from "./profile/ProfileDecoration";
 import { ProfileMenuPreview } from "./profile/ProfileMenuPreview";
@@ -82,12 +82,14 @@ export function ProfileCustomizationCard() {
     profile_decoration: (p.profile_decoration ?? "none") as string,
   });
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [subTab, setSubTab] = useState<"identity" | "style" | "cosmetics" | "privacy">("identity");
   const canUseReserved = canUseReservedCosmetics(roles);
 
   // Re-sync when profile reloads (e.g., after another device pushes changes).
   useEffect(() => {
     if (!profile) return;
+    if (dirty) return;
     const q = profile as any;
     setState((s) => ({
       ...s,
@@ -113,7 +115,17 @@ export function ProfileCustomizationCard() {
       profile_badges: selectableProfileBadgeIds(q.profile_badges),
       profile_decoration: q.profile_decoration ?? s.profile_decoration,
     }));
-  }, [profile]);
+  }, [dirty, profile]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   const initial = useMemo(
     () => (state.display_name || "U").slice(0, 1).toUpperCase(),
@@ -208,6 +220,7 @@ export function ProfileCustomizationCard() {
         },
       });
       await refresh();
+      setDirty(false);
       toast.success("Profile saved");
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't save profile");
@@ -217,6 +230,7 @@ export function ProfileCustomizationCard() {
   }
 
   function set<K extends keyof typeof state>(k: K, v: (typeof state)[K]) {
+    setDirty(true);
     setState((s) => ({ ...s, [k]: v }));
   }
 
@@ -585,6 +599,7 @@ export function ProfileCustomizationCard() {
                 if (state.custom_background_url) set("profile_background", "custom");
               }}
               onChange={(url) => {
+                setDirty(true);
                 setState((s) => ({
                   ...s,
                   custom_background_url: url,
@@ -714,14 +729,15 @@ export function ProfileCustomizationCard() {
                     key={b.id}
                     type="button"
                     disabled={atLimit}
-                    onClick={() =>
+                    onClick={() => {
+                      setDirty(true);
                       setState((s) => ({
                         ...s,
                         profile_badges: active
                           ? s.profile_badges.filter((x) => x !== b.id)
                           : [...s.profile_badges, b.id],
-                      }))
-                    }
+                      }));
+                    }}
                     className={`group relative flex flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2 transition disabled:opacity-40 ${
                       active
                         ? "border-primary bg-primary/10 ring-1 ring-primary/40"
@@ -880,8 +896,8 @@ function ToggleRow({
   );
 }
 
-const MAX_BYTES = 15 * 1024 * 1024; // 15MB
-const ACCEPT = "image/png,image/jpeg,image/webp,image/gif,image/apng,video/mp4,video/webm";
+const MAX_BYTES = 8 * 1024 * 1024; // 8MB
+const ACCEPT = "image/png,image/jpeg,image/webp";
 
 function CustomBackgroundUploader({
   userId,
@@ -898,10 +914,9 @@ function CustomBackgroundUploader({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<{ file: File; preview: string } | null>(null);
   const saveUrl = useServerFn(setCustomBackground);
-
-  const isVideo = !!url && /\.(mp4|webm)(\?|$)/i.test(url);
-  const isGif = !!url && /\.gif(\?|$)/i.test(url);
+  const moderateBackground = useServerFn(moderateProfileBackground);
 
   function pathFromPublicUrl(u: string | null): string | null {
     if (!u) return null;
@@ -909,18 +924,33 @@ function CustomBackgroundUploader({
     return m ? decodeURIComponent(m[1]) : null;
   }
 
-  async function handleFile(file: File) {
+  function handleFile(file: File) {
     if (!userId) {
       toast.error("Sign in to upload");
       return;
     }
-    if (file.size > MAX_BYTES) {
-      toast.error("File is too large (max 15MB)");
+    if (!ACCEPT.split(",").includes(file.type)) {
+      toast.error("Please upload a PNG, JPG, or WEBP image.");
       return;
     }
+    if (file.size > MAX_BYTES) {
+      toast.error("File is too large (max 8MB)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setPending({ file, preview: String(reader.result) });
+    reader.onerror = () => toast.error("Could not preview that image.");
+    reader.readAsDataURL(file);
+  }
+
+  async function savePending() {
+    if (!userId || !pending) return;
     setBusy(true);
     try {
-      const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+      await moderateBackground({ data: { dataUrl: pending.preview } });
+      const file = pending.file;
+      const ext =
+        file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
       const path = `${userId}/bg-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("profile-media")
@@ -931,7 +961,8 @@ function CustomBackgroundUploader({
       const previousPath = pathFromPublicUrl(url);
       await saveUrl({ data: { url: publicUrl, previousPath } });
       onChange(publicUrl);
-      toast.success("Custom background uploaded");
+      setPending(null);
+      toast.success("Custom background checked and saved");
     } catch (e: any) {
       toast.error(e?.message ?? "Upload failed");
     } finally {
@@ -961,9 +992,9 @@ function CustomBackgroundUploader({
         <div className="flex items-center gap-2 min-w-0">
           <Film className="h-4 w-4 text-primary shrink-0" />
           <div className="min-w-0">
-            <div className="text-sm font-semibold">Custom animated background</div>
+            <div className="text-sm font-semibold">Custom profile background</div>
             <div className="text-[11px] text-muted-foreground">
-              Upload your own GIF, PNG, JPG, WEBP, or short MP4/WebM (max 15MB).
+              Upload PNG, JPG, or WEBP (max 8MB). Images are previewed and moderated before saving.
             </div>
           </div>
         </div>
@@ -985,7 +1016,7 @@ function CustomBackgroundUploader({
             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            {url ? "Replace" : "Upload"}
+            {url ? "Choose replacement" : "Choose image"}
           </button>
           {url && (
             <button
@@ -1000,6 +1031,36 @@ function CustomBackgroundUploader({
         </div>
       </div>
 
+      {pending && (
+        <div className="mt-3 overflow-hidden rounded-lg border border-primary/35 bg-primary/5">
+          <img src={pending.preview} alt="Pending background preview" className="h-32 w-full object-cover" />
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2">
+            <span className="text-[11px] text-muted-foreground">
+              Preview before save. Unsafe images are blocked.
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setPending(null)}
+                className="rounded-lg border border-border/60 bg-background/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={savePending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                Save checked image
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {url && (
         <button
           type="button"
@@ -1009,15 +1070,11 @@ function CustomBackgroundUploader({
           }`}
           title="Use this background"
         >
-          {isVideo ? (
-            <video src={url} autoPlay loop muted playsInline className="h-full w-full object-cover" />
-          ) : (
-            <img src={url} alt="Custom background" className="h-full w-full object-cover" />
-          )}
+          <img src={url} alt="Custom background" className="h-full w-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">
             <span>{active ? "Selected" : "Click to use"}</span>
             <span className="rounded bg-white/15 px-1.5 py-0.5">
-              {isVideo ? "VIDEO" : isGif ? "GIF" : "IMAGE"}
+              IMAGE
             </span>
           </div>
         </button>

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { publishToShowcase, unpublishFromShowcase } from "@/lib/showcase.functions";
 import { Globe, Loader2, X, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { usePersistentDraft } from "@/hooks/usePersistentDraft";
 
 type Props = {
   projectId: string;
@@ -23,9 +24,19 @@ export function ShowcasePublishButton({
   projectName,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(showcaseTitle ?? projectName);
-  const [description, setDescription] = useState(showcaseDescription ?? "");
-  const [thumb, setThumb] = useState(showcaseThumbnailUrl ?? "");
+  const [draft, setDraft, clearDraft] = usePersistentDraft({
+    key: `bloxsmith.draft.showcase.${projectId}`,
+    initial: {
+      title: showcaseTitle ?? projectName,
+      description: showcaseDescription ?? "",
+      thumb: showcaseThumbnailUrl ?? "",
+    },
+    isEmpty: (value) =>
+      value.title === (showcaseTitle ?? projectName) &&
+      value.description === (showcaseDescription ?? "") &&
+      value.thumb === (showcaseThumbnailUrl ?? ""),
+  });
+  const { title, description, thumb } = draft;
   const qc = useQueryClient();
   const publish = useServerFn(publishToShowcase);
   const unpublish = useServerFn(unpublishFromShowcase);
@@ -42,6 +53,7 @@ export function ShowcasePublishButton({
       }),
     onSuccess: () => {
       toast.success("Published to showcase!");
+      clearDraft();
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["project", projectId] });
     },
@@ -105,7 +117,7 @@ export function ShowcasePublishButton({
                 </label>
                 <input
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => setDraft((value) => ({ ...value, title: e.target.value }))}
                   maxLength={120}
                   className="mt-1 w-full rounded-lg bg-background border border-border px-3 py-2 text-sm focus:outline-none focus:border-primary"
                 />
@@ -116,7 +128,9 @@ export function ShowcasePublishButton({
                 </label>
                 <textarea
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) =>
+                    setDraft((value) => ({ ...value, description: e.target.value }))
+                  }
                   maxLength={500}
                   rows={4}
                   placeholder="What does your project do? What makes it cool?"
@@ -130,7 +144,7 @@ export function ShowcasePublishButton({
                 </label>
                 <input
                   value={thumb}
-                  onChange={(e) => setThumb(e.target.value)}
+                  onChange={(e) => setDraft((value) => ({ ...value, thumb: e.target.value }))}
                   placeholder="https://..."
                   className="mt-1 w-full rounded-lg bg-background border border-border px-3 py-2 text-sm focus:outline-none focus:border-primary"
                 />

@@ -45,6 +45,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getPublicStats } from "@/lib/stats.functions";
 import { getFeaturedCreator } from "@/lib/showcase.functions";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -444,9 +445,11 @@ function SectionTitle({
 }
 
 function Landing() {
+  const { user } = useAuth();
   const { data: live } = useLiveStats();
   const { data: featuredRes } = useFeaturedCreator();
   const featured = featuredRes?.featured ?? null;
+  const buildTo = user ? "/dashboard" : "/signup";
   const stats = live
     ? [
         { value: compact(live.scripts), label: "Scripts generated" },
@@ -487,7 +490,7 @@ function Landing() {
               </p>
               <div className="mt-6 sm:mt-10 grid grid-cols-1 xs:grid-cols-2 sm:flex sm:flex-wrap gap-3">
                 <Link
-                  to="/signup"
+                  to={buildTo}
                   className="btn-shine group inline-flex justify-center items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground glow-ring hover:bg-primary/90 transition"
                 >
                   🚀 Start Building Free{" "}
@@ -635,7 +638,7 @@ function Landing() {
           </div>
           <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3">
             <Link
-              to="/signup"
+              to={buildTo}
               className="inline-flex justify-center items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90 transition"
             >
               Try the demo prompt <ArrowRight className="h-4 w-4" />
@@ -749,7 +752,7 @@ function Landing() {
             {promptIdeas.map((prompt) => (
               <Link
                 key={prompt}
-                to="/signup"
+                to={buildTo}
                 className="group rounded-2xl border border-border bg-background/40 px-4 py-4 text-sm text-left hover:border-primary/40 hover:bg-primary/10 transition"
               >
                 <span className="flex items-start gap-2">
@@ -1183,7 +1186,7 @@ function Landing() {
             </p>
             <div className="mt-8 grid grid-cols-1 xs:grid-cols-2 sm:flex sm:justify-center gap-3">
               <Link
-                to="/signup"
+                to={buildTo}
                 className="inline-flex justify-center items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] hover:bg-primary/90 transition"
               >
                 Start building free <ArrowRight className="h-4 w-4" />

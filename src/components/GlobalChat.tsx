@@ -66,6 +66,7 @@ import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
 import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
 import { presenceFromProfile } from "@/lib/presence";
 import { profileHandle } from "@/lib/profile-username";
+import { usePersistentDraft } from "@/hooks/usePersistentDraft";
 
 type DbMessage = {
   id: string;
@@ -374,7 +375,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [messages, setMessages] = useState<RenderMessage[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft, clearDraft] = usePersistentDraft({
+    key: user?.id ? `bloxsmith.draft.global-chat.${user.id}` : null,
+    initial: "",
+  });
   const [sending, setSending] = useState(false);
   // Safety watchdog: if `sending` ever stays true (e.g. an awaited call never
   // settles), the textarea and send button stay disabled and the user can't
@@ -1135,7 +1139,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     // Slash commands
     if (trimmed.startsWith("/")) {
       setSending(true);
-      setDraft("");
+      clearDraft();
       try {
         await runSlashCommand(trimmed);
       } finally {
@@ -1230,7 +1234,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         else toast.error(m);
         setDraft(trimmed);
       } else {
-        setDraft("");
+        clearDraft();
         setReplyTo(null);
         setPendingFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -2024,7 +2028,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                   <div key={p.id} className="flex items-center gap-1.5 text-[11px]">
                     <Pin className="h-3 w-3 text-primary shrink-0" />
                     <span className="font-semibold">{a?.display_name ?? "User"}:</span>
-                    <span className="truncate text-muted-foreground">{p.content}</span>
+                    <span className="truncate text-muted-foreground">
+                      {renderRich(p.content, myName, accent)}
+                    </span>
                     {canModerate && (
                       <button
                         type="button"
@@ -2317,13 +2323,13 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                             type="button"
                             onClick={() => toggleReaction(m.id, emoji)}
                             className={cn(
-                              "flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px]",
+                              "chat-reaction-pill flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] shadow-sm transition",
                               g.mine
-                                ? "border-primary/50 bg-primary/15"
-                                : "border-border bg-surface/50 hover:bg-surface",
+                                ? "border-primary/50 bg-primary/15 text-primary-glow"
+                                : "border-border bg-surface/50 hover:border-primary/35 hover:bg-surface",
                             )}
                           >
-                            <span>{emoji}</span>
+                            <span className="chat-reaction-emoji">{emoji}</span>
                             <span className="text-muted-foreground">{g.count}</span>
                           </button>
                         ))}

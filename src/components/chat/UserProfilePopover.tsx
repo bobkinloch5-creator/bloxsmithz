@@ -14,6 +14,7 @@ import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
 import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
 import { ProfileCardEffect, cardChromeStyle } from "@/components/profile/ProfileCardEffects";
 import { RoleBadges, type Role } from "@/components/RoleBadge";
+import { MarkdownText } from "@/components/MarkdownText";
 import {
   mergeProfileBadgeIds,
   normalizeProfileBadgeIds,
@@ -381,7 +382,9 @@ export function UserProfilePopover({
                 </div>
                 {handle ? <p className="mt-0.5 text-xs font-semibold text-primary-glow/90">{handle}</p> : null}
                 {profile.status_message && (
-                  <p className="mt-0.5 text-xs text-foreground/80 italic">"{profile.status_message}"</p>
+                  <p className="mt-0.5 text-xs text-foreground/80 italic">
+                    <MarkdownText text={profile.status_message} />
+                  </p>
                 )}
                 {visibleBadgeIds.length > 0 && (
                   <ProfileBadgeRow ids={visibleBadgeIds} size={24} className="mt-2" />
@@ -398,7 +401,11 @@ export function UserProfilePopover({
                   )}
                   <span><span className="font-semibold text-foreground">{achievements.length}</span> achievement{achievements.length === 1 ? "" : "s"}</span>
                 </div>
-                {profile.bio && <p className="mt-1 text-xs text-muted-foreground">{profile.bio}</p>}
+                {profile.bio && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <MarkdownText text={profile.bio} />
+                  </p>
+                )}
               </div>
 
               {!isSelf && (

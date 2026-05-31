@@ -35,3 +35,19 @@ export const setCustomBackground = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+export const moderateProfileBackground = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        dataUrl: z.string().max(11_500_000),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { checkImageSafeFor3D } = await import("./content-safety.server");
+    const verdict = await checkImageSafeFor3D(data.dataUrl);
+    if (!verdict.safe) throw new Error(verdict.reason);
+    return { ok: true };
+  });
