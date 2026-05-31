@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { createRobloxStyleAvatar } from "@/lib/generated-avatar";
 import logo from "@/assets/logo.png";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   User,
   Settings,
@@ -29,6 +29,7 @@ import {
   FileText,
   HelpCircle,
   Bug,
+  Clock,
 } from "lucide-react";
 import { PluginStatus } from "@/components/PluginStatus";
 import { McpStatus } from "@/components/McpStatus";
@@ -232,6 +233,7 @@ export function Header() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 lg:gap-2.5">
+          <LiveHeaderClock className="hidden sm:inline-flex" />
           <div className="hidden md:flex shrink-0 items-center gap-2">
             <a
               href="https://discord.gg/ZzdqTpntB"
@@ -377,6 +379,7 @@ export function Header() {
         aria-label="Mobile navigation"
       >
         <div className="flex w-max min-w-full items-center gap-2">
+          <LiveHeaderClock className="inline-flex md:hidden" />
           {mobileItems.map((item) => {
             const Icon = item.icon;
             const isProfile = item.to === "/account" && user;
@@ -426,6 +429,38 @@ export function Header() {
         </div>
       </nav>
     </header>
+  );
+}
+
+function LiveHeaderClock({ className = "" }: { className?: string }) {
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const time = now
+    ? now.toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      })
+    : "--:--:-- --";
+
+  return (
+    <div
+      className={`${className} h-9 shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-surface/70 px-3 text-xs font-semibold text-foreground/90 shadow-sm tabular-nums`}
+      title="Local 12-hour time"
+      aria-label={`Local time ${time}`}
+      suppressHydrationWarning
+    >
+      <Clock className="h-3.5 w-3.5 text-primary" />
+      <span>{time}</span>
+    </div>
   );
 }
 
