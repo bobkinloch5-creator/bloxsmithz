@@ -66,6 +66,29 @@ type AuthCtx = {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+const PROFILE_SELECT_FULL =
+  "id,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration,onboarding_completed_at,onboarding_step,onboarding_reward_claimed";
+
+const PROFILE_SELECT_CORE =
+  "id,display_name,avatar_url,bio,specialization,credits,discord_claimed,referral_code,referred_by";
+
+function withProfileDefaults(profile: Partial<Profile> | null, email: string): Profile | null {
+  if (!profile?.id) return null;
+  return {
+    ...(profile as Partial<Profile>),
+    id: profile.id,
+    email,
+    display_name: profile.display_name ?? null,
+    avatar_url: profile.avatar_url ?? null,
+    bio: profile.bio ?? null,
+    specialization: profile.specialization ?? null,
+    credits: profile.credits ?? 0,
+    discord_claimed: profile.discord_claimed ?? false,
+    referral_code: profile.referral_code ?? null,
+    referred_by: profile.referred_by ?? null,
+  } as Profile;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -94,17 +117,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (uid: string, userEmail?: string) => {
     try {
-      await (supabase as any).rpc("ensure_my_profile");
-      const [{ data: p }, { data: r }] = await Promise.all([
+      const { error: ensureError } = await (supabase as any).rpc("ensure_my_profile");
+      if (ensureError) {
+        console.warn("[auth] profile self-heal skipped:", ensureError.message ?? ensureError);
+      }
+
+      const [profileRes, { data: r }] = await Promise.all([
         supabase
           .from("profiles")
-          .select(
-            "id,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration,onboarding_completed_at,onboarding_step,onboarding_reward_claimed",
-          )
+          .select(PROFILE_SELECT_FULL)
           .eq("id", uid)
           .maybeSingle(),
         (supabase as any).from("user_roles").select("role").eq("user_id", uid),
       ]);
+
+      let p = profileRes.data as Partial<Profile> | null;
+      if (profileRes.error) {
+        console.warn("[auth] full profile load failed, retrying core fields:", profileRes.error.message);
+        const { data: coreProfile, error: coreError } = await supabase
+          .from("profiles")
+          .select(PROFILE_SELECT_CORE)
+          .eq("id", uid)
+          .maybeSingle();
+        if (coreError) throw coreError;
+        p = coreProfile as Partial<Profile> | null;
+      }
 
       let resolvedEmail = userEmail;
       if (p && !resolvedEmail) {
@@ -112,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resolvedEmail = data?.user?.email || "";
       }
 
-      setProfile(p ? ({ ...(p as any), email: resolvedEmail || "" } as Profile) : null);
+      setProfile(withProfileDefaults(p, resolvedEmail || ""));
       setRoles(((r ?? []) as { role: Role }[]).map((x) => x.role));
     } catch (e) {
       // Supabase unreachable/unconfigured — don't crash; leave profile empty.

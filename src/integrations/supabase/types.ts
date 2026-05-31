@@ -1344,11 +1344,16 @@ export type Database = {
           last_seen_at: string | null
           location: string | null
           manual_sync_only: boolean
+          onboarding_completed_at: string | null
+          onboarding_reward_claimed: boolean
+          onboarding_step: number
           pfp_effect: string
           presence_enabled: boolean
           presence_status: string
           private_profile: boolean
           profile_accent: string | null
+          profile_card_color: string
+          profile_card_effect: string
           profile_background: string | null
           profile_badges: string[]
           profile_decoration: string
@@ -1391,11 +1396,16 @@ export type Database = {
           last_seen_at?: string | null
           location?: string | null
           manual_sync_only?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_reward_claimed?: boolean
+          onboarding_step?: number
           pfp_effect?: string
           presence_enabled?: boolean
           presence_status?: string
           private_profile?: boolean
           profile_accent?: string | null
+          profile_card_color?: string
+          profile_card_effect?: string
           profile_background?: string | null
           profile_badges?: string[]
           profile_decoration?: string
@@ -1438,11 +1448,16 @@ export type Database = {
           last_seen_at?: string | null
           location?: string | null
           manual_sync_only?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_reward_claimed?: boolean
+          onboarding_step?: number
           pfp_effect?: string
           presence_enabled?: boolean
           presence_status?: string
           private_profile?: boolean
           profile_accent?: string | null
+          profile_card_color?: string
+          profile_card_effect?: string
           profile_background?: string | null
           profile_badges?: string[]
           profile_decoration?: string

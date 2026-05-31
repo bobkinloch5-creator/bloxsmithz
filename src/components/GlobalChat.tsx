@@ -103,6 +103,13 @@ type Author = {
 
 type Reaction = { id: string; message_id: string; user_id: string; emoji: string };
 type RenderMessage = DbMessage & { ephemeralBot?: boolean };
+type SendGlobalChatMessageArgs = {
+  content: string;
+  replyToId?: string | null;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
+  channelId?: string | null;
+};
 
 const OPEN_KEY = "bloxsmith.globalchat.open";
 
@@ -161,6 +168,52 @@ const CHAT_CONSEQUENCES = [
       "Scams, threats, NSFW content, harassment, ban evasion, or serious abuse can lead to a ban.",
   },
 ];
+
+function isRpcSignatureError(error: any) {
+  const code = String(error?.code ?? "");
+  const message = String(error?.message ?? error ?? "");
+  return (
+    code === "PGRST202" ||
+    code === "PGRST203" ||
+    /schema cache|could not find.*function|function .* does not exist|parameter|argument/i.test(
+      message,
+    )
+  );
+}
+
+async function sendGlobalChatMessage({
+  content,
+  replyToId = null,
+  attachmentUrl = null,
+  attachmentType = null,
+  channelId = "general",
+}: SendGlobalChatMessageArgs) {
+  const full = await (supabase as any).rpc("send_global_chat_message_v2", {
+    _content: content,
+    _reply_to_id: replyToId,
+    _attachment_url: attachmentUrl,
+    _attachment_type: attachmentType,
+    _channel_id: channelId || "general",
+  });
+  if (!full.error || !isRpcSignatureError(full.error)) return full;
+
+  const withoutChannel = await (supabase as any).rpc("send_global_chat_message_v2", {
+    _content: content,
+    _reply_to_id: replyToId,
+    _attachment_url: attachmentUrl,
+    _attachment_type: attachmentType,
+  });
+  if (!withoutChannel.error || !isRpcSignatureError(withoutChannel.error)) return withoutChannel;
+
+  if (!replyToId && !attachmentUrl && !attachmentType) {
+    const oneArg = await (supabase as any).rpc("send_global_chat_message_v2", {
+      p_content: content,
+    });
+    if (!oneArg.error || !isRpcSignatureError(oneArg.error)) return oneArg;
+  }
+
+  return full;
+}
 
 function realtimeTopic(prefix: string) {
   const id =
@@ -1133,12 +1186,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         attachment_type = "image";
       }
 
-      const { error } = await (supabase as any).rpc("send_global_chat_message_v2", {
-        _content: trimmed,
-        _reply_to_id: replyTo?.id ?? null,
-        _attachment_url: attachment_url,
-        _attachment_type: attachment_type,
-        _channel_id: currentChannel,
+      const { error } = await sendGlobalChatMessage({
+        content: trimmed,
+        replyToId: replyTo?.id ?? null,
+        attachmentUrl: attachment_url,
+        attachmentType: attachment_type,
+        channelId: currentChannel,
       });
       if (error) {
         const m = String(error.message || "Failed to send");
@@ -1503,7 +1556,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   }
 
   async function sendRaw(content: string) {
-    await (supabase as any).rpc("send_global_chat_message_v2", { _content: content });
+    const { error } = await sendGlobalChatMessage({ content, channelId: currentChannel });
+    if (error) toast.error(error.message);
   }
 
   async function shareRobloxGame() {
@@ -1525,12 +1579,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     }
     setSending(true);
     try {
-      const { error } = await (supabase as any).rpc("send_global_chat_message_v2", {
-        _content: caption, // caption text only; link goes in attachment_url
-        _reply_to_id: null,
-        _attachment_url: parsed.toString(),
-        _attachment_type: "roblox",
-        _channel_id: currentChannel,
+      const { error } = await sendGlobalChatMessage({
+        content: caption, // caption text only; link goes in attachment_url
+        replyToId: null,
+        attachmentUrl: parsed.toString(),
+        attachmentType: "roblox",
+        channelId: currentChannel,
       });
       if (error) {
         toast.error(error.message);
