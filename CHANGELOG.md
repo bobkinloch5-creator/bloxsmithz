@@ -2,6 +2,12 @@
 
 ## Latest Updates
 
+### Profile Badges & Role Labels
+
+- Added owner/admin/moderator role labels and earned role badges to the account dropdown and public profile popover.
+- Made profile badge saving safer by preventing users from self-selecting locked badges like Founder, Staff, Moderator, or Verified unless their account role earns them.
+- Updated profile customization previews and the account profile badge list so earned role badges and selected display badges show together.
+
 ### Avatar Decoration Images
 
 - Replaced emoji-only avatar decoration artwork with local image assets for crowns, halos, wings, rings, auras, hats, goggles, visors, and seasonal decorations.

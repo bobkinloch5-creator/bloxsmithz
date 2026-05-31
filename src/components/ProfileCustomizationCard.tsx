@@ -20,6 +20,11 @@ import {
   ProfileCardChrome,
   type ProfileCardEffectId,
 } from "./profile/ProfileCardEffects";
+import {
+  roleProfileBadgeIds,
+  selectableProfileBadgeIds,
+  SELECTABLE_PROFILE_BADGE_IDS,
+} from "@/lib/profile-badges";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
 const CARD_COLORS = ["#0f172a", "#102a2a", "#20133a", "#2a1327", "#2b1d0e", "#111827", "#064e3b", "#1e1b4b"];
@@ -37,7 +42,7 @@ const STATUSES = [
 ] as const;
 
 export function ProfileCustomizationCard() {
-  const { user, profile, refresh } = useAuth();
+  const { user, profile, refresh, roles } = useAuth();
   const p = (profile ?? {}) as any;
   const save = useServerFn(updateProfileCustomization);
 
@@ -60,7 +65,7 @@ export function ProfileCustomizationCard() {
     presence_enabled: p.presence_enabled !== false,
     show_activity: p.show_activity !== false,
     presence_status: (p.presence_status ?? "online") as "online" | "idle" | "dnd" | "invisible",
-    profile_badges: (Array.isArray(p.profile_badges) ? p.profile_badges : []) as string[],
+    profile_badges: selectableProfileBadgeIds(p.profile_badges) as string[],
     profile_decoration: (p.profile_decoration ?? "none") as string,
   });
   const [saving, setSaving] = useState(false);
@@ -89,7 +94,7 @@ export function ProfileCustomizationCard() {
       presence_enabled: q.presence_enabled !== false,
       show_activity: q.show_activity !== false,
       presence_status: q.presence_status ?? s.presence_status,
-      profile_badges: Array.isArray(q.profile_badges) ? q.profile_badges : s.profile_badges,
+      profile_badges: selectableProfileBadgeIds(q.profile_badges),
       profile_decoration: q.profile_decoration ?? s.profile_decoration,
     }));
   }, [profile]);
@@ -98,6 +103,12 @@ export function ProfileCustomizationCard() {
     () => (state.display_name || "U").slice(0, 1).toUpperCase(),
     [state.display_name],
   );
+  const earnedRoleBadgeIds = useMemo(() => roleProfileBadgeIds(roles), [roles]);
+  const previewBadgeIds = useMemo(
+    () => Array.from(new Set([...earnedRoleBadgeIds, ...state.profile_badges])),
+    [earnedRoleBadgeIds, state.profile_badges],
+  );
+  const selectableBadgeLimit = Math.max(0, 12 - earnedRoleBadgeIds.length);
 
   async function onSave() {
     if (!user) return;
@@ -212,8 +223,8 @@ export function ProfileCustomizationCard() {
               <p className="text-xs text-muted-foreground truncate">{state.status_message}</p>
             )}
             {state.bio && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{state.bio}</p>}
-            {state.profile_badges.length > 0 && (
-              <ProfileBadgeRow ids={state.profile_badges} size={22} className="mt-2" />
+            {previewBadgeIds.length > 0 && (
+              <ProfileBadgeRow ids={previewBadgeIds} size={22} className="mt-2" />
             )}
           </div>
         </div>
@@ -516,14 +527,22 @@ export function ProfileCustomizationCard() {
       </Section>
 
       {/* BADGES */}
-      <Section icon={<Award className="h-4 w-4" />} title={`Badges (${state.profile_badges.length}/12)`}>
+      <Section icon={<Award className="h-4 w-4" />} title={`Badges (${previewBadgeIds.length}/12)`}>
         <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
-          Pick up to 12 badges to show off on your profile. Click to toggle.
+          Pick display badges for your profile. Owner, staff, moderator, and verified badges are earned from your account role.
         </p>
+        {earnedRoleBadgeIds.length > 0 && (
+          <div className="mb-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary-glow">
+              Role badges
+            </div>
+            <ProfileBadgeRow ids={earnedRoleBadgeIds} size={28} />
+          </div>
+        )}
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-9">
-          {PROFILE_BADGES.map((b) => {
+          {PROFILE_BADGES.filter((b) => SELECTABLE_PROFILE_BADGE_IDS.includes(b.id)).map((b) => {
             const active = state.profile_badges.includes(b.id);
-            const atLimit = !active && state.profile_badges.length >= 12;
+            const atLimit = !active && state.profile_badges.length >= selectableBadgeLimit;
             return (
               <button
                 key={b.id}

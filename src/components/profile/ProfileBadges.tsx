@@ -1,26 +1,9 @@
 // Discord-style decorative profile badges. Pure CSS/SVG, no external icons,
 // each badge has a gradient face + glow ring + subtle animation.
 import { useMemo } from "react";
+import type { ProfileBadgeId } from "@/lib/profile-badges";
 
-export type BadgeId =
-  | "founder"
-  | "early"
-  | "developer"
-  | "verified"
-  | "supporter"
-  | "booster"
-  | "legend"
-  | "creator"
-  | "translator"
-  | "bug_hunter"
-  | "staff"
-  | "moderator"
-  | "og"
-  | "nitro"
-  | "active"
-  | "explorer"
-  | "artist"
-  | "scripter";
+export type BadgeId = ProfileBadgeId;
 
 type BadgeDef = {
   id: BadgeId;

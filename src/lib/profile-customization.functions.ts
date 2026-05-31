@@ -1,6 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import {
+  PROFILE_BADGE_IDS,
+  roleProfileBadgeIds,
+  selectableProfileBadgeIds,
+} from "@/lib/profile-badges";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const PROFILE_EFFECT_IDS = ["none", "sparkle", "aurora", "neon", "holographic", "confetti", "stars", "comet", "runes", "spotlight"] as const;
@@ -8,8 +13,6 @@ const PROFILE_BACKGROUND_IDS = ["none", "custom", "studio", "neon-city", "obby",
 const PFP_EFFECT_IDS = ["none", "gold", "rainbow", "flame", "electric", "ice", "galaxy", "rose"] as const;
 const PROFILE_DECORATION_IDS = ["none", "top_hat", "halo", "crown", "devil_horns", "headphones", "flower_crown", "wings", "snowflake", "santa", "party", "ninja", "witch", "neon_ring", "pumpkin", "cyber_visor", "bunny_ears", "cosmic_crown", "plasma_halo", "royal_wings", "lightning_aura", "crystal_spikes", "orbit", "flame_aura", "star_shower", "glitch_frame", "heart_aura", "coin_crown", "builder_goggles"] as const;
 const PROFILE_CARD_EFFECT_IDS = ["none", "soft_glow", "aurora_edge", "premium_shine", "scanline", "starfield", "pixel_rain"] as const;
-const PROFILE_BADGE_IDS = ["founder", "early", "developer", "verified", "supporter", "booster", "legend", "creator", "translator", "bug_hunter", "staff", "moderator", "og", "nitro", "active", "explorer", "artist", "scripter"] as const;
-
 const Schema = z
   .object({
     display_name: z.string().min(1).max(64).optional().nullable(),
@@ -63,6 +66,20 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
       if (v !== undefined) patch[k] = v;
     }
     if (Object.keys(patch).length === 0) return { ok: true };
+
+    if (patch.profile_badges !== undefined) {
+      const { data: roles } = await (supabase as any)
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      const roleList = ((roles ?? []) as { role: string }[]).map((row) => row.role);
+      patch.profile_badges = Array.from(
+        new Set([
+          ...selectableProfileBadgeIds(patch.profile_badges),
+          ...roleProfileBadgeIds(roleList),
+        ]),
+      ).slice(0, 12);
+    }
 
     const { data: row, error } = await (supabase as any)
       .from("profiles")

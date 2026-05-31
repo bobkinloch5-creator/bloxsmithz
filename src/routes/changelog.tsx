@@ -51,6 +51,14 @@ const changelogItems = [
     updates: [
       {
         category: "Account",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Profile Badges & Role Labels",
+        detail:
+          "Profile menus and public popovers now show owner/admin/mod role labels and earned role badges, while locked badges like Founder, Staff, Moderator, and Verified can only come from real account roles.",
+      },
+      {
+        category: "Account",
         tagColor: tagStyles.ui,
         icon: ImageIcon,
         title: "Real Decoration Images",

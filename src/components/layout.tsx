@@ -40,6 +40,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { creditBalanceTitle, formatCreditBalance } from "@/lib/credit-display";
+import { RoleBadges } from "@/components/RoleBadge";
+import { ProfileBadgeRow, getBadgeDef } from "@/components/profile/ProfileBadges";
+import {
+  mergeProfileBadgeIds,
+  roleProfileBadgeIds,
+  selectableProfileBadgeIds,
+} from "@/lib/profile-badges";
 
 type NavItem = {
   to: string;
@@ -125,12 +132,22 @@ function ProfileAvatar({
 }
 
 export function Header() {
-  const { user, signOut, profile, isOwner } = useAuth();
+  const { user, signOut, profile, isOwner, roles } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
 
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || null;
   const bannerUrl = profile?.banner_url || user?.user_metadata?.banner_url || null;
   const fallbackAvatar = createRobloxStyleAvatar(user?.id || user?.email);
+  const menuBadgeIds = mergeProfileBadgeIds([
+    ...roleProfileBadgeIds(roles),
+    ...selectableProfileBadgeIds((profile as any)?.profile_badges),
+    (profile as any)?.discord_claimed ? "booster" : "",
+    (profile as any)?.credits > 0 ? "supporter" : "",
+  ]);
+  const menuBadgeNames = menuBadgeIds
+    .map((id) => getBadgeDef(id)?.label)
+    .filter(Boolean)
+    .join(", ");
 
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.authOnly || user);
   const mobileItems = MOBILE_NAV_ITEMS.filter((item) => {
@@ -318,12 +335,25 @@ export function Header() {
                       </div>
                       <div className="-mt-7 px-4 pb-3 border-b border-border/40 relative">
                         <ProfileAvatar src={avatarUrl} fallback={fallbackAvatar} size="lg" />
-                        <p className="mt-2 text-sm font-semibold truncate">
-                          {profile?.display_name || "Builder"}
-                        </p>
+                        <div className="mt-2 flex min-w-0 items-center gap-2">
+                          <p className="min-w-0 text-sm font-semibold truncate">
+                            {profile?.display_name || "Builder"}
+                          </p>
+                          <RoleBadges roles={roles} size="sm" showLabel />
+                        </div>
                         {profile?.hide_email === false && profile?.email ? (
                           <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
                         ) : null}
+                        {menuBadgeIds.length > 0 && (
+                          <div className="mt-2">
+                            <ProfileBadgeRow ids={menuBadgeIds} size={24} max={8} />
+                            {menuBadgeNames && (
+                              <p className="mt-1 text-[10px] text-muted-foreground line-clamp-2">
+                                {menuBadgeNames}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="py-1.5">
                         <Link

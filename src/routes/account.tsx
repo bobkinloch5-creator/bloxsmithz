@@ -42,6 +42,11 @@ import { RoleBadges } from "@/components/RoleBadge";
 import { ProfileBadgeRow, getBadgeDef } from "@/components/profile/ProfileBadges";
 import { formatCreditBalance } from "@/lib/credit-display";
 import {
+  mergeProfileBadgeIds,
+  roleProfileBadgeIds,
+  selectableProfileBadgeIds,
+} from "@/lib/profile-badges";
+import {
   ResponsiveContainer,
   AreaChart,
   Area,
@@ -97,7 +102,7 @@ function ProfileRolesRow() {
 }
 
 function Account() {
-  const { user, profile, loading, refresh, isOwner } = useAuth();
+  const { user, profile, loading, refresh, isOwner, roles } = useAuth();
   const nav = useNavigate();
   const [token, setToken] = useState<string | null>(null);
   const [showToken, setShowToken] = useState(false);
@@ -414,11 +419,9 @@ function Account() {
     value,
     color: COLORS[idx % COLORS.length],
   }));
-  const selectedBadgeIds = Array.isArray((profile as any)?.profile_badges)
-    ? ((profile as any).profile_badges as string[])
-    : [];
-  const earnedBadgeIds = Array.from(
-    new Set([
+  const selectedBadgeIds = selectableProfileBadgeIds((profile as any)?.profile_badges);
+  const earnedBadgeIds = mergeProfileBadgeIds([
+      ...roleProfileBadgeIds(roles),
       ...selectedBadgeIds,
       projectCount > 0 ? "creator" : "",
       projectCount >= 3 ? "developer" : "",
@@ -426,9 +429,7 @@ function Account() {
       totalCreditsUsed >= 25 ? "scripter" : "",
       (profile as any)?.discord_claimed ? "booster" : "",
       (profile as any)?.credits > 0 ? "supporter" : "",
-      isOwner ? "founder" : "",
-    ].filter(Boolean)),
-  );
+    ]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">

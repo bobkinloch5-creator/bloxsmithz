@@ -13,6 +13,12 @@ import { presenceFromProfile } from "@/lib/presence";
 import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
 import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
 import { ProfileCardEffect, cardChromeStyle } from "@/components/profile/ProfileCardEffects";
+import { RoleBadges, type Role } from "@/components/RoleBadge";
+import {
+  mergeProfileBadgeIds,
+  roleProfileBadgeIds,
+  selectableProfileBadgeIds,
+} from "@/lib/profile-badges";
 
 
 type Profile = {
@@ -58,6 +64,7 @@ export function UserProfilePopover({
 }) {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [friend, setFriend] = useState<{ status: FriendStatus; requestId: string | null }>({ status: "none", requestId: null });
   const [isFollowing, setIsFollowing] = useState(false);
@@ -76,7 +83,7 @@ export function UserProfilePopover({
     let cancel = false;
     (async () => {
       setLoading(true);
-      const [{ data: p }, { data: fr }] = await Promise.all([
+      const [{ data: p }, { data: fr }, { data: roleRows }] = await Promise.all([
         (supabase as any)
           .from("profiles")
           .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges,profile_decoration")
@@ -92,9 +99,11 @@ export function UserProfilePopover({
               )
               .maybeSingle()
           : Promise.resolve({ data: null }),
+        (supabase as any).from("user_roles").select("role").eq("user_id", userId),
       ]);
       if (cancel) return;
       setProfile(p as Profile | null);
+      setRoles(((roleRows ?? []) as { role: Role }[]).map((row) => row.role));
       if (fr) {
         const status: FriendStatus =
           fr.status === "accepted"
@@ -173,6 +182,14 @@ export function UserProfilePopover({
   }, [profile?.roblox_user_id, fetchPresence]);
 
   const displayName = profile?.chat_nickname || profile?.display_name || "User";
+  const visibleBadgeIds = useMemo(
+    () =>
+      mergeProfileBadgeIds([
+        ...roleProfileBadgeIds(roles),
+        ...selectableProfileBadgeIds(profile?.profile_badges),
+      ]),
+    [profile?.profile_badges, roles],
+  );
 
   async function addFriend() {
     const { error } = await (supabase as any).rpc("send_friend_request", { _target: userId });
@@ -274,7 +291,10 @@ export function UserProfilePopover({
               </div>
             </div>
             <div className="space-y-3 px-3 pb-3 pt-10">
-              <h3 className="text-lg font-bold">{displayName}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-bold">{displayName}</h3>
+                <RoleBadges roles={roles} size="sm" />
+              </div>
               <div className="rounded-xl border border-border bg-background/40 p-4 text-center space-y-2">
                 <div className="text-2xl">🔒</div>
                 <p className="text-sm font-semibold">This profile is private</p>
@@ -353,12 +373,13 @@ export function UserProfilePopover({
                   {profile.chat_nickname && profile.display_name && (
                     <span className="text-xs text-muted-foreground">aka {profile.display_name}</span>
                   )}
+                  <RoleBadges roles={roles} size="sm" />
                 </div>
                 {profile.status_message && (
                   <p className="mt-0.5 text-xs text-foreground/80 italic">"{profile.status_message}"</p>
                 )}
-                {profile.profile_badges && profile.profile_badges.length > 0 && (
-                  <ProfileBadgeRow ids={profile.profile_badges} size={24} className="mt-2" />
+                {visibleBadgeIds.length > 0 && (
+                  <ProfileBadgeRow ids={visibleBadgeIds} size={24} className="mt-2" />
                 )}
 
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
