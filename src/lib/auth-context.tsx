@@ -92,20 +92,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loadProfile = async (uid: string) => {
+  const loadProfile = async (uid: string, userEmail?: string) => {
     try {
       await (supabase as any).rpc("ensure_my_profile");
       const [{ data: p }, { data: r }] = await Promise.all([
         supabase
           .from("profiles")
           .select(
-            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration,onboarding_completed_at,onboarding_step,onboarding_reward_claimed",
+            "id,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration,onboarding_completed_at,onboarding_step,onboarding_reward_claimed",
           )
           .eq("id", uid)
           .maybeSingle(),
         (supabase as any).from("user_roles").select("role").eq("user_id", uid),
       ]);
-      setProfile(p as Profile | null);
+
+      let resolvedEmail = userEmail;
+      if (p && !resolvedEmail) {
+        const { data } = await supabase.auth.getUser();
+        resolvedEmail = data?.user?.email || "";
+      }
+
+      setProfile(p ? ({ ...(p as any), email: resolvedEmail || "" } as Profile) : null);
       setRoles(((r ?? []) as { role: Role }[]).map((x) => x.role));
     } catch (e) {
       // Supabase unreachable/unconfigured — don't crash; leave profile empty.
@@ -120,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       if (s?.user) {
-        setTimeout(() => loadProfile(s.user.id), 0);
+        setTimeout(() => loadProfile(s.user.id, s.user.email), 0);
         if (event === "SIGNED_IN") {
           // Enforce 1-account-per-user. Runs once per fresh sign-in.
           setTimeout(async () => {
@@ -177,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setSession(sess);
           authReadyRef.current = true;
-          loadProfile(sess.user.id).finally(() => setLoading(false));
+          loadProfile(sess.user.id, sess.user.email).finally(() => setLoading(false));
         } else {
           setSession(null);
           authReadyRef.current = true;
