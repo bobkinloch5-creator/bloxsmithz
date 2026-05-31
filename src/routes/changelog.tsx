@@ -46,6 +46,55 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.8.8",
+    date: "May 31, 2026",
+    title: "BloxSmith AI Gateway, Chat Images & Usage Protection",
+    description:
+      "BloxSmith AI now has a safer Comet-compatible gateway setup, tighter usage timers, AI memory, playtest QA, and text-to-image generation directly inside project chat.",
+    updates: [
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "BloxSmith AI Model Gateway",
+        detail:
+          "Added BloxSmith AI as a protected site-wide provider with budget-first models, `gpt-5.5-all`, DeepSeek, Grok, Gemini, Qwen, MiniMax, Claude options, model descriptions, credit multipliers, web-search badges, and Thinking labels.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Strict Normal-User AI Limits",
+        detail:
+          "Normal users are limited to 8 AI requests per 24 hours, 1 premium GPT use per 24 hours, 1 Claude Opus use per 24 hours, and 2 chat image generations per hour by default. Owners, admins, and moderators bypass limits for testing.",
+      },
+      {
+        category: "Images",
+        tagColor: tagStyles.tools,
+        icon: ImageIcon,
+        title: "Text-To-Image In AI Chat",
+        detail:
+          "Project chat can now generate images from prompts, render them inline as polished preview cards, and provide one-click PNG downloads with server-side prompt safety checks.",
+      },
+      {
+        category: "Memory",
+        tagColor: tagStyles.backend,
+        icon: Server,
+        title: "AI Memory & Playtest QA",
+        detail:
+          "Added a visible project AI Memory panel plus an AI Playtest shortcut that performs deeper Roblox QA and queues safe fixes when possible.",
+      },
+      {
+        category: "Config",
+        tagColor: tagStyles.integrations,
+        icon: Globe2,
+        title: "CometAPI Environment Support",
+        detail:
+          "The server now accepts Comet's `COMETAPI_KEY` name, keeps `COMET_API_KEY` as a backwards-compatible alias, and routes Comet-compatible text and image requests through `https://api.cometapi.com/v1`.",
+      },
+    ],
+  },
+  {
     version: "v3.8.7",
     date: "May 31, 2026",
     title: "Weekly 3D Studio Limits & Safer Visual Controls",

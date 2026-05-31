@@ -22,7 +22,7 @@
 - Added BloxSmith AI image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
 - Added a 24-hour AI usage timer and server-side request limit for normal users, with owner/admin/moderator bypass.
 - Added Supabase migration support for BloxSmith AI provider settings and the new AI rate-limit event table.
-- Added safe environment documentation for `COMET_API_KEY`, `COMET_BASE_URL`, and daily AI limit settings.
+- Added safe environment documentation for `COMETAPI_KEY`, `COMET_API_KEY`, `COMET_BASE_URL`, and daily AI limit settings.
 - Updated the project usage indicator to show the 24-hour timer with AM/PM reset time.
 
 ### MCP & Provider Secret Vault Migration
