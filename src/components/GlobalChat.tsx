@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   MessagesSquare,
+  MessageCircle,
   Send,
   X,
   Loader2,
@@ -64,6 +65,8 @@ import { ProfileEffect } from "@/components/chat/ProfileEffect";
 import { PfpRing } from "@/components/profile/PfpRing";
 import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
 import { PROFILE_BADGES, ProfileBadgeRow } from "@/components/profile/ProfileBadges";
+import { ProfileBackground } from "@/components/profile/ProfileBackground";
+import { ProfileCardEffect, cardChromeStyle } from "@/components/profile/ProfileCardEffects";
 import { presenceFromProfile } from "@/lib/presence";
 import { profileHandle } from "@/lib/profile-username";
 import { usePersistentDraft } from "@/hooks/usePersistentDraft";
@@ -93,8 +96,12 @@ type Author = {
   profile_accent: string | null;
   profile_effect: string | null;
   profile_background: string | null;
+  custom_background_url: string | null;
+  profile_card_color: string | null;
+  profile_card_effect: string | null;
   pfp_effect: string | null;
   profile_decoration: string | null;
+  status_message: string | null;
   presence_enabled: boolean | null;
   presence_status: string | null;
   last_seen_at: string | null;
@@ -103,6 +110,31 @@ type Author = {
   chat_icon: string | null;
   chat_nickname: string | null;
   chat_font: string | null;
+};
+
+type HydratedAuthorProfile = {
+  id: string;
+  display_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  profile_badges: unknown;
+  profile_accent: string | null;
+  profile_effect: string | null;
+  profile_background: string | null;
+  custom_background_url: string | null;
+  profile_card_color: string | null;
+  profile_card_effect: string | null;
+  pfp_effect: string | null;
+  profile_decoration: string | null;
+  status_message: string | null;
+  presence_enabled: boolean | null;
+  presence_status: string | null;
+  last_seen_at: string | null;
+  chat_name_gradient: unknown;
+  chat_text_gradient: unknown;
+  chat_icon: unknown;
+  chat_nickname: string | null;
+  chat_font: unknown;
 };
 
 type Reaction = { id: string; message_id: string; user_id: string; emoji: string };
@@ -511,11 +543,25 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           typeof p.profile_background === "string"
             ? p.profile_background
             : existing.profile_background,
+        custom_background_url:
+          typeof p.custom_background_url === "string"
+            ? p.custom_background_url
+            : existing.custom_background_url,
+        profile_card_color:
+          typeof p.profile_card_color === "string"
+            ? p.profile_card_color
+            : existing.profile_card_color,
+        profile_card_effect:
+          typeof p.profile_card_effect === "string"
+            ? p.profile_card_effect
+            : existing.profile_card_effect,
         pfp_effect: typeof p.pfp_effect === "string" ? p.pfp_effect : existing.pfp_effect,
         profile_decoration:
           typeof p.profile_decoration === "string"
             ? p.profile_decoration
             : existing.profile_decoration,
+        status_message:
+          typeof p.status_message === "string" ? p.status_message : existing.status_message,
         presence_enabled: p.presence_enabled ?? existing.presence_enabled,
         presence_status:
           typeof p.presence_status === "string" ? p.presence_status : existing.presence_status,
@@ -553,7 +599,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       supabase
         .from("profiles")
         .select(
-          "id,display_name,username,avatar_url,profile_badges,profile_accent,profile_effect,profile_background,pfp_effect,profile_decoration,presence_enabled,presence_status,last_seen_at,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
+          "id,display_name,username,avatar_url,profile_badges,profile_accent,profile_effect,profile_background,custom_background_url,profile_card_color,profile_card_effect,pfp_effect,profile_decoration,status_message,presence_enabled,presence_status,last_seen_at,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
         )
         .in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
@@ -573,7 +619,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     });
     setAuthors((prev) => {
       const next = new Map(prev);
-      (profs ?? []).forEach((p: any) => {
+      ((profs ?? []) as HydratedAuthorProfile[]).forEach((p) => {
         const nick =
           typeof p.chat_nickname === "string" && p.chat_nickname.trim()
             ? p.chat_nickname.trim()
@@ -589,9 +635,16 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           profile_effect: typeof p.profile_effect === "string" ? p.profile_effect : null,
           profile_background:
             typeof p.profile_background === "string" ? p.profile_background : null,
+          custom_background_url:
+            typeof p.custom_background_url === "string" ? p.custom_background_url : null,
+          profile_card_color:
+            typeof p.profile_card_color === "string" ? p.profile_card_color : null,
+          profile_card_effect:
+            typeof p.profile_card_effect === "string" ? p.profile_card_effect : null,
           pfp_effect: typeof p.pfp_effect === "string" ? p.pfp_effect : null,
           profile_decoration:
             typeof p.profile_decoration === "string" ? p.profile_decoration : null,
+          status_message: typeof p.status_message === "string" ? p.status_message : null,
           presence_enabled: p.presence_enabled ?? null,
           presence_status: typeof p.presence_status === "string" ? p.presence_status : null,
           last_seen_at: typeof p.last_seen_at === "string" ? p.last_seen_at : null,
@@ -829,17 +882,17 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           capChatMessages([
             ...prev,
             {
-            id: `sys-join-${key}-${Date.now()}`,
-            user_id: "bloxbot",
-            content: `🟢 ${name} joined the chat`,
-            created_at: new Date().toISOString(),
-            deleted_at: null,
-            reply_to_id: null,
-            attachment_url: null,
-            attachment_type: null,
-            pinned_at: null,
-            flagged: false,
-            ephemeralBot: true,
+              id: `sys-join-${key}-${Date.now()}`,
+              user_id: "bloxbot",
+              content: `🟢 ${name} joined the chat`,
+              created_at: new Date().toISOString(),
+              deleted_at: null,
+              reply_to_id: null,
+              attachment_url: null,
+              attachment_type: null,
+              pinned_at: null,
+              flagged: false,
+              ephemeralBot: true,
             },
           ]),
         );
@@ -854,17 +907,17 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           capChatMessages([
             ...prev,
             {
-            id: `sys-leave-${key}-${Date.now()}`,
-            user_id: "bloxbot",
-            content: `🔴 ${name} left the chat`,
-            created_at: new Date().toISOString(),
-            deleted_at: null,
-            reply_to_id: null,
-            attachment_url: null,
-            attachment_type: null,
-            pinned_at: null,
-            flagged: false,
-            ephemeralBot: true,
+              id: `sys-leave-${key}-${Date.now()}`,
+              user_id: "bloxbot",
+              content: `🔴 ${name} left the chat`,
+              created_at: new Date().toISOString(),
+              deleted_at: null,
+              reply_to_id: null,
+              attachment_url: null,
+              attachment_type: null,
+              pinned_at: null,
+              flagged: false,
+              ephemeralBot: true,
             },
           ]),
         );
@@ -922,17 +975,17 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             capChatMessages([
               ...prev,
               {
-              id: `ach-${row.user_id}-${row.achievement_key}-${Date.now()}`,
-              user_id: "bloxbot",
-              content,
-              created_at: new Date().toISOString(),
-              deleted_at: null,
-              reply_to_id: null,
-              attachment_url: null,
-              attachment_type: null,
-              pinned_at: null,
-              flagged: false,
-              ephemeralBot: true,
+                id: `ach-${row.user_id}-${row.achievement_key}-${Date.now()}`,
+                user_id: "bloxbot",
+                content,
+                created_at: new Date().toISOString(),
+                deleted_at: null,
+                reply_to_id: null,
+                attachment_url: null,
+                attachment_type: null,
+                pinned_at: null,
+                flagged: false,
+                ephemeralBot: true,
               },
             ]),
           );
@@ -1245,8 +1298,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           toast.error("Links aren't allowed in chat — keep it clean and friendly 💙");
         else if (m.includes("unknown_channel"))
           toast.error("This channel isn't set up yet. Try #general or refresh.");
-        else if (m.includes("forbidden_channel"))
-          toast.error("You can't post in this channel.");
+        else if (m.includes("forbidden_channel")) toast.error("You can't post in this channel.");
         else if (m.includes("banned")) toast.error("Your account is banned from chat.");
         else if (m.includes("empty_message")) toast.error("Type a message first.");
         else if (m.includes("attachments_disabled"))
@@ -1263,7 +1315,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       // Anything thrown above (network drop, server-fn 500, unexpected error)
       // must surface — otherwise pressing Enter looks like it does nothing.
       console.error("[GlobalChat.send] failed", err);
-      toast.error(err?.message ? `Couldn't send: ${err.message}` : "Couldn't send message. Try again.");
+      toast.error(
+        err?.message ? `Couldn't send: ${err.message}` : "Couldn't send message. Try again.",
+      );
       setDraft(trimmed);
     } finally {
       setSending(false);
@@ -1318,7 +1372,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           "/me <action>, /shrug, /clear-mine",
           ...(canModerate ? ["Moderation: /warn, /timeout"] : []),
           ...(isAdmin
-            ? ["Admin: /announce, /badge, /giveaway create, /giveaway finish, /ban, /unban, /feature, /changelog, /slow, /clear"]
+            ? [
+                "Admin: /announce, /badge, /giveaway create, /giveaway finish, /ban, /unban, /feature, /changelog, /slow, /clear",
+              ]
             : []),
           ...(isOwner ? ["Owner: /event, /givecredits, /takecredits, /role"] : []),
           "Fun: /giveaway <id> joins a giveaway. Credit minigame rewards are rate-limited server-side.",
@@ -1525,7 +1581,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       }
       const id = args.trim();
       if (!/^[0-9a-f-]{36}$/i.test(id)) {
-        pushEphemeralBot("Giveaway help:\nAdmin: /giveaway create 25 10 Build Night\nJoin: /giveaway giveaway-id");
+        pushEphemeralBot(
+          "Giveaway help:\nAdmin: /giveaway create 25 10 Build Night\nJoin: /giveaway giveaway-id",
+        );
         return;
       }
       const { error } = await (supabase as any).rpc("join_chat_giveaway", { _giveaway_id: id });
@@ -1570,8 +1628,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         if (error) {
           toast.error(error.message);
           pushEphemeralBot(`I couldn't grant that badge.\n\n${badgeHelpText()}`);
-        }
-        else toast.success("Badge granted");
+        } else toast.success("Badge granted");
         return;
       }
       if (cmd === "role") {
@@ -1714,17 +1771,17 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       capChatMessages([
         ...prev,
         {
-        id: `bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        user_id: "bloxbot",
-        content,
-        created_at: new Date().toISOString(),
-        deleted_at: null,
-        reply_to_id: null,
-        attachment_url: null,
-        attachment_type: null,
-        pinned_at: null,
-        flagged: false,
-        ephemeralBot: true,
+          id: `bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          user_id: "bloxbot",
+          content,
+          created_at: new Date().toISOString(),
+          deleted_at: null,
+          reply_to_id: null,
+          attachment_url: null,
+          attachment_type: null,
+          pinned_at: null,
+          flagged: false,
+          ephemeralBot: true,
         },
       ]),
     );
@@ -1873,6 +1930,48 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     return grouped;
   }, [reactions]);
   const accent = prefs.theme_accent;
+  const onlineSet = useMemo(() => new Set(onlineUsers), [onlineUsers]);
+  const memberGroups = useMemo(() => {
+    const rows = Array.from(authors.entries())
+      .filter(([id]) => id !== "bloxbot")
+      .map(([id, author]) => ({ id, author, online: onlineSet.has(id) }))
+      .sort((a, b) => {
+        if (a.online !== b.online) return a.online ? -1 : 1;
+        return displayAuthorName(a.author, a.id).localeCompare(displayAuthorName(b.author, b.id));
+      });
+    const take = (label: string, test: (a: Author) => boolean) => {
+      const members = rows.filter(({ author }) => test(author));
+      return members.length ? [{ label, members }] : [];
+    };
+    const groupedIds = new Set<string>();
+    const groups: { label: string; members: { id: string; author: Author; online: boolean }[] }[] =
+      [];
+    for (const group of [
+      ...take("Owner", (a) => a.roles.includes("owner")),
+      ...take("Staff Team", (a) => a.roles.includes("admin") || a.roles.includes("moderator")),
+      ...take(
+        "Partners & Premium",
+        (a) =>
+          a.roles.includes("premium") ||
+          a.badges.includes("creator") ||
+          a.profile_badges.includes("supporter"),
+      ),
+      ...take(
+        "OG",
+        (a) =>
+          a.badges.includes("og") ||
+          a.profile_badges.includes("og") ||
+          a.profile_badges.includes("early"),
+      ),
+    ]) {
+      const members = group.members.filter((member) => !groupedIds.has(member.id));
+      members.forEach((member) => groupedIds.add(member.id));
+      if (members.length) groups.push({ ...group, members });
+    }
+    const rest = rows.filter((member) => !groupedIds.has(member.id));
+    if (rest.length) groups.push({ label: "Online & Recent", members: rest });
+    return groups;
+  }, [authors, onlineSet]);
 
   // Mention suggestions
   const mentionSuggestions = useMemo(() => {
@@ -1884,11 +1983,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       const n = a.display_name;
       const handle = profileHandle(a.username).slice(1);
       if ((!n && !handle) || seen.has(id)) continue;
-      if (
-        q === "" ||
-        n?.toLowerCase().includes(q) ||
-        handle.toLowerCase().includes(q)
-      ) {
+      if (q === "" || n?.toLowerCase().includes(q) || handle.toLowerCase().includes(q)) {
         out.push({ id, name: n || `@${handle}` });
         seen.add(id);
       }
@@ -2130,27 +2225,23 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             </div>
           )}
 
-          {/* Online users dropdown */}
+          {/* Members list */}
           {showUsers && (
-            <div className="border-b border-border bg-background/40 px-3 py-2 text-xs">
-              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Online ({onlineUsers.length})
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {onlineUsers.map((id) => {
-                  const a = authors.get(id);
-                  return (
-                    <span
-                      key={id}
-                      className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      {a?.display_name ?? id.slice(0, 6)}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
+            <MembersListPanel
+              groups={memberGroups}
+              onlineCount={onlineUsers.length}
+              onClose={() => setShowUsers(false)}
+              onOpenProfile={(uid) => {
+                setProfileUid(uid);
+                setShowUsers(false);
+              }}
+              onOpenDm={(uid) => {
+                setActiveDm(uid);
+                setView("friends");
+                setShowUsers(false);
+                setDmUnread(0);
+              }}
+            />
           )}
 
           {visibleChannels.length > 0 && (
@@ -2952,6 +3043,155 @@ function ChatAvatar({
         title={pr.label}
       />
     </button>
+  );
+}
+
+function MembersListPanel({
+  groups,
+  onlineCount,
+  onClose,
+  onOpenProfile,
+  onOpenDm,
+}: {
+  groups: { label: string; members: { id: string; author: Author; online: boolean }[] }[];
+  onlineCount: number;
+  onClose: () => void;
+  onOpenProfile: (uid: string) => void;
+  onOpenDm: (uid: string) => void;
+}) {
+  return (
+    <div className="absolute inset-x-2 bottom-2 top-[58px] z-30 overflow-hidden rounded-xl border border-border bg-surface-elevated/95 shadow-2xl backdrop-blur-xl md:inset-x-auto md:right-0 md:top-[57px] md:bottom-0 md:w-80 md:rounded-none md:rounded-bl-xl md:border-y-0 md:border-r-0">
+      <header className="flex items-center justify-between border-b border-border px-3 py-2">
+        <div>
+          <div className="text-sm font-bold">Members</div>
+          <div className="text-[10px] text-muted-foreground">{onlineCount} online now</div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground"
+          aria-label="Close members"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+      <div className="h-[calc(100%-49px)] overflow-y-auto px-2 py-3">
+        {groups.length === 0 ? (
+          <p className="px-2 text-xs text-muted-foreground">No members loaded yet.</p>
+        ) : (
+          groups.map((group) => (
+            <section key={group.label} className="mb-4">
+              <div className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {group.label} — {group.members.length}
+              </div>
+              <div className="space-y-1.5">
+                {group.members.map((member) => (
+                  <MemberCard
+                    key={member.id}
+                    id={member.id}
+                    author={member.author}
+                    online={member.online}
+                    onOpenProfile={onOpenProfile}
+                    onOpenDm={onOpenDm}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MemberCard({
+  id,
+  author,
+  online,
+  onOpenProfile,
+  onOpenDm,
+}: {
+  id: string;
+  author: Author;
+  online: boolean;
+  onOpenProfile: (uid: string) => void;
+  onOpenDm: (uid: string) => void;
+}) {
+  const name = displayAuthorName(author, id);
+  const handle = profileHandle(author.username);
+  const pr = presenceFromProfile({
+    presence_enabled: author.presence_enabled,
+    presence_status: author.presence_status,
+    last_seen_at: author.last_seen_at,
+  });
+  const status = author.status_message || (online ? pr.label : "Recently active");
+  return (
+    <div
+      className="group relative overflow-hidden rounded-xl border px-2.5 py-2 transition hover:-translate-y-0.5 hover:border-primary/50"
+      style={cardChromeStyle(author.profile_card_color)}
+    >
+      <ProfileBackground
+        id={author.profile_background ?? "none"}
+        customUrl={author.custom_background_url}
+        className="opacity-45"
+      />
+      <ProfileCardEffect effect={author.profile_card_effect} color={author.profile_card_color} />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/45 to-transparent" />
+      <div className="relative z-10 flex min-w-0 items-center gap-2">
+        <ChatAvatar isBot={false} author={author} name={name} onClick={() => onOpenProfile(id)} />
+        <button
+          type="button"
+          onClick={() => onOpenProfile(id)}
+          className="min-w-0 flex-1 text-left"
+        >
+          <div
+            className="truncate text-sm font-black leading-tight"
+            style={{
+              ...gradientTextStyle(author.chat_name_gradient),
+              ...chatFontStyle(author.chat_font),
+              color: author.chat_name_gradient?.length
+                ? undefined
+                : (author.profile_accent ?? undefined),
+            }}
+          >
+            {author.chat_icon ? `${author.chat_icon} ` : ""}
+            {name}
+          </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${online ? pr.dot : "bg-muted-foreground/40"}`}
+            />
+            <span className="truncate">{status}</span>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenDm(id)}
+          title={`Message ${name}`}
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border/70 bg-background/45 text-muted-foreground opacity-0 transition hover:border-primary/50 hover:text-primary group-hover:opacity-100"
+        >
+          <MessageCircle className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <div className="relative z-10 mt-1.5 flex min-w-0 items-center gap-1.5 pl-12">
+        <RoleBadges roles={author.roles} size="sm" showLabel />
+        <ProfileBadgeRow
+          ids={author.profile_badges?.length ? author.profile_badges : author.badges}
+          size={17}
+          max={4}
+        />
+        <span className="min-w-0 truncate text-[10px] text-muted-foreground">{handle}</span>
+      </div>
+    </div>
+  );
+}
+
+function displayAuthorName(author: Author | null | undefined, id: string) {
+  return (
+    author?.chat_nickname ||
+    author?.display_name ||
+    profileHandle(author?.username).slice(1) ||
+    id.slice(0, 8)
   );
 }
 

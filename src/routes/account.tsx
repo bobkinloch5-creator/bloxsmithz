@@ -47,6 +47,7 @@ import {
   roleProfileBadgeIds,
   selectableProfileBadgeIds,
 } from "@/lib/profile-badges";
+import { resolveNeokensModel } from "@/lib/ai-models";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -65,6 +66,34 @@ export const Route = createFileRoute("/account")({
     meta: [{ title: "Profile — BloxSmith" }, { name: "robots", content: "noindex, nofollow" }],
   }),
 });
+
+function actualUsageModelName(
+  model: string | null | undefined,
+  source?: string | null,
+  creditsUsed?: number | null,
+) {
+  const raw = String(model ?? "").trim();
+  const sourceText = String(source ?? "").toLowerCase();
+  const inferred =
+    raw && !/^bloxsmith ai$/i.test(raw) && !/^ai usage$/i.test(raw)
+      ? raw
+      : sourceText.includes("ui")
+        ? "gemini-2.5-flash"
+        : sourceText.includes("template")
+          ? "template-system"
+          : (creditsUsed ?? 0) >= 10
+            ? "gpt-5.5"
+            : (creditsUsed ?? 0) >= 3
+              ? "claude-sonnet-4-6-thinking"
+              : "gemini-3-flash";
+
+  if (inferred === "template-system") return "Template System";
+  if (/^claude-|^gpt-|^gemini-/i.test(inferred)) {
+    const resolved = resolveNeokensModel(inferred);
+    return resolved.thinking ? `${resolved.model} (thinking)` : resolved.model;
+  }
+  return inferred;
+}
 
 type Tx = { id: string; amount: number; type?: string; reason: string | null; created_at: string };
 type UsageEvent = {
@@ -105,7 +134,9 @@ function ProfileRolesRow() {
 function Account() {
   const { user, profile, loading, refresh, isOwner, roles } = useAuth();
   const nav = useNavigate();
-  const [activeTab, setActiveTab] = useState<"profile" | "billing" | "workspaces" | "analytics" | "security">("profile");
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "billing" | "workspaces" | "analytics" | "security"
+  >("profile");
   const [token, setToken] = useState<string | null>(null);
   const [showToken, setShowToken] = useState(false);
 
@@ -356,7 +387,7 @@ function Account() {
 
     return {
       ...t,
-      modelName,
+      modelName: actualUsageModelName(modelName, t.reason, absAmt),
       actionType,
       costUsd: absAmt * 0.05,
     };
@@ -366,7 +397,7 @@ function Account() {
     amount: -Math.max(1, Number(e.credits_used ?? 1)),
     created_at: e.created_at,
     reason: String(e.source ?? "AI usage"),
-    modelName: e.model || "BloxSmith AI",
+    modelName: actualUsageModelName(e.model, e.source, Number(e.credits_used ?? 1)),
     actionType: String(e.source ?? "AI usage").replace(/_/g, " "),
     costUsd: Math.max(0, Number(e.credits_used ?? 0)) * 0.05,
   }));
@@ -429,19 +460,19 @@ function Account() {
   }));
   const selectedBadgeIds = selectableProfileBadgeIds((profile as any)?.profile_badges);
   const earnedBadgeIds = mergeProfileBadgeIds([
-      ...roleProfileBadgeIds(roles),
-      ...selectedBadgeIds,
-      ...activityProfileBadgeIds({
-        projectCount,
-        creditsUsed: totalCreditsUsed,
-        usageSources: usageEvents.map((e) => e.source ?? ""),
-        model3dCount,
-        discordClaimed: (profile as any)?.discord_claimed,
-        referredBy: (profile as any)?.referred_by,
-        onboardingCompleted: !!(profile as any)?.onboarding_completed_at,
-        credits: (profile as any)?.credits,
-      }),
-    ]);
+    ...roleProfileBadgeIds(roles),
+    ...selectedBadgeIds,
+    ...activityProfileBadgeIds({
+      projectCount,
+      creditsUsed: totalCreditsUsed,
+      usageSources: usageEvents.map((e) => e.source ?? ""),
+      model3dCount,
+      discordClaimed: (profile as any)?.discord_claimed,
+      referredBy: (profile as any)?.referred_by,
+      onboardingCompleted: !!(profile as any)?.onboarding_completed_at,
+      credits: (profile as any)?.credits,
+    }),
+  ]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
@@ -519,7 +550,9 @@ function Account() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground">Profile Bio</label>
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Profile Bio
+                    </label>
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
@@ -565,7 +598,8 @@ function Account() {
                       <Award className="h-5 w-5 text-primary" /> Earned Profile Badges
                     </h2>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Badges unlock from activity, credits, Discord perks, projects, and owner/staff status.
+                      Badges unlock from activity, credits, Discord perks, projects, and owner/staff
+                      status.
                     </p>
                   </div>
                   <ProfileBadgeRow ids={earnedBadgeIds} size={30} />
@@ -652,12 +686,14 @@ function Account() {
                     <Ticket className="h-5 w-5 text-primary" /> Promo Codes &amp; Free Credits
                   </h2>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Enter a promo code to add credits to your account, or claim your free daily refill
-                    (+10 credits per day).
+                    Enter a promo code to add credits to your account, or claim your free daily
+                    refill (+10 credits per day).
                   </p>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-muted-foreground">Promo code</label>
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Promo code
+                    </label>
                     <div className="flex gap-2">
                       <input
                         value={promoCode}
@@ -689,7 +725,11 @@ function Account() {
                       title={dailyCd.onCooldown ? `Next claim in ${dailyCd.label}` : undefined}
                       className="rounded-lg bg-primary/10 border border-primary/20 text-primary-glow hover:bg-primary/15 px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50"
                     >
-                      {claiming ? "…" : dailyCd.onCooldown ? `Next in ${dailyCd.label}` : "Claim +10"}
+                      {claiming
+                        ? "…"
+                        : dailyCd.onCooldown
+                          ? `Next in ${dailyCd.label}`
+                          : "Claim +10"}
                     </button>
                   </div>
 
@@ -737,7 +777,10 @@ function Account() {
                   ) : (
                     <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 text-sm divide-y divide-border/40">
                       {txs.slice(0, 15).map((t) => (
-                        <div key={t.id} className="pt-2 flex justify-between items-center first:pt-0">
+                        <div
+                          key={t.id}
+                          className="pt-2 flex justify-between items-center first:pt-0"
+                        >
                           <div className="min-w-0">
                             <div className="font-medium text-xs truncate max-w-[200px]">
                               {t.reason ?? t.type}
@@ -806,8 +849,8 @@ function Account() {
                   </h2>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Connect your Roblox Studio plugin to your web account. Paste this token into the
-                    widget to link the project files. Generating a new token will invalidate previous
-                    session authorizations.
+                    widget to link the project files. Generating a new token will invalidate
+                    previous session authorizations.
                   </p>
 
                   {token ? (
@@ -873,7 +916,9 @@ function Account() {
 
                   {projects.length === 0 ? (
                     <div className="rounded-lg bg-surface-elevated/30 border border-dashed border-border/60 p-6 text-center">
-                      <p className="text-sm text-muted-foreground">No active workspaces detected.</p>
+                      <p className="text-sm text-muted-foreground">
+                        No active workspaces detected.
+                      </p>
                       <Link
                         to="/dashboard"
                         className="text-xs text-primary-glow font-semibold hover:underline mt-2 inline-block"
@@ -963,16 +1008,27 @@ function Account() {
                     key={m.label}
                     className={`relative overflow-hidden rounded-xl border border-border/40 bg-surface-elevated/30 p-4 group hover:border-border/70 transition`}
                   >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${m.tint} opacity-60 pointer-events-none`} />
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-br ${m.tint} opacity-60 pointer-events-none`}
+                    />
                     <div className="relative flex items-center gap-2 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
-                      <span className="grid h-6 w-6 place-items-center rounded-md bg-background/40">{m.icon}</span>
+                      <span className="grid h-6 w-6 place-items-center rounded-md bg-background/40">
+                        {m.icon}
+                      </span>
                       {m.label}
                     </div>
                     <div className="relative mt-3 flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-foreground truncate" title={m.value}>
+                      <span
+                        className="text-2xl font-black text-foreground truncate"
+                        title={m.value}
+                      >
                         {m.value}
                       </span>
-                      {m.suffix && <span className="text-[10px] font-medium text-muted-foreground">{m.suffix}</span>}
+                      {m.suffix && (
+                        <span className="text-[10px] font-medium text-muted-foreground">
+                          {m.suffix}
+                        </span>
+                      )}
                     </div>
                     <div className="relative text-[10px] text-muted-foreground mt-1">{m.hint}</div>
                   </div>
@@ -1075,7 +1131,10 @@ function Account() {
                         {/* Legend */}
                         <div className="space-y-1">
                           {modelDistributionData.map((item) => (
-                            <div key={item.name} className="flex items-center justify-between text-xs">
+                            <div
+                              key={item.name}
+                              className="flex items-center justify-between text-xs"
+                            >
                               <div className="flex items-center gap-2">
                                 <div
                                   className="h-2 w-2 rounded-full"
@@ -1162,8 +1221,8 @@ function Account() {
               <section className="rounded-2xl border border-border/50 bg-surface/10 p-6 space-y-4">
                 <h2 className="text-lg font-bold">Session Security</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  If you are logging in from a shared system, make sure to terminate the session context
-                  when you are finished.
+                  If you are logging in from a shared system, make sure to terminate the session
+                  context when you are finished.
                 </p>
                 <button
                   onClick={signOut}
