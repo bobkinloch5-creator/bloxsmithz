@@ -111,12 +111,11 @@ function Admin() {
   const loadUsers = async () => {
     const { data: profs } = await supabase
       .from("profiles")
-      .select("id,email,display_name,credits,banned,ban_reason")
+      .select("id,display_name,credits,banned,ban_reason")
       .order("created_at", { ascending: false })
       .limit(200);
     const list = (profs ?? []) as Array<{
       id: string;
-      email: string;
       display_name: string | null;
       credits: number;
       banned: boolean;
@@ -127,13 +126,6 @@ function Admin() {
       setRows([]);
       return;
     }
-    setEmails((prev) => {
-      const next = { ...prev };
-      list.forEach((p) => {
-        next[p.id] = p.email;
-      });
-      return next;
-    });
     const [{ data: roles }, { data: projs }, { data: gens }] = await Promise.all([
       supabase.from("user_roles").select("user_id,role").in("user_id", ids),
       supabase.from("projects").select("user_id").in("user_id", ids),
@@ -154,6 +146,7 @@ function Admin() {
     setRows(
       list.map((p) => ({
         ...p,
+        email: emails[p.id] ?? "",
         roles: roleMap[p.id] ?? ["user"],
         projects: pCount[p.id] ?? 0,
         generations: gCount[p.id] ?? 0,
@@ -161,11 +154,15 @@ function Admin() {
     );
     try {
       const modData = await loadModeration();
-      const map: Record<string, boolean> = {};
-      (modData.users ?? []).forEach((u: { id: string; email_confirmed: boolean }) => {
-        map[u.id] = u.email_confirmed;
+      const confirmedMap: Record<string, boolean> = {};
+      const emailMap: Record<string, string> = { ...emails };
+      (modData.users ?? []).forEach((u: { id: string; email: string; email_confirmed: boolean }) => {
+        confirmedMap[u.id] = u.email_confirmed;
+        if (u.email) emailMap[u.id] = u.email;
       });
-      setEmailConfirmed(map);
+      setEmailConfirmed(confirmedMap);
+      setEmails(emailMap);
+      setRows((prev) => prev.map((r) => ({ ...r, email: emailMap[r.id] ?? r.email })));
       setModeratorActions((modData.moderatorActions ?? []) as ModeratorAction[]);
     } catch {
       setEmailConfirmed({});
@@ -181,15 +178,8 @@ function Admin() {
       .limit(25);
     const list = (data ?? []) as Activity[];
     setActivity(list);
-    const ids = Array.from(new Set(list.map((r) => r.user_id))).filter((id) => !emails[id]);
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
-      const map: Record<string, string> = { ...emails };
-      (profs ?? []).forEach((p: { id: string; email: string }) => {
-        map[p.id] = p.email;
-      });
-      setEmails(map);
-    }
+    // Emails are sourced from auth.users via loadModeratorDashboard; no profile lookup needed.
+    void list;
   };
 
   const toggleBan = async (r: Row) => {
@@ -268,15 +258,8 @@ function Admin() {
       .order("created_at", { ascending: false });
     const list = (data ?? []) as PromoSub[];
     setPromoSubs(list);
-    const ids = Array.from(new Set(list.map((r) => r.user_id))).filter((id) => !emails[id]);
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
-      const map: Record<string, string> = { ...emails };
-      (profs ?? []).forEach((p: { id: string; email: string }) => {
-        map[p.id] = p.email;
-      });
-      setEmails(map);
-    }
+    // Emails are sourced from auth.users via loadModeratorDashboard; no profile lookup needed.
+    void list;
   };
 
   const reviewPromo = async (s: PromoSub, approve: boolean) => {
@@ -323,15 +306,7 @@ function Admin() {
       .order("created_at", { ascending: false });
     const list = (data ?? []) as PR[];
     setRequests(list);
-    const ids = Array.from(new Set(list.map((r) => r.user_id)));
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
-      const map: Record<string, string> = {};
-      (profs ?? []).forEach((p: { id: string; email: string }) => {
-        map[p.id] = p.email;
-      });
-      setEmails(map);
-    }
+    void list;
   };
 
   useEffect(() => {

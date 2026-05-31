@@ -64,10 +64,10 @@ export function TeamChat({ projectId }: { projectId: string }) {
           if (m.user_id !== user.id) {
             const { data: prof } = await supabase
               .from("profiles")
-              .select("id,display_name,email")
+              .select("id,display_name")
               .eq("id", m.user_id)
               .maybeSingle();
-            m.author = prof ?? undefined;
+            m.author = prof ? { display_name: prof.display_name, email: null } : undefined;
             if (!open) setUnread((u) => u + 1);
           }
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
