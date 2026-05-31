@@ -117,6 +117,7 @@ export function ProfileMenuAvatar({
   profile,
   size,
   compact = false,
+  animated,
   className = "",
 }: {
   src?: string | null;
@@ -124,18 +125,22 @@ export function ProfileMenuAvatar({
   profile?: ProfileMenuSource | null;
   size: number;
   compact?: boolean;
+  animated?: boolean;
   className?: string;
 }) {
   const [currentSrc, setCurrentSrc] = useState(src || fallback);
   const effects = useMemo(() => getProfileMenuEffects(profile), [profile]);
+  const renderAnimated = animated ?? !compact;
 
   useEffect(() => {
     setCurrentSrc(src || fallback);
   }, [src, fallback]);
 
   const decoration =
-    compact && !COMPACT_DECORATION_IDS.has(effects.decoration) ? "none" : effects.decoration;
-  const decorationSuppressed = compact && effects.decoration !== "none" && decoration === "none";
+    !renderAnimated || (compact && !COMPACT_DECORATION_IDS.has(effects.decoration))
+      ? "none"
+      : effects.decoration;
+  const decorationSuppressed = effects.decoration !== "none" && decoration === "none";
   const decorationSize = size + (effects.pfpEffect !== "none" ? 6 : 0);
 
   return (
@@ -145,7 +150,7 @@ export function ProfileMenuAvatar({
         size={decorationSize}
         className={decoration !== "none" ? "overflow-visible" : ""}
       >
-        <PfpRing effect={effects.pfpEffect} size={size}>
+        <PfpRing effect={effects.pfpEffect} size={size} animated={renderAnimated}>
           <span
             className="grid place-items-center overflow-hidden rounded-full bg-primary/15 ring-1 ring-primary/20"
             style={{ width: size, height: size }}
@@ -180,6 +185,7 @@ export function ProfileMenuPreview({
   badgeIds,
   badgeNames,
   children,
+  lightweight = false,
   className = "",
 }: {
   profile?: ProfileMenuSource | null;
@@ -190,11 +196,14 @@ export function ProfileMenuPreview({
   badgeIds: ProfileBadgeId[];
   badgeNames?: string | null;
   children?: ReactNode;
+  lightweight?: boolean;
   className?: string;
 }) {
   const effects = getProfileMenuEffects(profile);
   const displayName = profile?.display_name || "Builder";
   const showEmail = profile?.hide_email === false && !!profile?.email;
+  const cardEffect = lightweight ? "none" : effects.cardEffect;
+  const profileEffect = lightweight ? "none" : effects.profileEffect;
   const showFlair = hasProfileMenuFlair({
     ...profile,
     banner_url: bannerUrl ?? profile?.banner_url ?? null,
@@ -205,14 +214,14 @@ export function ProfileMenuPreview({
       className={`relative overflow-hidden rounded-xl border shadow-2xl backdrop-blur-xl ${className}`}
       style={menuChromeStyle(effects.cardColor)}
     >
-      <ProfileCardEffect effect={effects.cardEffect} color={effects.cardColor} />
+      <ProfileCardEffect effect={cardEffect} color={effects.cardColor} />
       <div className="relative h-28 overflow-hidden bg-gradient-brand">
         {bannerUrl ? (
           <img src={bannerUrl} alt="Profile banner" className="h-full w-full object-cover" />
         ) : (
           <ProfileBackground id={effects.background} customUrl={effects.customBackgroundUrl} />
         )}
-        <ProfileEffect effect={effects.profileEffect} accent={effects.accent} />
+        <ProfileEffect effect={profileEffect} accent={effects.accent} />
         {!bannerUrl && effects.background === "none" && (
           <div
             className="absolute inset-0"
@@ -230,6 +239,7 @@ export function ProfileMenuPreview({
           fallback={fallbackAvatar}
           profile={profile}
           size={64}
+          animated={!lightweight}
           className="drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)]"
         />
         <div className="mt-2 flex min-w-0 items-center gap-2">

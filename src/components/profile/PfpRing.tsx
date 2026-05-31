@@ -66,11 +66,13 @@ export function PfpRing({
   children,
   size = 64,
   className = "",
+  animated = true,
 }: {
   effect?: PfpEffectId | string | null;
   children: React.ReactNode;
   size?: number;
   className?: string;
+  animated?: boolean;
 }) {
   const id = (effect ?? "none") as PfpEffectId;
   if (id === "none") {
@@ -80,11 +82,12 @@ export function PfpRing({
       </div>
     );
   }
-  const style = RING_STYLE[id];
+  const style = RING_STYLE[id] ?? RING_STYLE.none;
+  const ringStyle = animated ? style : { ...style, animation: undefined };
   return (
     <div
       className={`relative inline-grid place-items-center rounded-full ${className}`}
-      style={{ width: size + 6, height: size + 6, padding: 3, ...style }}
+      style={{ width: size + 6, height: size + 6, padding: 3, ...ringStyle }}
     >
       <div
         className="grid place-items-center rounded-full bg-surface"

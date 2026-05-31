@@ -307,6 +307,7 @@ export function Header() {
                         bannerUrl={bannerUrl}
                         badgeIds={menuBadgeIds}
                         badgeNames={menuBadgeNames}
+                        lightweight
                       >
                         <div className="relative z-10 py-1.5">
                           <Link

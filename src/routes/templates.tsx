@@ -174,7 +174,7 @@ function TemplatesPage() {
                 </div>
                 <div className="relative -mx-1 overflow-hidden rounded-xl border border-white/10 bg-background/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_40px_-28px_rgba(0,217,255,0.75)]">
                   <img
-                    src={t.thumbnail_url ?? "/template-previews/simulator-real.jpg"}
+                    src={t.thumbnail_url ?? "/template-previews/simulator-real.webp"}
                     alt={`${t.name} preview`}
                     className="h-40 w-full object-cover saturate-[1.08] contrast-[1.04]"
                     loading="lazy"
