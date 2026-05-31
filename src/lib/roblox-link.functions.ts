@@ -80,13 +80,16 @@ export const startRobloxLink = createServerFn({ method: "POST" })
     const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        roblox_verification_code: code,
-        roblox_verification_expires_at: expires,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
+      .from("private_user_data")
+      .upsert(
+        {
+          user_id: userId,
+          roblox_verification_code: code,
+          roblox_verification_expires_at: expires,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
     if (error) throw new Error(error.message);
 
     return {
@@ -112,9 +115,9 @@ export const confirmRobloxLink = createServerFn({ method: "POST" })
     const { userId } = context;
 
     const { data: profile, error: pErr } = await supabaseAdmin
-      .from("profiles")
+      .from("private_user_data")
       .select("roblox_verification_code, roblox_verification_expires_at")
-      .eq("id", userId)
+      .eq("user_id", userId)
       .maybeSingle();
     if (pErr) throw new Error(pErr.message);
     const code = profile?.roblox_verification_code;
@@ -157,12 +160,11 @@ export const confirmRobloxLink = createServerFn({ method: "POST" })
         roblox_display_name: lookup.displayName,
         roblox_avatar_url: avatar,
         roblox_verified_at: new Date().toISOString(),
-        roblox_verification_code: null,
-        roblox_verification_expires_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
     if (uErr) throw new Error(uErr.message);
+    await supabaseAdmin.from("private_user_data").delete().eq("user_id", userId);
 
     return {
       ok: true as const,
@@ -186,12 +188,11 @@ export const unlinkRoblox = createServerFn({ method: "POST" })
         roblox_display_name: null,
         roblox_avatar_url: null,
         roblox_verified_at: null,
-        roblox_verification_code: null,
-        roblox_verification_expires_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
     if (error) throw new Error(error.message);
+    await supabaseAdmin.from("private_user_data").delete().eq("user_id", userId);
     return { ok: true as const };
   });
 
