@@ -164,6 +164,22 @@ async function storeModelFile(
   return { filePath, fileUrl: pub.publicUrl };
 }
 
+export async function storeGeneratedAssetFile(
+  userId: string,
+  content: string,
+  ext: string,
+  contentType = "text/plain",
+): Promise<{ filePath: string; fileUrl: string }> {
+  const cleanExt = ext.replace(/[^a-z0-9]/gi, "").toLowerCase() || "txt";
+  const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${cleanExt}`;
+  const { error: upErr } = await supabaseAdmin.storage
+    .from("generated-3d-models")
+    .upload(filePath, Buffer.from(content, "utf8"), { contentType, upsert: false });
+  if (upErr) throw new Error(`Could not save the generated Studio package: ${upErr.message}`);
+  const { data: pub } = supabaseAdmin.storage.from("generated-3d-models").getPublicUrl(filePath);
+  return { filePath, fileUrl: pub.publicUrl };
+}
+
 /**
  * Generate a 3D model from a text prompt with options, store the chosen
  * download format AND a GLB for the WebGL preview, and return permanent URLs.

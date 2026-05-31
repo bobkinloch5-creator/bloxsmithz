@@ -5,6 +5,7 @@ import {
   Box,
   Bot,
   CheckCircle,
+  Clock,
   CreditCard,
   FileCode,
   Flag,
@@ -43,6 +44,47 @@ const tagStyles = {
 };
 
 const changelogItems = [
+  {
+    version: "v3.6.0",
+    date: "May 30, 2026",
+    title: "Custom 3D Generator Studio",
+    description:
+      "The 3D Model Generator is now a fuller Roblox asset studio with custom model settings, 3D text, animation blueprints, live cooldown timers, and safer PayPal transaction submission.",
+    updates: [
+      {
+        category: "3D",
+        tagColor: tagStyles.tools,
+        icon: Box,
+        title: "Custom 3D Model Controls",
+        detail:
+          "Users can choose model type, Roblox style, theme, material, texture look, colors, quality, format, polygon budget, textures, and rigged exports before generating.",
+      },
+      {
+        category: "3D",
+        tagColor: tagStyles.ui,
+        icon: Palette,
+        title: "3D Text & Animation Modes",
+        detail:
+          "Added customizable Roblox-ready 3D text packages and animation blueprint packages for idle, walk, run, attack, emote, dance, pet, NPC, and tool animations.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.backend,
+        icon: Clock,
+        title: "Live Weekly Cooldown Timer",
+        detail:
+          "The 3D generator now shows time remaining, unlock time, a disabled generate button, and automatic unlock once the Supabase-saved cooldown expires.",
+      },
+      {
+        category: "Payments",
+        tagColor: tagStyles.security,
+        icon: CreditCard,
+        title: "Safer PayPal Transaction ID Flow",
+        detail:
+          "Checkout now submits PayPal transaction IDs through a server-side RPC with duplicate transaction protection so credits are added after verified approval.",
+      },
+    ],
+  },
   {
     version: "v3.5.0",
     date: "May 30, 2026",

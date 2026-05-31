@@ -144,7 +144,7 @@ function Pricing() {
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          PayPal · credits delivered after manual verification.
+          PayPal · paste your transaction ID after payment and credits are added after verification.
         </p>
       </main>
       <Footer />

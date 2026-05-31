@@ -44,22 +44,24 @@ function CustomCheckout() {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.from("payment_requests").insert({
-      user_id: user.id,
-      pack_id: `custom_${safeCredits}`,
-      credits: safeCredits,
-      amount: price,
-      paypal_transaction_id: txId.trim(),
-      paypal_note: note.trim() || null,
-      status: "pending",
+    const { error } = await (supabase as any).rpc("submit_payment_request", {
+      _pack_id: `custom_${safeCredits}`,
+      _credits: safeCredits,
+      _amount: price,
+      _paypal_transaction_id: txId.trim(),
+      _paypal_note: note.trim() || null,
     });
     setSubmitting(false);
     if (error) {
-      toast.error(error.message);
+      const messages: Record<string, string> = {
+        transaction_id_already_submitted: "That PayPal transaction ID has already been submitted.",
+        invalid_transaction_id: "Enter the PayPal transaction ID from your receipt.",
+      };
+      toast.error(messages[error.message] ?? error.message);
       return;
     }
     setSubmitted(true);
-    toast.success("Submitted! Credits will be added after verification.");
+    toast.success("Transaction ID submitted. Credits are added as soon as the payment is verified.");
   };
 
   return (
@@ -140,8 +142,8 @@ function CustomCheckout() {
           <h2 className="font-semibold">Step 2 — Submit for verification</h2>
           {submitted ? (
             <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm">
-              Your payment is pending verification. You'll see your credits update on the dashboard
-              once approved.
+              Your transaction ID was received. You'll see your credits update on the dashboard as
+              soon as the payment is verified and approved.
               <div className="mt-3">
                 <Link to="/dashboard" className="underline">
                   Back to dashboard
