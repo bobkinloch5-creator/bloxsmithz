@@ -258,15 +258,8 @@ function Admin() {
       .order("created_at", { ascending: false });
     const list = (data ?? []) as PromoSub[];
     setPromoSubs(list);
-    const ids = Array.from(new Set(list.map((r) => r.user_id))).filter((id) => !emails[id]);
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
-      const map: Record<string, string> = { ...emails };
-      (profs ?? []).forEach((p: { id: string; email: string }) => {
-        map[p.id] = p.email;
-      });
-      setEmails(map);
-    }
+    // Emails are sourced from auth.users via loadModeratorDashboard; no profile lookup needed.
+    void list;
   };
 
   const reviewPromo = async (s: PromoSub, approve: boolean) => {
