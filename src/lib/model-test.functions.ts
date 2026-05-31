@@ -168,11 +168,11 @@ export const testAllSiteModels = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-    const isAdmin = (roles ?? []).some(
-      (r: { role: string }) => r.role === "admin" || r.role === "owner",
+    const canTest = (roles ?? []).some(
+      (r: { role: string }) => r.role === "admin" || r.role === "owner" || r.role === "moderator",
     );
-    if (!isAdmin) {
-      throw new Error("Forbidden — admin only.");
+    if (!canTest) {
+      throw new Error("Forbidden - moderator only.");
     }
 
     const jobs: Promise<ModelTestResult>[] = [];

@@ -9,6 +9,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, XCircle, Loader2, PlayCircle, RefreshCw } from "lucide-react";
 import { testAllSiteModels, type ModelTestResult } from "@/lib/model-test.functions";
 import { RobloxDocsPanel } from "@/components/RobloxDocsPanel";
+import { loadModeratorDashboard, resendConfirmationForUser } from "@/lib/moderator.functions";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async () => {
@@ -73,6 +74,14 @@ type Activity = {
   reason: string | null;
   created_at: string;
 };
+type ModeratorAction = {
+  id: string;
+  actor_id: string;
+  target_user_id: string | null;
+  action: string;
+  amount: number | null;
+  created_at: string;
+};
 
 function Admin() {
   const { user, isAdmin, isOwner, loading } = useAuth();
@@ -94,6 +103,10 @@ function Admin() {
   const [promoSubs, setPromoSubs] = useState<PromoSub[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [showBanned, setShowBanned] = useState(false);
+  const [moderatorActions, setModeratorActions] = useState<ModeratorAction[]>([]);
+  const [emailConfirmed, setEmailConfirmed] = useState<Record<string, boolean>>({});
+  const loadModeration = useServerFn(loadModeratorDashboard);
+  const resendConfirm = useServerFn(resendConfirmationForUser);
 
   const loadUsers = async () => {
     const { data: profs } = await supabase
@@ -114,6 +127,13 @@ function Admin() {
       setRows([]);
       return;
     }
+    setEmails((prev) => {
+      const next = { ...prev };
+      list.forEach((p) => {
+        next[p.id] = p.email;
+      });
+      return next;
+    });
     const [{ data: roles }, { data: projs }, { data: gens }] = await Promise.all([
       supabase.from("user_roles").select("user_id,role").in("user_id", ids),
       supabase.from("projects").select("user_id").in("user_id", ids),
@@ -139,6 +159,18 @@ function Admin() {
         generations: gCount[p.id] ?? 0,
       })),
     );
+    try {
+      const modData = await loadModeration();
+      const map: Record<string, boolean> = {};
+      (modData.users ?? []).forEach((u: { id: string; email_confirmed: boolean }) => {
+        map[u.id] = u.email_confirmed;
+      });
+      setEmailConfirmed(map);
+      setModeratorActions((modData.moderatorActions ?? []) as ModeratorAction[]);
+    } catch {
+      setEmailConfirmed({});
+      setModeratorActions([]);
+    }
   };
 
   const loadActivity = async () => {
@@ -414,6 +446,16 @@ function Admin() {
     await adjustCredits(row.id, amt, reason);
   };
 
+  const resendSignupEmail = async (row: Row) => {
+    try {
+      const res = await resendConfirm({ data: { userId: row.id, email: row.email } });
+      toast.success(res.sent ? "Confirmation email resent." : "Email already confirmed.");
+      setEmailConfirmed((prev) => ({ ...prev, [row.id]: true }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not resend email.");
+    }
+  };
+
   const filtered = rows.filter((r) => {
     if (!showBanned && r.banned) return false;
     const term = q.toLowerCase();
@@ -449,128 +491,130 @@ function Admin() {
 
         <RobloxDocsPanel />
 
-
-
         {isOwner && (
-        <section className="glass rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="font-semibold">Pending payment verifications ({requests.length})</h2>
-            <a
-              href="https://www.paypal.com/myaccount/activity"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs underline text-muted-foreground"
-            >
-              Open PayPal activity
-            </a>
-          </div>
-          {requests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No pending payments.</p>
-          ) : (
-            <div className="space-y-3">
-              {requests.map((r) => (
-                <div
-                  key={r.id}
-                  className="rounded-xl border border-border p-4 flex flex-wrap gap-3 justify-between items-center"
-                >
-                  <div className="text-sm space-y-1">
-                    <div>
-                      <span className="text-muted-foreground">User:</span>{" "}
-                      <span className="font-medium">{emails[r.user_id] ?? r.user_id}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Pack:</span> {r.pack_id} —{" "}
-                      <span className="font-semibold">${r.amount}</span> for{" "}
-                      <span className="font-semibold">{r.credits} credits</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">PayPal Tx:</span>{" "}
-                      <code className="bg-surface-elevated px-1 rounded">
-                        {r.paypal_transaction_id}
-                      </code>
-                    </div>
-                    {r.paypal_note && (
-                      <div className="text-xs text-muted-foreground">Note: {r.paypal_note}</div>
-                    )}
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(r.created_at).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => reviewPayment(r, true)}
-                      className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
-                    >
-                      Approve & credit
-                    </button>
-                    <button
-                      onClick={() => reviewPayment(r, false)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-sm"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
+          <section className="glass rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-semibold">Pending payment verifications ({requests.length})</h2>
+              <a
+                href="https://www.paypal.com/myaccount/activity"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs underline text-muted-foreground"
+              >
+                Open PayPal activity
+              </a>
             </div>
-          )}
-        </section>
+            {requests.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No pending payments.</p>
+            ) : (
+              <div className="space-y-3">
+                {requests.map((r) => (
+                  <div
+                    key={r.id}
+                    className="rounded-xl border border-border p-4 flex flex-wrap gap-3 justify-between items-center"
+                  >
+                    <div className="text-sm space-y-1">
+                      <div>
+                        <span className="text-muted-foreground">User:</span>{" "}
+                        <span className="font-medium">{emails[r.user_id] ?? r.user_id}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Pack:</span> {r.pack_id} —{" "}
+                        <span className="font-semibold">${r.amount}</span> for{" "}
+                        <span className="font-semibold">{r.credits} credits</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">PayPal Tx:</span>{" "}
+                        <code className="bg-surface-elevated px-1 rounded">
+                          {r.paypal_transaction_id}
+                        </code>
+                      </div>
+                      {r.paypal_note && (
+                        <div className="text-xs text-muted-foreground">Note: {r.paypal_note}</div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(r.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => reviewPayment(r, true)}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+                      >
+                        Approve & credit
+                      </button>
+                      <button
+                        onClick={() => reviewPayment(r, false)}
+                        className="rounded-lg border border-border px-3 py-1.5 text-sm"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         )}
 
         {isOwner && (
-        <section className="glass rounded-2xl p-6">
-          <h2 className="font-semibold mb-3">Pending promotion submissions ({promoSubs.length})</h2>
-          {promoSubs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No pending promotion submissions.</p>
-          ) : (
-            <div className="space-y-3">
-              {promoSubs.map((s) => (
-                <div
-                  key={s.id}
-                  className="rounded-xl border border-border p-4 flex flex-wrap gap-3 justify-between items-center"
-                >
-                  <div className="text-sm space-y-1 min-w-0">
-                    <div>
-                      <span className="text-muted-foreground">User:</span>{" "}
-                      <span className="font-medium">{emails[s.user_id] ?? s.user_id}</span>
+          <section className="glass rounded-2xl p-6">
+            <h2 className="font-semibold mb-3">
+              Pending promotion submissions ({promoSubs.length})
+            </h2>
+            {promoSubs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No pending promotion submissions.</p>
+            ) : (
+              <div className="space-y-3">
+                {promoSubs.map((s) => (
+                  <div
+                    key={s.id}
+                    className="rounded-xl border border-border p-4 flex flex-wrap gap-3 justify-between items-center"
+                  >
+                    <div className="text-sm space-y-1 min-w-0">
+                      <div>
+                        <span className="text-muted-foreground">User:</span>{" "}
+                        <span className="font-medium">{emails[s.user_id] ?? s.user_id}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs uppercase rounded bg-surface-elevated px-1.5 py-0.5">
+                          {s.platform}
+                        </span>
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline text-primary truncate max-w-[480px]"
+                        >
+                          {s.url}
+                        </a>
+                      </div>
+                      {s.note && (
+                        <div className="text-xs text-muted-foreground">Note: {s.note}</div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(s.created_at).toLocaleString()}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs uppercase rounded bg-surface-elevated px-1.5 py-0.5">
-                        {s.platform}
-                      </span>
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline text-primary truncate max-w-[480px]"
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => reviewPromo(s, true)}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
                       >
-                        {s.url}
-                      </a>
-                    </div>
-                    {s.note && <div className="text-xs text-muted-foreground">Note: {s.note}</div>}
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(s.created_at).toLocaleString()}
+                        Approve & credit
+                      </button>
+                      <button
+                        onClick={() => reviewPromo(s, false)}
+                        className="rounded-lg border border-border px-3 py-1.5 text-sm"
+                      >
+                        Reject
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => reviewPromo(s, true)}
-                      className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
-                    >
-                      Approve & credit
-                    </button>
-                    <button
-                      onClick={() => reviewPromo(s, false)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-sm"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+                ))}
+              </div>
+            )}
+          </section>
         )}
 
         <section className="glass rounded-2xl p-6">
@@ -661,6 +705,14 @@ function Admin() {
                       <td className="text-muted-foreground">{r.projects}</td>
                       <td className="text-muted-foreground">{r.generations}</td>
                       <td className="text-right whitespace-nowrap">
+                        {emailConfirmed[r.id] === false && (
+                          <button
+                            onClick={() => resendSignupEmail(r)}
+                            className="text-xs rounded-md border border-amber-400/40 bg-amber-400/10 text-amber-200 px-2 py-1 mr-1"
+                          >
+                            Resend email
+                          </button>
+                        )}
                         {isOwner && (
                           <>
                             <button
@@ -765,95 +817,138 @@ function Admin() {
         </section>
 
         {isOwner && (
-        <section className="glass rounded-2xl p-6">
-          <h2 className="font-semibold mb-3">Promo codes</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-4">
-            <input
-              value={newCode}
-              onChange={(e) => setNewCode(e.target.value)}
-              placeholder="CODE"
-              className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm uppercase"
-            />
-            <input
-              type="number"
-              value={newCredits}
-              onChange={(e) => setNewCredits(parseInt(e.target.value || "0", 10))}
-              placeholder="Credits"
-              className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
-            />
-            <input
-              type="number"
-              value={newMax}
-              onChange={(e) => setNewMax(e.target.value)}
-              placeholder="Max uses (blank=∞)"
-              className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
-            />
-            <input
-              type="datetime-local"
-              value={newExpires}
-              onChange={(e) => setNewExpires(e.target.value)}
-              className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
-            />
-            <button
-              onClick={createPromo}
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
-            >
-              Create
-            </button>
-          </div>
-          {promos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No promo codes yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase text-muted-foreground">
-                  <tr>
-                    <th className="py-2">Code</th>
-                    <th>Credits</th>
-                    <th>Uses</th>
-                    <th>Expires</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {promos.map((p) => (
-                    <tr key={p.id} className="border-t border-border">
-                      <td className="py-2 font-mono">{p.code}</td>
-                      <td>{p.credits}</td>
-                      <td>
-                        {p.redemption_count}
-                        {p.max_redemptions ? ` / ${p.max_redemptions}` : ""}
-                      </td>
-                      <td>{p.expires_at ? new Date(p.expires_at).toLocaleDateString() : "—"}</td>
-                      <td>
-                        {p.active ? (
-                          <span className="text-success">Active</span>
-                        ) : (
-                          <span className="text-muted-foreground">Disabled</span>
-                        )}
-                      </td>
-                      <td className="text-right whitespace-nowrap">
-                        <button
-                          onClick={() => togglePromo(p)}
-                          className="text-xs rounded-md border border-border px-2 py-1 mr-1"
-                        >
-                          {p.active ? "Disable" : "Enable"}
-                        </button>
-                        <button
-                          onClick={() => deletePromo(p)}
-                          className="text-xs rounded-md border border-border px-2 py-1"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <section className="glass rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-semibold">Moderator action log</h2>
+              <button onClick={loadUsers} className="text-xs underline text-muted-foreground">
+                Refresh
+              </button>
             </div>
-          )}
-        </section>
+            {moderatorActions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No moderator actions yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="py-2">When</th>
+                      <th>Action</th>
+                      <th>Actor</th>
+                      <th>Target</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {moderatorActions.slice(0, 25).map((a) => (
+                      <tr key={a.id} className="border-t border-border">
+                        <td className="py-2 text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(a.created_at).toLocaleString()}
+                        </td>
+                        <td className="font-medium">{a.action}</td>
+                        <td className="text-xs">{emails[a.actor_id] ?? a.actor_id.slice(0, 8)}</td>
+                        <td className="text-xs">
+                          {a.target_user_id ? emails[a.target_user_id] ?? a.target_user_id.slice(0, 8) : "—"}
+                        </td>
+                        <td>{a.amount ? (a.amount > 0 ? `+${a.amount}` : a.amount) : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
+        {isOwner && (
+          <section className="glass rounded-2xl p-6">
+            <h2 className="font-semibold mb-3">Promo codes</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-4">
+              <input
+                value={newCode}
+                onChange={(e) => setNewCode(e.target.value)}
+                placeholder="CODE"
+                className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm uppercase"
+              />
+              <input
+                type="number"
+                value={newCredits}
+                onChange={(e) => setNewCredits(parseInt(e.target.value || "0", 10))}
+                placeholder="Credits"
+                className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
+              />
+              <input
+                type="number"
+                value={newMax}
+                onChange={(e) => setNewMax(e.target.value)}
+                placeholder="Max uses (blank=∞)"
+                className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
+              />
+              <input
+                type="datetime-local"
+                value={newExpires}
+                onChange={(e) => setNewExpires(e.target.value)}
+                className="rounded-lg bg-surface-elevated border border-border px-3 py-1.5 text-sm"
+              />
+              <button
+                onClick={createPromo}
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+              >
+                Create
+              </button>
+            </div>
+            {promos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No promo codes yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase text-muted-foreground">
+                    <tr>
+                      <th className="py-2">Code</th>
+                      <th>Credits</th>
+                      <th>Uses</th>
+                      <th>Expires</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {promos.map((p) => (
+                      <tr key={p.id} className="border-t border-border">
+                        <td className="py-2 font-mono">{p.code}</td>
+                        <td>{p.credits}</td>
+                        <td>
+                          {p.redemption_count}
+                          {p.max_redemptions ? ` / ${p.max_redemptions}` : ""}
+                        </td>
+                        <td>{p.expires_at ? new Date(p.expires_at).toLocaleDateString() : "—"}</td>
+                        <td>
+                          {p.active ? (
+                            <span className="text-success">Active</span>
+                          ) : (
+                            <span className="text-muted-foreground">Disabled</span>
+                          )}
+                        </td>
+                        <td className="text-right whitespace-nowrap">
+                          <button
+                            onClick={() => togglePromo(p)}
+                            className="text-xs rounded-md border border-border px-2 py-1 mr-1"
+                          >
+                            {p.active ? "Disable" : "Enable"}
+                          </button>
+                          <button
+                            onClick={() => deletePromo(p)}
+                            className="text-xs rounded-md border border-border px-2 py-1"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
         )}
       </main>
       <Footer />

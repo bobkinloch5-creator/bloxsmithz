@@ -47,7 +47,7 @@ export const Route = createFileRoute("/dashboard")({
 type Project = { id: string; name: string; game_type: string; updated_at: string; status: string };
 
 function Dashboard() {
-  const { user, profile, loading, isOwner, isAdmin } = useAuth();
+  const { user, profile, loading, isOwner, isAdmin, isModerator } = useAuth();
   const nav = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -225,6 +225,7 @@ function Dashboard() {
                 </Link>
               )}
               {isAdmin && !isOwner && <span className="text-muted-foreground">· Admin</span>}
+              {isModerator && !isAdmin && <span className="text-muted-foreground">· Moderator</span>}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -411,6 +412,15 @@ function Dashboard() {
           >
             <ShieldCheck className="h-5 w-5 text-primary-glow" />
             <span className="font-medium">Admin dashboard</span>
+          </Link>
+        )}
+        {isModerator && !isAdmin && (
+          <Link
+            to="/moderator"
+            className="glass rounded-2xl p-5 flex items-center gap-3 hover:bg-surface"
+          >
+            <ShieldCheck className="h-5 w-5 text-sky-300" />
+            <span className="font-medium">Moderator panel</span>
           </Link>
         )}
       </main>

@@ -15,6 +15,7 @@ import {
   Library,
   LayoutDashboard,
   Link2Off,
+  Mail,
   Menu,
   MessageSquare,
   Palette,
@@ -42,6 +43,47 @@ const tagStyles = {
 };
 
 const changelogItems = [
+  {
+    version: "v3.5.0",
+    date: "May 30, 2026",
+    title: "Game Template Store & Moderator Panel",
+    description:
+      "The template store now has real Roblox game starters instead of an empty section, and moderators have a safer dashboard with strict limits, email resend tools, and audit logging.",
+    updates: [
+      {
+        category: "Templates",
+        tagColor: tagStyles.tools,
+        icon: Library,
+        title: "Roblox Game Template Catalog",
+        detail:
+          "Added simulator, obby, tycoon, pet, mining, sword fighting, racing, roleplay, horror, and tower defense templates with preview images, credit costs, difficulty, build details, and plugin status.",
+      },
+      {
+        category: "Plugin",
+        tagColor: tagStyles.plugin,
+        icon: FileCode,
+        title: "Studio-Ready Template Builds",
+        detail:
+          "Build This Game now seeds projects with scripts, UI, config modules, RemoteEvents, tools, tasks, and build plans so the Roblox Studio plugin has a full structure to insert.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Safe Moderator Role",
+        detail:
+          "Added a migration that safely enables the moderator enum, plus a separate Moderator Panel with no admin promotion, demotion, owner/admin targeting, or unlimited credit powers.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.backend,
+        icon: Mail,
+        title: "Resend Confirmation Tools",
+        detail:
+          "Admins and moderators can resend signup confirmation emails for users whose email is still unconfirmed, with each action logged for owner review.",
+      },
+    ],
+  },
   {
     version: "v3.4.0",
     date: "May 30, 2026",

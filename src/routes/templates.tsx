@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Loader2, Download, Coins, Sparkles, Star, ShieldCheck, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useMemo } from "react";
+import { PluginStatus } from "@/components/PluginStatus";
 
 export const Route = createFileRoute("/templates")({
   component: () => (<RequireAuth><TemplatesPage /></RequireAuth>),
@@ -59,7 +60,7 @@ function TemplatesPage() {
   const installMut = useMutation({
     mutationFn: (slug: string) => install({ data: { templateSlug: slug } }),
     onSuccess: (res) => {
-      toast.success(`Installed ${res.name}`);
+      toast.success(`Built ${res.name}`);
       nav({ to: "/project/$projectId", params: { projectId: res.projectId } });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -88,8 +89,8 @@ function TemplatesPage() {
                 Template <span className="gradient-text">Store</span>
               </h1>
               <p className="mt-2 text-muted-foreground max-w-2xl">
-                Install polished Roblox systems with credits. Premium templates seed a project,
-                build plan, tasks, secure server checks, and Studio-ready structure.
+                Build polished Roblox game structures with credits. Each kit seeds scripts, UI,
+                folders, tools, RemoteEvents, maps, tasks, and Studio-ready systems.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -131,6 +132,16 @@ function TemplatesPage() {
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.length === 0 && (
+              <div className="col-span-full rounded-2xl border border-border/60 bg-surface/45 p-10 text-center">
+                <Sparkles className="mx-auto mb-3 h-8 w-8 text-primary-glow" />
+                <h2 className="font-bold">No templates in this filter yet</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Pick another category. BloxSmith always includes starter kits even when the
+                  Supabase catalog is empty.
+                </p>
+              </div>
+            )}
             {filtered.map((t) => (
               <article
                 key={t.id}
@@ -150,7 +161,7 @@ function TemplatesPage() {
                       {t.category}
                     </div>
                     <h2 className="font-bold text-lg leading-tight">{t.name}</h2>
-                  </div>
+                    </div>
                   <span
                     className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                       t.credits_cost === 0
@@ -161,17 +172,43 @@ function TemplatesPage() {
                     {t.credits_cost === 0 ? "Free" : `${t.credits_cost} credits`}
                   </span>
                 </div>
+                <div className="relative -mx-1 overflow-hidden rounded-xl border border-border/60 bg-background/50">
+                  <img
+                    src={t.thumbnail_url ?? "/template-previews/simulator.svg"}
+                    alt={`${t.name} preview`}
+                    className="h-36 w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute bottom-2 left-2 rounded-full border border-black/20 bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
+                    Roblox game template
+                  </div>
+                </div>
                 <p className="text-sm text-muted-foreground">{t.description}</p>
-                <ul className="text-xs text-muted-foreground space-y-1 flex-1">
+                <div className="rounded-xl border border-border/60 bg-background/30 p-3">
+                  <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    What it builds
+                  </div>
+                  <ul className="text-xs text-muted-foreground space-y-1">
                   {(t.features ?? []).slice(0, 4).map((f) => (
                     <li key={f} className="flex items-center gap-1.5">
                       <Sparkles className="h-3 w-3 text-primary-glow shrink-0" />
                       {f}
                     </li>
                   ))}
-                </ul>
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <span className="text-xs text-muted-foreground capitalize">{t.difficulty}</span>
+                  </ul>
+                </div>
+                <div className="mt-auto grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border border-border/60 bg-background/30 px-3 py-2">
+                    <div className="text-[10px] uppercase text-muted-foreground">Difficulty</div>
+                    <div className="font-semibold capitalize">{t.difficulty}</div>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/30 px-3 py-2">
+                    <div className="text-[10px] uppercase text-muted-foreground">Plugin</div>
+                    <div className="font-semibold">Required</div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+                  <PluginStatus compact />
                   {user ? (
                     <button
                       onClick={() => installMut.mutate(t.slug)}
@@ -185,7 +222,7 @@ function TemplatesPage() {
                       ) : (
                         <Coins className="h-3.5 w-3.5" />
                       )}
-                      Install
+                      Build This Game
                     </button>
                   ) : (
                     <Link

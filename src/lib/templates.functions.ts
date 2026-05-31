@@ -3,6 +3,51 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isGeneratorOwner } from "@/lib/generator-credits.server";
 import { recordAiUsageEvent } from "@/lib/usage-events.server";
+import {
+  GAME_TEMPLATE_CATALOG,
+  catalogTemplateBySlug,
+  templateProjectFiles,
+  type GameTemplateCatalogItem,
+} from "@/lib/game-template-catalog";
+
+type DbTemplate = {
+  id?: string;
+  slug: string;
+  name: string;
+  category: string;
+  description: string;
+  thumbnail_url?: string | null;
+  credits_cost: number;
+  difficulty: GameTemplateCatalogItem["difficulty"] | string;
+  features?: unknown;
+  build_spec?: unknown;
+  install_count?: number | null;
+};
+
+function normalizeTemplate(tpl: DbTemplate): GameTemplateCatalogItem {
+  const fallback = catalogTemplateBySlug(tpl.slug);
+  return {
+    id: tpl.id ?? fallback?.id ?? `catalog-${tpl.slug}`,
+    slug: tpl.slug,
+    name: tpl.name,
+    category: tpl.category,
+    description: tpl.description,
+    thumbnail_url: tpl.thumbnail_url ?? fallback?.thumbnail_url ?? "/template-previews/simulator.svg",
+    credits_cost: Number(tpl.credits_cost ?? fallback?.credits_cost ?? 0),
+    difficulty: (tpl.difficulty as GameTemplateCatalogItem["difficulty"]) ?? fallback?.difficulty ?? "easy",
+    features: Array.isArray(tpl.features)
+      ? (tpl.features as string[])
+      : fallback?.features ?? [],
+    build_spec:
+      typeof tpl.build_spec === "object" && tpl.build_spec
+        ? (tpl.build_spec as { prompt: string })
+        : fallback?.build_spec ?? {
+            prompt: `Build a polished Roblox ${tpl.category} game from the ${tpl.name} template.`,
+          },
+    install_count: Number(tpl.install_count ?? fallback?.install_count ?? 0),
+    active: true,
+  };
+}
 
 export const listTemplates = createServerFn({ method: "GET" }).handler(async () => {
   // Public catalog — read via the auth-middleware client (RLS allows anon SELECT on active rows
@@ -16,8 +61,19 @@ export const listTemplates = createServerFn({ method: "GET" }).handler(async () 
     .eq("active", true)
     .order("credits_cost", { ascending: false })
     .order("install_count", { ascending: false });
-  if (error) throw new Error(error.message);
-  return { templates: data ?? [] };
+  const merged = new Map<string, GameTemplateCatalogItem>();
+  for (const template of GAME_TEMPLATE_CATALOG) merged.set(template.slug, template);
+  if (!error) {
+    for (const template of (data ?? []) as DbTemplate[]) {
+      merged.set(template.slug, normalizeTemplate(template));
+    }
+  }
+  return {
+    templates: Array.from(merged.values()).sort((a, b) => {
+      if (b.credits_cost !== a.credits_cost) return b.credits_cost - a.credits_cost;
+      return b.install_count - a.install_count;
+    }),
+  };
 });
 
 export const installTemplate = createServerFn({ method: "POST" })
@@ -35,22 +91,32 @@ export const installTemplate = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const isOwner = await isGeneratorOwner(userId, supabase);
 
-    const { data: tpl, error: tplErr } = await supabaseAdmin
+    const { data: dbTpl, error: tplErr } = await supabaseAdmin
       .from("templates")
       .select("*")
       .eq("slug", data.templateSlug)
       .eq("active", true)
       .maybeSingle();
-    if (tplErr || !tpl) throw new Error("Template not found");
+    if (tplErr) throw new Error(tplErr.message);
+    const catalogTpl = catalogTemplateBySlug(data.templateSlug);
+    const tpl = dbTpl ? normalizeTemplate(dbTpl as unknown as DbTemplate) : catalogTpl;
+    if (!tpl) throw new Error("Template not found");
+    const dbTemplateId = (dbTpl as { id?: string } | null)?.id;
 
-    // Charge credits (owner role gets 999,999 free)
-    if (tpl.credits_cost > 0) {
-      const { error: spendErr } = await supabase.rpc("spend_credits_atomic", {
-        _amount: tpl.credits_cost,
-      });
-      if (spendErr) throw new Error("Not enough credits to install this template.");
+    const cost = isOwner ? 0 : tpl.credits_cost;
+    if (cost > 0) {
+      const { data: profile, error: creditCheckErr } = await supabaseAdmin
+        .from("profiles")
+        .select("credits")
+        .eq("id", userId)
+        .maybeSingle();
+      if (creditCheckErr) throw new Error(creditCheckErr.message);
+      if (!profile || Number(profile.credits ?? 0) < cost) {
+        throw new Error("Not enough credits to build this template.");
+      }
     }
 
+    let createdProjectId: string | null = null;
     const { data: project, error: pErr } = await supabase
       .from("projects")
       .insert({
@@ -63,21 +129,31 @@ export const installTemplate = createServerFn({ method: "POST" })
       .select()
       .single();
     if (pErr || !project) throw new Error(pErr?.message ?? "Could not create project");
+    createdProjectId = project.id;
 
-    // Seed a build_plan from the template spec so the user lands in /project/$id with a plan ready to execute
-    const buildSpec = (tpl.build_spec ?? {}) as { prompt?: string };
-    if (buildSpec.prompt) {
-      await supabase.from("build_plans").insert({
-        project_id: project.id,
-        user_id: userId,
-        prompt: buildSpec.prompt,
-        plan: { source: "template", template_slug: tpl.slug, features: tpl.features },
-        status: "ready",
-      });
-      // Seed tasks from features list
-      const features = Array.isArray(tpl.features) ? (tpl.features as string[]) : [];
+    try {
+      // Seed a build_plan from the template spec so the user lands in /project/$id with a plan ready to execute.
+      const buildSpec = (tpl.build_spec ?? {}) as { prompt?: string };
+      if (buildSpec.prompt) {
+        const { error: planErr } = await supabase.from("build_plans").insert({
+          project_id: project.id,
+          user_id: userId,
+          prompt: buildSpec.prompt,
+          plan: {
+            source: "template",
+            template_slug: tpl.slug,
+            features: tpl.features,
+            plugin_required: true,
+            inserts_full_structure: true,
+          },
+          status: "ready",
+        });
+        if (planErr) throw new Error(planErr.message);
+      }
+
+      const features = Array.isArray(tpl.features) ? tpl.features : [];
       if (features.length > 0) {
-        await supabase.from("project_tasks").insert(
+        const { error: taskErr } = await supabase.from("project_tasks").insert(
           features.map((title, i) => ({
             project_id: project.id,
             user_id: userId,
@@ -87,25 +163,84 @@ export const installTemplate = createServerFn({ method: "POST" })
             position: i,
           })),
         );
+        if (taskErr) throw new Error(taskErr.message);
       }
-    }
 
-    await supabaseAdmin.from("template_installs").insert({
-      template_id: tpl.id,
-      user_id: userId,
-      project_id: project.id,
-      credits_charged: tpl.credits_cost,
-    });
-    await recordAiUsageEvent({
-      userId,
-      source: "Template install",
-      creditsUsed: isOwner ? 0 : tpl.credits_cost,
-      metadata: { template_slug: tpl.slug, template_name: tpl.name },
-    });
-    await supabaseAdmin
-      .from("templates")
-      .update({ install_count: (tpl.install_count ?? 0) + 1 })
-      .eq("id", tpl.id);
+      const files = templateProjectFiles(tpl);
+      if (files.length > 0) {
+        const { error: fileErr } = await supabase.from("project_files").insert(
+          files.map((file) => ({
+            project_id: project.id,
+            path: file.path,
+            file_type: file.file_type,
+            service_location: file.service_location,
+            content: file.content,
+          })),
+        );
+        if (fileErr) throw new Error(fileErr.message);
+      }
+
+      if (cost > 0) {
+        const { error: spendErr } = await supabase.rpc("spend_credits_atomic", {
+          _amount: cost,
+        });
+        if (spendErr) throw new Error("Template built, but credit charge failed. No credits were deducted.");
+      }
+
+      if (dbTemplateId) {
+        await supabaseAdmin.from("template_installs").insert({
+          template_id: dbTemplateId,
+          user_id: userId,
+          project_id: project.id,
+          credits_charged: cost,
+        });
+        await supabaseAdmin
+          .from("templates")
+          .update({ install_count: (tpl.install_count ?? 0) + 1 })
+          .eq("id", dbTemplateId);
+      }
+
+      await recordAiUsageEvent({
+        userId,
+        source: "Template build",
+        creditsUsed: cost,
+        metadata: {
+          template_slug: tpl.slug,
+          template_name: tpl.name,
+          project_id: project.id,
+          seeded_files: files.length,
+        },
+      });
+      await (supabaseAdmin as any).rpc("unlock_achievement", {
+        _user_id: userId,
+        _key: "template_first_build",
+      });
+      if (cost > 0) {
+        await (supabaseAdmin as any).rpc("unlock_achievement", {
+          _user_id: userId,
+          _key: "template_premium_build",
+        });
+      }
+      const categoryKey = `${tpl.category.toLowerCase()}_maker`.replace(/[^a-z0-9_]/g, "_");
+      const mappedKey: Record<string, string> = {
+        simulator_maker: "simulator_maker",
+        obby_maker: "obby_architect",
+        tycoon_maker: "tycoon_founder",
+        pet_maker: "pet_engineer",
+      };
+      const achievementKey = mappedKey[categoryKey];
+      if (achievementKey) {
+        await (supabaseAdmin as any).rpc("unlock_achievement", {
+          _user_id: userId,
+          _key: achievementKey,
+        });
+      }
+    } catch (err) {
+      if (createdProjectId) {
+        await supabaseAdmin.from("projects").delete().eq("id", createdProjectId);
+      }
+      throw err;
+    }
 
     return { projectId: project.id, name: project.name };
   });
