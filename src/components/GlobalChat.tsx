@@ -1132,6 +1132,14 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         else if (m.includes("too_long")) toast.error("Message is too long");
         else if (m.includes("links_not_allowed"))
           toast.error("Links aren't allowed in chat — keep it clean and friendly 💙");
+        else if (m.includes("unknown_channel"))
+          toast.error("This channel isn't set up yet. Try #general or refresh.");
+        else if (m.includes("forbidden_channel"))
+          toast.error("You can't post in this channel.");
+        else if (m.includes("banned")) toast.error("Your account is banned from chat.");
+        else if (m.includes("empty_message")) toast.error("Type a message first.");
+        else if (m.includes("attachments_disabled"))
+          toast.error("Attachments are currently disabled.");
         else toast.error(m);
         setDraft(trimmed);
       } else {
@@ -1140,6 +1148,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         setPendingFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
+    } catch (err: any) {
+      // Anything thrown above (network drop, server-fn 500, unexpected error)
+      // must surface — otherwise pressing Enter looks like it does nothing.
+      console.error("[GlobalChat.send] failed", err);
+      toast.error(err?.message ? `Couldn't send: ${err.message}` : "Couldn't send message. Try again.");
+      setDraft(trimmed);
     } finally {
       setSending(false);
       inputRef.current?.focus();
