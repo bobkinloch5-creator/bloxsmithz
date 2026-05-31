@@ -111,12 +111,11 @@ function Admin() {
   const loadUsers = async () => {
     const { data: profs } = await supabase
       .from("profiles")
-      .select("id,email,display_name,credits,banned,ban_reason")
+      .select("id,display_name,credits,banned,ban_reason")
       .order("created_at", { ascending: false })
       .limit(200);
     const list = (profs ?? []) as Array<{
       id: string;
-      email: string;
       display_name: string | null;
       credits: number;
       banned: boolean;
@@ -127,13 +126,6 @@ function Admin() {
       setRows([]);
       return;
     }
-    setEmails((prev) => {
-      const next = { ...prev };
-      list.forEach((p) => {
-        next[p.id] = p.email;
-      });
-      return next;
-    });
     const [{ data: roles }, { data: projs }, { data: gens }] = await Promise.all([
       supabase.from("user_roles").select("user_id,role").in("user_id", ids),
       supabase.from("projects").select("user_id").in("user_id", ids),
