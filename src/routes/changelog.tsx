@@ -46,6 +46,47 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.8.5",
+    date: "May 31, 2026",
+    title: "3D Studio Animation Creator",
+    description:
+      "The 3D generator now feels more like a Roblox creation studio, with custom animation prompts, clearer progress, and better controls for model, text, and animation assets.",
+    updates: [
+      {
+        category: "3D",
+        tagColor: tagStyles.tools,
+        icon: Box,
+        title: "Custom Animation Prompts",
+        detail:
+          "Animation mode now lets creators write their own motion prompt and tune type, target, style, body focus, easing, loop, duration, and intensity before exporting a Roblox blueprint.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Sparkles,
+        title: "Better Generator Studio UI",
+        detail:
+          "Model, text, and animation generation now share a cleaner studio layout with mode cards, mobile-friendly controls, richer previews, and clearer output panels.",
+      },
+      {
+        category: "Progress",
+        tagColor: tagStyles.backend,
+        icon: Clock,
+        title: "Progress Bar and ETA",
+        detail:
+          "Generation now shows estimated time, elapsed time, remaining ETA, and step-by-step progress so users know what is happening while assets are being built.",
+      },
+      {
+        category: "Roblox",
+        tagColor: tagStyles.tools,
+        icon: Palette,
+        title: "Animation-Ready Exports",
+        detail:
+          "Rigged model generation now exposes animation-ready export settings, while animation packages include keyframe metadata and a controller snippet for Roblox Studio.",
+      },
+    ],
+  },
+  {
     version: "v3.8.4",
     date: "May 31, 2026",
     title: "AI Timeout Recovery & Model Cleanup",
