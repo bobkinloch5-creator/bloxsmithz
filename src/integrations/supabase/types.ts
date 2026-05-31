@@ -2324,7 +2324,8 @@ export type Database = {
       }
       user_mcp_servers: {
         Row: {
-          auth_header: string | null
+          auth_header_secret_id: string | null
+          auth_header_set: boolean | null
           created_at: string
           enabled: boolean
           id: string
@@ -2339,7 +2340,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          auth_header?: string | null
+          auth_header_secret_id?: string | null
+          auth_header_set?: boolean | null
           created_at?: string
           enabled?: boolean
           id?: string
@@ -2354,7 +2356,8 @@ export type Database = {
           user_id: string
         }
         Update: {
-          auth_header?: string | null
+          auth_header_secret_id?: string | null
+          auth_header_set?: boolean | null
           created_at?: string
           enabled?: boolean
           id?: string
@@ -2372,7 +2375,7 @@ export type Database = {
       }
       user_provider_keys: {
         Row: {
-          api_key: string
+          api_key_secret_id: string | null
           created_at: string
           label: string | null
           provider: string
@@ -2380,7 +2383,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          api_key: string
+          api_key_secret_id?: string | null
           created_at?: string
           label?: string | null
           provider: string
@@ -2388,7 +2391,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          api_key?: string
+          api_key_secret_id?: string | null
           created_at?: string
           label?: string | null
           provider?: string
@@ -2522,6 +2525,10 @@ export type Database = {
       }
       apply_referral: { Args: { _code: string }; Returns: Json }
       are_friends: { Args: { _a: string; _b: string }; Returns: boolean }
+      can_access_conversation: {
+        Args: { _convo_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_access_project: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -2541,13 +2548,23 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      delete_provider_api_key: {
+        Args: { _provider: string }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
       ensure_my_profile: { Args: never; Returns: undefined }
+      extract_uuid_from_topic: { Args: { _topic: string }; Returns: string }
       follow_user: { Args: { _target: string }; Returns: undefined }
       get_ai_usage: { Args: never; Returns: Json }
+      get_mcp_auth_header: { Args: { _server_id: string }; Returns: string }
+      get_provider_api_key: {
+        Args: { _provider: string; _user_id: string }
+        Returns: string
+      }
       grant_credits_service: {
         Args: { _amount: number; _reason: string; _user_id: string }
         Returns: number
@@ -2632,6 +2649,14 @@ export type Database = {
           _reply_to_id?: string
         }
         Returns: string
+      }
+      set_mcp_auth_header: {
+        Args: { _server_id: string; _value: string }
+        Returns: undefined
+      }
+      set_provider_api_key: {
+        Args: { _api_key: string; _label?: string; _provider: string }
+        Returns: undefined
       }
       spend_credits_atomic: { Args: { _amount: number }; Returns: number }
       toggle_gallery_like: { Args: { _post: string }; Returns: boolean }

@@ -92,16 +92,12 @@ export const saveProviderKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => SaveKeySchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { error } = await supabase.from("user_provider_keys").upsert(
-      {
-        user_id: userId,
-        provider: data.provider,
-        api_key: data.apiKey.trim(),
-        label: null,
-      },
-      { onConflict: "user_id,provider" },
-    );
+    const { supabase } = context;
+    const { error } = await supabase.rpc("set_provider_api_key" as any, {
+      _provider: data.provider,
+      _api_key: data.apiKey.trim(),
+      _label: null,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -110,12 +106,10 @@ export const clearProviderKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ClearKeySchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { error } = await supabase
-      .from("user_provider_keys")
-      .delete()
-      .eq("user_id", userId)
-      .eq("provider", data.provider);
+    const { supabase } = context;
+    const { error } = await supabase.rpc("delete_provider_api_key" as any, {
+      _provider: data.provider,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

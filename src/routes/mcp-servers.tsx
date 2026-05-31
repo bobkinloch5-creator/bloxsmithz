@@ -14,7 +14,7 @@ type Server = {
   id: string;
   name: string;
   url: string;
-  auth_header: string | null;
+  auth_header_set: boolean | null;
   enabled: boolean;
   last_tested_at: string | null;
   last_test_ok: boolean | null;
@@ -133,14 +133,27 @@ function McpServersPage() {
       setSaving(false);
       return;
     }
-    const { error } = await supabase.from("user_mcp_servers").insert({
-      user_id: u.user.id,
-      name: form.name.trim(),
-      url: form.url.trim(),
-      auth_header: form.auth_header.trim() || null,
-    });
+    const { data: created, error } = await supabase
+      .from("user_mcp_servers")
+      .insert({
+        user_id: u.user.id,
+        name: form.name.trim(),
+        url: form.url.trim(),
+      })
+      .select("id")
+      .single();
+    if (error) {
+      setSaving(false);
+      return toast.error(error.message);
+    }
+    const headerVal = form.auth_header.trim();
+    if (headerVal && created?.id) {
+      await supabase.rpc("set_mcp_auth_header" as any, {
+        _server_id: created.id,
+        _value: headerVal,
+      });
+    }
     setSaving(false);
-    if (error) return toast.error(error.message);
     toast.success("MCP server added");
     setForm({ name: "", url: "", auth_header: "" });
     load();

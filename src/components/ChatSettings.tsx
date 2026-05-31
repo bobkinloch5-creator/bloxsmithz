@@ -39,7 +39,7 @@ type McpServer = {
   id: string;
   name: string;
   url: string;
-  auth_header: string | null;
+  auth_header_set: boolean | null;
   enabled: boolean;
 };
 
@@ -103,10 +103,10 @@ function McpServersSection() {
     setLoading(true);
     const { data, error } = await supabase
       .from("user_mcp_servers")
-      .select("id,name,url,auth_header,enabled")
+      .select("id,name,url,auth_header_set,enabled")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
-    setServers((data as McpServer[]) ?? []);
+    setServers((data as unknown as McpServer[]) ?? []);
     setLoading(false);
   };
 
@@ -124,14 +124,27 @@ function McpServersSection() {
       setSaving(false);
       return;
     }
-    const { error } = await supabase.from("user_mcp_servers").insert({
-      user_id: u.user.id,
-      name: form.name.trim(),
-      url: form.url.trim(),
-      auth_header: form.auth_header.trim() || null,
-    });
+    const { data: created, error } = await supabase
+      .from("user_mcp_servers")
+      .insert({
+        user_id: u.user.id,
+        name: form.name.trim(),
+        url: form.url.trim(),
+      })
+      .select("id")
+      .single();
+    if (error) {
+      setSaving(false);
+      return toast.error(error.message);
+    }
+    const headerVal = form.auth_header.trim();
+    if (headerVal && created?.id) {
+      await supabase.rpc("set_mcp_auth_header" as any, {
+        _server_id: created.id,
+        _value: headerVal,
+      });
+    }
     setSaving(false);
-    if (error) return toast.error(error.message);
     toast.success("MCP server added");
     setForm({ name: "", url: "", auth_header: "" });
     setAdding(false);
