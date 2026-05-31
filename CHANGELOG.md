@@ -2,6 +2,18 @@
 
 ## Latest Updates
 
+### AI Model Status & Availability
+
+- Added green/red availability indicators to the AI model picker so users can immediately see which models are online and which are temporarily down.
+- Disabled models that are currently marked down so users cannot select a broken or unavailable AI model by mistake.
+- Added clear down-state labels such as Temporarily down, Provider down, Timed out, Rate limited, Auth failed, Model unavailable, and Not configured.
+- Added automatic model health polling in the picker so availability refreshes every 30 seconds while users are working.
+- Added server-side model health snapshots using recent AI provider events so the UI reflects real model failures and recoveries.
+- Added fallback protection for saved project settings so if a saved Neokens model is down, the server tries an available site model instead of sending the request to a known-bad model.
+- Updated admin model diagnostics so test results are recorded into provider health events, letting successful checks bring models back online.
+- Kept user prompt/context/tool/JSON-specific failures from globally disabling a model, so only provider-style outages or availability problems mark a model down.
+- Verified the changed files with TypeScript, targeted ESLint, and a production build.
+
 ### 3D Model Generator, Profile Themes & Onboarding
 
 - Renamed and surfaced the 3D tool as a clear **3D Model Generator** website feature for Roblox text-to-3D and image-to-3D assets.

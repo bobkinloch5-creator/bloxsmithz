@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/public/plugin/auth")({
           });
         const { data: profile } = await supabaseAdmin
           .from("profiles")
-          .select("id,display_name,credits")
+          .select("id,email,display_name,credits")
           .eq("id", tokenRow.user_id)
           .maybeSingle();
         if (!profile)
@@ -48,7 +48,6 @@ export const Route = createFileRoute("/api/public/plugin/auth")({
             status: 401,
             headers: cors,
           });
-        const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profile.id);
         const { data: roles } = await (supabaseAdmin as any)
           .from("user_roles")
           .select("role")
@@ -56,7 +55,6 @@ export const Route = createFileRoute("/api/public/plugin/auth")({
         const isOwner = (roles ?? []).some((row: { role: string }) => row.role === "owner");
         const userProfile = {
           ...profile,
-          email: authUser?.user?.email ?? null,
           credits: isOwner ? 999999 : profile.credits,
           unlimited_credits: isOwner,
         };

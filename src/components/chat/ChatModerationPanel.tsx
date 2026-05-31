@@ -92,7 +92,10 @@ function ReportsTab({ onDeleteMessage }: { onDeleteMessage: (id: string) => Prom
     }
   }
   if (loading) return <p className="text-xs text-muted-foreground">Loading…</p>;
-  if (!items.length) return <p className="text-xs text-muted-foreground">No reports — quiet on the western front.</p>;
+  if (!items.length)
+    return (
+      <p className="text-xs text-muted-foreground">No reports — quiet on the western front.</p>
+    );
   return (
     <ul className="space-y-2 text-xs">
       {items.map((r) => (
@@ -161,7 +164,10 @@ function WordsTab() {
     }
   }
   async function remove(id: string) {
-    const { error } = await (supabase as any).from("global_chat_blocked_words").delete().eq("id", id);
+    const { error } = await (supabase as any)
+      .from("global_chat_blocked_words")
+      .delete()
+      .eq("id", id);
     if (error) toast.error(error.message);
     else load();
   }
@@ -193,12 +199,19 @@ function WordsTab() {
       </div>
       <ul className="space-y-1">
         {items.map((i) => (
-          <li key={i.id} className="flex items-center justify-between rounded border border-border bg-background/40 px-2 py-1">
+          <li
+            key={i.id}
+            className="flex items-center justify-between rounded border border-border bg-background/40 px-2 py-1"
+          >
             <span>
               <span className="font-mono">{i.word}</span>{" "}
               <span className="text-[10px] text-muted-foreground">· {i.severity}</span>
             </span>
-            <button type="button" onClick={() => remove(i.id)} className="text-muted-foreground hover:text-destructive">
+            <button
+              type="button"
+              onClick={() => remove(i.id)}
+              className="text-muted-foreground hover:text-destructive"
+            >
               <Trash2 className="h-3 w-3" />
             </button>
           </li>

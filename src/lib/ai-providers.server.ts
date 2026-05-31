@@ -1,4 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import type { LanguageModel } from "ai";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   BLOXSMITH_MODEL,
@@ -33,7 +34,17 @@ export type ProviderHealthEvent = {
   source?: "mcp" | "api_key";
   ok: boolean;
   durationMs?: number;
-  errorKind?: "timeout" | "context" | "rate_limit" | "tool" | "json" | "provider" | "unknown";
+  errorKind?:
+    | "auth"
+    | "context"
+    | "json"
+    | "model_not_found"
+    | "not_configured"
+    | "provider"
+    | "rate_limit"
+    | "timeout"
+    | "tool"
+    | "unknown";
   projectId?: string | null;
   userId?: string | null;
 };
@@ -52,8 +63,7 @@ export async function recordProviderHealth(event: ProviderHealthEvent): Promise<
   };
 
   try {
-    const client = supabaseAdmin as any;
-    const { error } = await client.from("ai_provider_events").insert(row);
+    const { error } = await supabaseAdmin.from("ai_provider_events").insert(row);
     if (error && !/relation .*ai_provider_events.* does not exist/i.test(error.message ?? "")) {
       console.warn("[ai-provider-health] insert failed:", error.message);
     }
@@ -246,7 +256,10 @@ function providerEndpoint(provider: ProviderId): { name: string; baseURL: string
   }
 }
 
-export function createProvider(provider: ProviderId, apiKey: string): (modelId: string) => any {
+export function createProvider(
+  provider: ProviderId,
+  apiKey: string,
+): (modelId: string) => LanguageModel {
   const { name, baseURL } = providerEndpoint(provider);
   return createOpenAICompatible({
     name,
@@ -261,7 +274,7 @@ export type ResolvedGateway = {
   provider: ProviderId;
   modelName: string;
   // The vercel AI SDK model handle to pass into generateText / streamText.
-  model: any;
+  model: LanguageModel;
 };
 
 export function resolveBuiltInGateway(opts: {
@@ -327,10 +340,12 @@ export async function resolveAiGateway(opts: {
   if (provider === "neokens") {
     const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
     if (!neoKey) return fallback();
+    const { chooseAvailableSiteModel } = await import("./ai-model-health.server");
+    const availableModel = await chooseAvailableSiteModel(provider, rawModel);
     // Map the UI model id to the real Neokens id (+ thinking flag). This is the
     // single place that decides what model string Neokens actually receives.
     const { resolveNeokensModel } = await import("./ai-models");
-    const { model: modelName, thinking: implicitThinking } = resolveNeokensModel(rawModel);
+    const { model: modelName, thinking: implicitThinking } = resolveNeokensModel(availableModel);
     if (implicitThinking) opts.thinking = true;
     const gw = createProvider("neokens", neoKey);
     return { source: "api_key", provider, modelName, model: gw(modelName) };

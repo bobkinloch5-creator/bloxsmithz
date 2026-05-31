@@ -45,6 +45,71 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.8.0",
+    date: "May 31, 2026",
+    title: "AI Model Status & Availability",
+    description:
+      "The AI model picker now shows live availability so users can see which models are online, which are temporarily down, and avoid selecting models that are not working.",
+    updates: [
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "Green/Red Model Indicators",
+        detail:
+          "Added green lights for available models and red lights for temporarily unavailable models directly in the AI model picker.",
+      },
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Link2Off,
+        title: "Down Models Are Disabled",
+        detail:
+          "Models marked down are now disabled in the picker so users cannot accidentally choose a broken or unavailable model.",
+      },
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Server,
+        title: "Clear Down-State Labels",
+        detail:
+          "The picker now labels availability problems as temporarily down, provider down, timed out, rate limited, auth failed, model unavailable, or not configured.",
+      },
+      {
+        category: "Backend",
+        tagColor: tagStyles.backend,
+        icon: Clock,
+        title: "Automatic Health Refresh",
+        detail:
+          "Model availability refreshes every 30 seconds from recent provider health events so the UI can recover when a model comes back online.",
+      },
+      {
+        category: "Reliability",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Saved Model Fallback Protection",
+        detail:
+          "If a project already has a saved Neokens model that is currently down, server-side AI routing now tries an available site model instead of sending the request to a known-bad model.",
+      },
+      {
+        category: "Admin",
+        tagColor: tagStyles.backend,
+        icon: CheckCircle,
+        title: "Diagnostics Feed Model Health",
+        detail:
+          "Admin model diagnostics now record their pass/fail results into provider health events, allowing successful checks to bring models back online.",
+      },
+      {
+        category: "Reliability",
+        tagColor: tagStyles.security,
+        icon: Wrench,
+        title: "Smarter Disable Rules",
+        detail:
+          "Prompt-specific context, tool, or JSON failures no longer globally disable a model; only provider-style outages and availability problems mark a model down.",
+      },
+    ],
+  },
+  {
     version: "v3.7.0",
     date: "May 30, 2026",
     title: "Smarter Roblox Toolbox Asset Planning",

@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { LanguageModel } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { SITE_PROVIDER_MODELS, type SiteProviderId } from "./ai-models";
+import { SITE_PROVIDER_MODELS, resolveNeokensModel, type SiteProviderId } from "./ai-models";
+import { recordProviderHealth, type ProviderHealthEvent } from "./ai-providers.server";
 
 export type ModelTestResult = {
   provider: SiteProviderId;
@@ -23,12 +25,24 @@ export type ModelTestResult = {
 const PER_MODEL_TIMEOUT_MS = 90_000;
 const PING_PROMPT = "Say hi in one short sentence.";
 
-function classifyError(err: any): { kind: ModelTestResult["errorKind"]; message: string } {
-  const message = String(err?.message ?? err ?? "unknown error");
-  const lower = message.toLowerCase();
-  const status = err?.status ?? err?.statusCode;
+function toHealthErrorKind(
+  kind: ModelTestResult["errorKind"],
+): ProviderHealthEvent["errorKind"] | undefined {
+  return kind as ProviderHealthEvent["errorKind"] | undefined;
+}
 
-  if (err?.name === "AbortError" || /abort|timeout|timed out/i.test(message)) {
+function errorField(err: unknown, field: "message" | "name" | "status" | "statusCode") {
+  return err && typeof err === "object" && field in err
+    ? (err as Record<typeof field, unknown>)[field]
+    : undefined;
+}
+
+function classifyError(err: unknown): { kind: ModelTestResult["errorKind"]; message: string } {
+  const message = String(errorField(err, "message") ?? err ?? "unknown error");
+  const lower = message.toLowerCase();
+  const status = errorField(err, "status") ?? errorField(err, "statusCode");
+
+  if (errorField(err, "name") === "AbortError" || /abort|timeout|timed out/i.test(message)) {
     return { kind: "timeout", message };
   }
   if (
@@ -63,9 +77,12 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
   const { generateText } = await import("ai");
   const { createProvider, resolveModelAlias } = await import("./ai-providers.server");
   const { createGroqProvider } = await import("./ai-gateway.server");
-  const aliased = resolveModelAlias(modelId);
+  const realModel =
+    provider === "neokens"
+      ? resolveNeokensModel(modelId).model
+      : resolveModelAlias(modelId).realModel;
 
-  let model: any;
+  let model: LanguageModel;
   try {
     if (provider === "neokens") {
       const key = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
@@ -73,7 +90,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
         return {
           provider,
           modelId,
-          realModel: aliased.realModel,
+          realModel,
           ok: false,
           durationMs: 0,
           errorKind: "not_configured",
@@ -81,14 +98,14 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
         };
       }
       const gw = createProvider("neokens", key);
-      model = gw(aliased.realModel);
+      model = gw(realModel);
     } else if (provider === "groq") {
       const key = process.env.GROQ_API_KEY;
       if (!key) {
         return {
           provider,
           modelId,
-          realModel: aliased.realModel,
+          realModel,
           ok: false,
           durationMs: 0,
           errorKind: "not_configured",
@@ -96,12 +113,12 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
         };
       }
       const gw = createGroqProvider(key);
-      model = gw(aliased.realModel);
+      model = gw(realModel);
     } else {
       return {
         provider,
         modelId,
-        realModel: aliased.realModel,
+        realModel,
         ok: false,
         durationMs: 0,
         errorKind: "unknown",
@@ -113,7 +130,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
     return {
       provider,
       modelId,
-      realModel: aliased.realModel,
+      realModel,
       ok: false,
       durationMs: Date.now() - started,
       errorKind: kind,
@@ -134,7 +151,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
       return {
         provider,
         modelId,
-        realModel: aliased.realModel,
+        realModel,
         ok: false,
         durationMs: Date.now() - started,
         errorKind: "unknown",
@@ -144,7 +161,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
     return {
       provider,
       modelId,
-      realModel: aliased.realModel,
+      realModel,
       ok: true,
       durationMs: Date.now() - started,
       sample,
@@ -154,7 +171,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
     return {
       provider,
       modelId,
-      realModel: aliased.realModel,
+      realModel,
       ok: false,
       durationMs: Date.now() - started,
       errorKind: kind,
@@ -182,6 +199,20 @@ export const testAllSiteModels = createServerFn({ method: "POST" })
       }
     }
     const results = await Promise.all(jobs);
+    await Promise.all(
+      results.map((result) =>
+        recordProviderHealth({
+          feature: "other",
+          provider: result.provider,
+          model: result.realModel,
+          source: "api_key",
+          ok: result.ok,
+          durationMs: result.durationMs,
+          errorKind: toHealthErrorKind(result.errorKind),
+          userId,
+        }),
+      ),
+    );
     const okCount = results.filter((r) => r.ok).length;
     return {
       ranAt: new Date().toISOString(),
