@@ -20,6 +20,11 @@ import {
   chatWithAI,
 } from "@/lib/ai.functions";
 import {
+  forgetProjectAiMemory,
+  listProjectAiMemories,
+  rememberProjectNote,
+} from "@/lib/ai-memory.functions";
+import {
   Loader2,
   Plus,
   Send,
@@ -50,6 +55,7 @@ import {
   Plug,
   Search,
   AlertCircle,
+  BookOpen,
   PanelLeft,
   PanelRight,
   Square,
@@ -98,6 +104,15 @@ type Project = {
   description: string | null;
   game_type: string;
   user_id: string;
+};
+type AiMemory = {
+  id: string;
+  key: string;
+  kind: string;
+  value: string;
+  confidence: number;
+  updated_at: string;
+  last_seen_at: string;
 };
 type Msg = { id: string; role: "user" | "assistant"; content: string; actions?: any };
 
@@ -399,6 +414,9 @@ function ProjectEditor() {
   const runAutopilot = useServerFn(autopilotBuild);
   const runQueuePluginAction = useServerFn(queuePluginAction);
   const runImprovePrompt = useServerFn(improvePrompt);
+  const listMemories = useServerFn(listProjectAiMemories);
+  const rememberNote = useServerFn(rememberProjectNote);
+  const forgetMemory = useServerFn(forgetProjectAiMemory);
   const [improving, setImproving] = useState(false);
   const chatEnd = useRef<HTMLDivElement>(null);
   const [showFix, setShowFix] = useState(false);
@@ -600,13 +618,18 @@ function ProjectEditor() {
     fileCount: number;
     instanceCount: number | null;
     updatedAt: string | null;
+    memoryCount: number;
   } | null>(null);
+  const [memories, setMemories] = useState<AiMemory[]>([]);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [memoryDraft, setMemoryDraft] = useState("");
+  const [memoryBusy, setMemoryBusy] = useState(false);
   const [treeQuery, setTreeQuery] = useState("");
   const [scanRequestedAt, setScanRequestedAt] = useState<number | null>(null);
   const [scanTimedOut, setScanTimedOut] = useState(false);
 
   const refreshAiContext = async () => {
-    const [{ count }, { data: ctx }] = await Promise.all([
+    const [{ count }, { data: ctx }, { count: memoryCount }] = await Promise.all([
       supabase
         .from("project_files")
         .select("id", { count: "exact", head: true })
@@ -616,12 +639,57 @@ function ProjectEditor() {
         .select("instance_count,updated_at")
         .eq("project_id", projectId)
         .maybeSingle(),
+      supabase
+        .from("project_ai_memories")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId),
     ]);
     setAiContext({
       fileCount: count ?? 0,
       instanceCount: ctx?.instance_count ?? null,
       updatedAt: ctx?.updated_at ?? null,
+      memoryCount: memoryCount ?? 0,
     });
+  };
+
+  const refreshMemories = async () => {
+    try {
+      const out = await listMemories({ data: { projectId } });
+      setMemories((out.memories ?? []) as AiMemory[]);
+      setAiContext((ctx) => (ctx ? { ...ctx, memoryCount: out.memories?.length ?? 0 } : ctx));
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not load AI memory.");
+    }
+  };
+
+  const addManualMemory = async () => {
+    const value = memoryDraft.trim();
+    if (value.length < 3 || memoryBusy) return;
+    setMemoryBusy(true);
+    try {
+      await rememberNote({ data: { projectId, value, kind: "preference" } });
+      setMemoryDraft("");
+      await refreshMemories();
+      toast.success("Saved to AI memory.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save memory.");
+    } finally {
+      setMemoryBusy(false);
+    }
+  };
+
+  const deleteMemory = async (id: string) => {
+    if (memoryBusy) return;
+    setMemoryBusy(true);
+    try {
+      await forgetMemory({ data: { projectId, id } });
+      await refreshMemories();
+      toast.success("Forgot that memory.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not forget memory.");
+    } finally {
+      setMemoryBusy(false);
+    }
   };
 
   const refreshCredits = async () => {
@@ -659,6 +727,7 @@ function ProjectEditor() {
 
       refreshCredits();
       refreshAiContext();
+      refreshMemories();
 
       // Load all conversations for this project, pick the most recent (or create one).
       const { data: allConvos } = await supabase
@@ -1018,6 +1087,7 @@ function ProjectEditor() {
             fileCount: prev?.fileCount ?? 0,
             instanceCount: updatedCtx?.instance_count ?? null,
             updatedAt: updatedCtx?.updated_at ?? null,
+            memoryCount: prev?.memoryCount ?? 0,
           }));
         },
       )
@@ -1337,6 +1407,7 @@ function ProjectEditor() {
       setAiBusy(false);
       refreshCredits();
       refreshAiContext();
+      refreshMemories();
     }
   };
 
@@ -1368,6 +1439,7 @@ function ProjectEditor() {
       setAiBusy(false);
       refreshCredits();
       refreshAiContext();
+      refreshMemories();
     }
   };
 
@@ -1432,6 +1504,8 @@ function ProjectEditor() {
     } finally {
       setAiBusy(false);
       refreshCredits();
+      refreshAiContext();
+      refreshMemories();
     }
   };
 
@@ -1602,6 +1676,7 @@ Check:
       setFixBusy(false);
       refreshCredits();
       refreshAiContext();
+      refreshMemories();
     }
   };
 
@@ -1671,6 +1746,7 @@ Check:
       setAutoBusy(false);
       refreshCredits();
       refreshAiContext();
+      refreshMemories();
     }
   };
 
@@ -2095,6 +2171,18 @@ Check:
                   </button>
                 );
               })()}
+              <button
+                type="button"
+                onClick={async () => {
+                  setMemoryOpen(true);
+                  await refreshMemories();
+                }}
+                title="View and edit persistent AI memory for this project"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-background/40 px-2 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+              >
+                <BookOpen className="h-3.5 w-3.5 text-primary" />
+                Memory {aiContext?.memoryCount ?? memories.length}
+              </button>
               <div className="flex items-center gap-0.5">
                 <button
                   onClick={() => setShowAuto(true)}
@@ -3055,6 +3143,100 @@ Check:
 
       {showAiSourceModal && (
         <AiSourceSettings projectId={projectId} onClose={() => setShowAiSourceModal(false)} />
+      )}
+
+      {memoryOpen && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-4 backdrop-blur-sm"
+          onClick={() => !memoryBusy && setMemoryOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[82vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-border p-4">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                <div>
+                  <h2 className="text-sm font-semibold">AI Memory</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Saved project preferences and facts are included in future chat, plans, fixes,
+                    and builds.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => !memoryBusy && setMemoryOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <div className="rounded-xl border border-border bg-background/45 p-3">
+                <label className="text-xs font-semibold text-foreground">Remember this</label>
+                <textarea
+                  value={memoryDraft}
+                  onChange={(e) => setMemoryDraft(e.target.value)}
+                  placeholder="Example: Always make my game neon cyberpunk, mobile friendly, and server-authoritative."
+                  rows={3}
+                  maxLength={1000}
+                  className="mt-2 w-full resize-none rounded-lg border border-border bg-background/70 p-3 text-sm outline-none focus:border-primary/50"
+                />
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-muted-foreground">
+                    The AI also learns from messages like "remember that..." automatically.
+                  </span>
+                  <button
+                    onClick={addManualMemory}
+                    disabled={memoryBusy || memoryDraft.trim().length < 3}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                  >
+                    {memoryBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookOpen className="h-3.5 w-3.5" />}
+                    Save memory
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {memories.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                    No memories saved yet. Add one above or tell the AI "remember that..."
+                  </div>
+                ) : (
+                  memories.map((memory) => (
+                    <div
+                      key={memory.id}
+                      className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background/35 p-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                            {memory.kind.replace(/_/g, " ")}
+                          </span>
+                          <span className="truncate text-[11px] text-muted-foreground">
+                            {memory.key.replace(/_/g, " ")}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm leading-relaxed text-foreground/90">
+                          {memory.value}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => deleteMemory(memory.id)}
+                        disabled={memoryBusy}
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
+                        title="Forget this memory"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {showFix && (

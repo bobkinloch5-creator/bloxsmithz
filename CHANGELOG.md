@@ -13,6 +13,7 @@
 - Marked deeper Thinking-capable models in the picker so users know which models are better for architecture, debugging, QA, and multi-file Roblox builds.
 - Simplified the 3D Studio into a prompt-first flow with Advanced controls collapsed by default, plus an AI playtest-readiness option for Roblox import QA.
 - Added an AI Playtest shortcut in the project chat that runs a deep QA-style inspection over the current Roblox project and queues safe fixes when possible.
+- Added a visible project AI Memory panel so users can review, add, and forget persistent memories used by future chat, plans, fixes, and builds.
 - Added BloxSmith AI image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
 - Added a 24-hour AI usage timer and server-side request limit for normal users, with owner/admin/moderator bypass.
 - Added Supabase migration support for BloxSmith AI provider settings and the new AI rate-limit event table.
