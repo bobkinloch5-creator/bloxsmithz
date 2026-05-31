@@ -29,6 +29,14 @@ import {
   normalizeProfileBadgeIds,
   type ProfileBadgeId,
 } from "@/lib/profile-badges";
+import {
+  normalizeProfileUsername,
+  profileHandle,
+} from "@/lib/profile-username";
+import {
+  canUseReservedCosmetics,
+  isReservedProfileDecoration,
+} from "@/lib/profile-cosmetics";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
 const CARD_COLORS = ["#0f172a", "#102a2a", "#20133a", "#2a1327", "#2b1d0e", "#111827", "#064e3b", "#1e1b4b"];
@@ -52,6 +60,7 @@ export function ProfileCustomizationCard() {
 
   const [state, setState] = useState({
     display_name: p.display_name ?? "",
+    username: p.username ?? "",
     bio: p.bio ?? "",
     pronouns: p.pronouns ?? "",
     location: p.location ?? "",
@@ -74,6 +83,7 @@ export function ProfileCustomizationCard() {
   });
   const [saving, setSaving] = useState(false);
   const [subTab, setSubTab] = useState<"identity" | "style" | "cosmetics" | "privacy">("identity");
+  const canUseReserved = canUseReservedCosmetics(roles);
 
   // Re-sync when profile reloads (e.g., after another device pushes changes).
   useEffect(() => {
@@ -82,6 +92,7 @@ export function ProfileCustomizationCard() {
     setState((s) => ({
       ...s,
       display_name: q.display_name ?? s.display_name,
+      username: q.username ?? s.username,
       bio: q.bio ?? s.bio,
       pronouns: q.pronouns ?? s.pronouns ?? "",
       location: q.location ?? s.location ?? "",
@@ -145,6 +156,10 @@ export function ProfileCustomizationCard() {
         (profile as any)?.display_name ||
         user?.email?.split("@")[0] ||
         "Builder",
+      username:
+        state.username ||
+        (profile as any)?.username ||
+        normalizeProfileUsername(state.display_name || user?.email?.split("@")[0] || ""),
       email: user?.email ?? (profile as any)?.email ?? null,
       hide_email: state.hide_email,
       profile_accent: state.profile_accent,
@@ -164,9 +179,13 @@ export function ProfileCustomizationCard() {
     if (!user) return;
     setSaving(true);
     try {
+      if (isReservedProfileDecoration(state.profile_decoration) && !canUseReserved) {
+        throw new Error("That profile decoration is reserved for owners/admins.");
+      }
       await save({
         data: {
           display_name: state.display_name?.trim() || null,
+          username: normalizeProfileUsername(state.username || state.display_name || user.email),
           bio: state.bio?.trim() || null,
           pronouns: state.pronouns?.trim() || null,
           location: state.location?.trim() || null,
@@ -356,6 +375,25 @@ export function ProfileCustomizationCard() {
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
               placeholder="What others see"
             />
+          </Field>
+          <Field label="Username">
+            <div className="flex rounded-lg border border-border bg-background focus-within:ring-2 focus-within:ring-primary/35">
+              <span className="grid place-items-center border-r border-border px-3 text-sm font-bold text-muted-foreground">
+                @
+              </span>
+              <input
+                value={state.username}
+                onChange={(e) => set("username", normalizeProfileUsername(e.target.value))}
+                className="min-w-0 flex-1 rounded-r-lg bg-transparent px-3 py-2 text-sm outline-none"
+                placeholder="unique_username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              Unique handle: {profileHandle(state.username) || "pick one"}. Display names can match, usernames cannot.
+            </div>
           </Field>
           <Field label="Pronouns">
             <input
@@ -616,19 +654,27 @@ export function ProfileCustomizationCard() {
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               {PROFILE_DECORATIONS.map((d) => {
                 const active = state.profile_decoration === d.id;
+                const locked = isReservedProfileDecoration(d.id) && !canUseReserved;
                 return (
                   <button
                     key={d.id}
                     type="button"
+                    disabled={locked}
                     onClick={() => set("profile_decoration", d.id)}
                     className={`relative flex flex-col items-center justify-end gap-1 rounded-xl border px-2 pb-2 pt-5 transition ${
                       active
                         ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                        : "border-border/60 bg-background/40 hover:border-border"
+                        : locked
+                          ? "cursor-not-allowed border-border/40 bg-background/20 opacity-55"
+                          : "border-border/60 bg-background/40 hover:border-border"
                     }`}
-                    title={d.label}
+                    title={locked ? `${d.label} — owner/admin only` : d.label}
                   >
-                    {(d.premium || d.animated) && (
+                    {locked ? (
+                      <span className="absolute right-1.5 top-1.5 rounded-full border border-border bg-background/80 px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
+                        Locked
+                      </span>
+                    ) : (d.premium || d.animated) && (
                       <span className="absolute right-1.5 top-1.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary-glow">
                         {d.animated ? "Anim" : "Pro"}
                       </span>

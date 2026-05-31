@@ -1297,6 +1297,11 @@ summary:active {
 }
 
 /* Profile effects */
+.profile-effect-static,
+.profile-effect-static * {
+  animation-play-state: paused !important;
+}
+
 @keyframes pe-aurora {
   0% { transform: translate3d(0,0,0) scale(1); filter: hue-rotate(0deg); }
   100% { transform: translate3d(0,-6%,0) scale(1.05); filter: hue-rotate(40deg); }

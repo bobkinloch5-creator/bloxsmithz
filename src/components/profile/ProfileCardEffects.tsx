@@ -38,9 +38,11 @@ export function cardChromeStyle(color?: string | null): React.CSSProperties {
 export const ProfileCardEffect = memo(function ProfileCardEffect({
   effect,
   color,
+  className = "",
 }: {
   effect?: ProfileCardEffectId | string | null;
   color?: string | null;
+  className?: string;
 }) {
   const e = (effect ?? "none") as ProfileCardEffectId;
   if (e === "none") return null;
@@ -50,7 +52,7 @@ export const ProfileCardEffect = memo(function ProfileCardEffect({
     return (
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className={`pointer-events-none absolute inset-0 ${className}`}
         style={{
           boxShadow: `inset 0 0 42px rgba(${rgb},0.34), inset 0 0 100px rgba(${rgb},0.14)`,
           animation: "pe-neon 3.2s ease-in-out infinite",
@@ -63,7 +65,7 @@ export const ProfileCardEffect = memo(function ProfileCardEffect({
     return (
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-80"
+        className={`pointer-events-none absolute inset-0 opacity-80 ${className}`}
         style={{
           background: `radial-gradient(70% 30% at 10% 0%, rgba(${rgb},0.32), transparent 70%), radial-gradient(55% 35% at 90% 8%, rgba(0,217,255,0.24), transparent 72%)`,
           animation: "pe-aurora 8s ease-in-out infinite alternate",
@@ -77,7 +79,7 @@ export const ProfileCardEffect = memo(function ProfileCardEffect({
     return (
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className={`pointer-events-none absolute inset-0 ${className}`}
         style={{
           background:
             "linear-gradient(115deg, transparent 0%, transparent 36%, rgba(255,255,255,0.2) 48%, transparent 60%, transparent 100%)",
@@ -93,7 +95,7 @@ export const ProfileCardEffect = memo(function ProfileCardEffect({
     return (
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className={`pointer-events-none absolute inset-0 ${className}`}
         style={{
           background: `repeating-linear-gradient(180deg, transparent 0 7px, rgba(${rgb},0.14) 8px, transparent 10px)`,
           animation: "pc-scan 7s linear infinite",
@@ -104,7 +106,7 @@ export const ProfileCardEffect = memo(function ProfileCardEffect({
 
   const count = e === "pixel_rain" ? 24 : 22;
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div aria-hidden className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
       {Array.from({ length: count }, (_, i) => (
         <span
           key={i}

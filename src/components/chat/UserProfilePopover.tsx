@@ -19,11 +19,13 @@ import {
   normalizeProfileBadgeIds,
   roleProfileBadgeIds,
 } from "@/lib/profile-badges";
+import { profileHandle } from "@/lib/profile-username";
 
 
 type Profile = {
   id: string;
   display_name: string | null;
+  username: string | null;
   chat_nickname: string | null;
   avatar_url: string | null;
   bio: string | null;
@@ -86,7 +88,7 @@ export function UserProfilePopover({
       const [{ data: p }, { data: fr }, { data: roleRows }] = await Promise.all([
         (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges,profile_decoration")
+          .select("id,display_name,username,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges,profile_decoration")
           .eq("id", userId)
           .maybeSingle(),
 
@@ -182,6 +184,7 @@ export function UserProfilePopover({
   }, [profile?.roblox_user_id, fetchPresence]);
 
   const displayName = profile?.chat_nickname || profile?.display_name || "User";
+  const handle = profileHandle(profile?.username);
   const visibleBadgeIds = useMemo(
     () =>
       mergeProfileBadgeIds([
@@ -295,6 +298,7 @@ export function UserProfilePopover({
                 <h3 className="text-lg font-bold">{displayName}</h3>
                 <RoleBadges roles={roles} size="sm" />
               </div>
+              {handle ? <p className="text-xs font-semibold text-primary-glow/90">{handle}</p> : null}
               <div className="rounded-xl border border-border bg-background/40 p-4 text-center space-y-2">
                 <div className="text-2xl">🔒</div>
                 <p className="text-sm font-semibold">This profile is private</p>
@@ -375,6 +379,7 @@ export function UserProfilePopover({
                   )}
                   <RoleBadges roles={roles} size="sm" />
                 </div>
+                {handle ? <p className="mt-0.5 text-xs font-semibold text-primary-glow/90">{handle}</p> : null}
                 {profile.status_message && (
                   <p className="mt-0.5 text-xs text-foreground/80 italic">"{profile.status_message}"</p>
                 )}

@@ -65,6 +65,7 @@ import { PfpRing } from "@/components/profile/PfpRing";
 import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
 import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
 import { presenceFromProfile } from "@/lib/presence";
+import { profileHandle } from "@/lib/profile-username";
 
 type DbMessage = {
   id: string;
@@ -82,6 +83,7 @@ type DbMessage = {
 
 type Author = {
   display_name: string | null;
+  username: string | null;
   avatar_url: string | null;
   roles: Role[];
   badges: string[];
@@ -103,6 +105,12 @@ type Author = {
 
 type Reaction = { id: string; message_id: string; user_id: string; emoji: string };
 type RenderMessage = DbMessage & { ephemeralBot?: boolean };
+const MAX_CHAT_MESSAGES = 220;
+
+function capChatMessages(rows: RenderMessage[]) {
+  return rows.length > MAX_CHAT_MESSAGES ? rows.slice(-MAX_CHAT_MESSAGES) : rows;
+}
+
 type SendGlobalChatMessageArgs = {
   content: string;
   replyToId?: string | null;
@@ -485,6 +493,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       next.set(p.id, {
         ...existing,
         display_name: nick ?? p.display_name ?? existing.display_name,
+        username: typeof p.username === "string" ? p.username : existing.username,
         avatar_url: p.avatar_url ?? existing.avatar_url,
         profile_badges: Array.isArray(p.profile_badges)
           ? p.profile_badges
@@ -539,7 +548,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       supabase
         .from("profiles")
         .select(
-          "id,display_name,avatar_url,profile_badges,profile_accent,profile_effect,profile_background,pfp_effect,profile_decoration,presence_enabled,presence_status,last_seen_at,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
+          "id,display_name,username,avatar_url,profile_badges,profile_accent,profile_effect,profile_background,pfp_effect,profile_decoration,presence_enabled,presence_status,last_seen_at,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font",
         )
         .in("id", need),
       (supabase as any).from("user_roles").select("user_id,role").in("user_id", need),
@@ -566,6 +575,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             : null;
         next.set(p.id, {
           display_name: nick ?? p.display_name,
+          username: typeof p.username === "string" ? p.username : null,
           avatar_url: p.avatar_url,
           roles: rolesByUser.get(p.id) ?? [],
           badges: badgesByUser.get(p.id) ?? [],
@@ -672,7 +682,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         async (payload) => {
           const row = payload.new as DbMessage;
           if (row.deleted_at) return;
-          setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]));
+          setMessages((prev) =>
+            prev.some((m) => m.id === row.id) ? prev : capChatMessages([...prev, row]),
+          );
           if (!openRef.current && row.user_id !== user.id) setUnread((u) => u + 1);
           await loadAuthors([row.user_id]);
           // Sound + notification
@@ -796,9 +808,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           name = (p?.chat_nickname?.trim() || p?.display_name || "Someone") as string;
         }
         if (prefsRef.current.sound_enabled) playJoin();
-        setMessages((prev) => [
-          ...prev,
-          {
+        setMessages((prev) =>
+          capChatMessages([
+            ...prev,
+            {
             id: `sys-join-${key}-${Date.now()}`,
             user_id: "bloxbot",
             content: `🟢 ${name} joined the chat`,
@@ -810,8 +823,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             pinned_at: null,
             flagged: false,
             ephemeralBot: true,
-          },
-        ]);
+            },
+          ]),
+        );
       })
       .on("presence", { event: "leave" }, ({ key }) => {
         if (!presenceSyncedRef.current) return;
@@ -819,9 +833,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         const a = authorsRef.current.get(key);
         const name = a?.display_name ?? "Someone";
         if (prefsRef.current.sound_enabled) playLeave();
-        setMessages((prev) => [
-          ...prev,
-          {
+        setMessages((prev) =>
+          capChatMessages([
+            ...prev,
+            {
             id: `sys-leave-${key}-${Date.now()}`,
             user_id: "bloxbot",
             content: `🔴 ${name} left the chat`,
@@ -833,8 +848,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             pinned_at: null,
             flagged: false,
             ephemeralBot: true,
-          },
-        ]);
+            },
+          ]),
+        );
       })
       .on("broadcast", { event: "typing" }, (payload) => {
         const uid = (payload.payload as any)?.user_id;
@@ -885,9 +901,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             .filter(Boolean)
             .join(" · ");
           const content = `🏆 ${name} unlocked **${achName}**${rewards ? ` (${rewards})` : ""}`;
-          setMessages((prev) => [
-            ...prev,
-            {
+          setMessages((prev) =>
+            capChatMessages([
+              ...prev,
+              {
               id: `ach-${row.user_id}-${row.achievement_key}-${Date.now()}`,
               user_id: "bloxbot",
               content,
@@ -899,8 +916,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               pinned_at: null,
               flagged: false,
               ephemeralBot: true,
-            },
-          ]);
+              },
+            ]),
+          );
           if (prefsRef.current.sound_enabled && row.user_id !== user.id) playPing();
         },
       )
@@ -1161,7 +1179,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           const verdict = await Promise.race([
             moderate({ data: { content: trimmed } }),
             new Promise<{ allow: boolean; reason?: string | null }>((resolve) =>
-              setTimeout(() => resolve({ allow: true, reason: null }), 6000),
+              setTimeout(() => resolve({ allow: true, reason: null }), 1800),
             ),
           ]);
           if (verdict && !verdict.allow) {
@@ -1238,8 +1256,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       const mm = input.match(/@([A-Za-z0-9_ .-]{2,40})/);
       const q = mm?.[1]?.trim().toLowerCase();
       if (!q) return null;
-      for (const [id, a] of authors)
-        if (a.display_name?.toLowerCase() === q) return { id, name: a.display_name };
+      for (const [id, a] of authors) {
+        const handle = profileHandle(a.username).slice(1);
+        if (a.display_name?.toLowerCase() === q || handle === q) {
+          return { id, name: a.display_name ?? `@${handle}` };
+        }
+      }
       return null;
     };
     const modOnly = () => {
@@ -1600,9 +1622,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   }
 
   function pushEphemeralBot(content: string) {
-    setMessages((prev) => [
-      ...prev,
-      {
+    setMessages((prev) =>
+      capChatMessages([
+        ...prev,
+        {
         id: `bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         user_id: "bloxbot",
         content,
@@ -1614,8 +1637,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         pinned_at: null,
         flagged: false,
         ephemeralBot: true,
-      },
-    ]);
+        },
+      ]),
+    );
   }
 
   async function deleteMessage(id: string) {
@@ -1751,6 +1775,15 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     () => visibleMessages.filter((m) => m.pinned_at).slice(-3),
     [visibleMessages],
   );
+  const reactionsByMessage = useMemo(() => {
+    const grouped = new Map<string, Reaction[]>();
+    for (const reaction of reactions) {
+      const list = grouped.get(reaction.message_id);
+      if (list) list.push(reaction);
+      else grouped.set(reaction.message_id, [reaction]);
+    }
+    return grouped;
+  }, [reactions]);
   const accent = prefs.theme_accent;
 
   // Mention suggestions
@@ -1761,9 +1794,14 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     const out: { id: string; name: string }[] = [];
     for (const [id, a] of authors) {
       const n = a.display_name;
-      if (!n || seen.has(id)) continue;
-      if (q === "" || n.toLowerCase().includes(q)) {
-        out.push({ id, name: n });
+      const handle = profileHandle(a.username).slice(1);
+      if ((!n && !handle) || seen.has(id)) continue;
+      if (
+        q === "" ||
+        n?.toLowerCase().includes(q) ||
+        handle.toLowerCase().includes(q)
+      ) {
+        out.push({ id, name: n || `@${handle}` });
         seen.add(id);
       }
       if (out.length >= 5) break;
@@ -2077,7 +2115,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               const name = isBot ? "BloxBot" : author?.display_name || (isMe ? "You" : "User");
               const replyTarget = m.reply_to_id ? messagesById.get(m.reply_to_id) : null;
               const replyAuthor = replyTarget ? authors.get(replyTarget.user_id) : null;
-              const msgReacts = reactions.filter((r) => r.message_id === m.id);
+              const msgReacts = reactionsByMessage.get(m.id) ?? [];
               const grouped = new Map<string, { count: number; mine: boolean }>();
               for (const r of msgReacts) {
                 const g = grouped.get(r.emoji) ?? { count: 0, mine: false };
@@ -2767,11 +2805,20 @@ function ChatAvatar({
       className="relative h-10 w-10 shrink-0 overflow-visible text-[11px] font-bold text-muted-foreground transition hover:scale-105"
       title={name}
     >
-      <span className="absolute inset-0 overflow-hidden rounded-full opacity-80">
-        <ProfileEffect effect={author?.profile_effect} accent={author?.profile_accent} />
+      <span className="profile-effect-static absolute inset-0 overflow-hidden rounded-full opacity-70">
+        <ProfileEffect
+          effect={author?.profile_effect}
+          accent={author?.profile_accent}
+          className="profile-effect-static"
+        />
       </span>
-      <AvatarDecoration id={author?.profile_decoration} size={40}>
-        <PfpRing effect={author?.pfp_effect ?? "none"} size={34} className="relative z-10">
+      <AvatarDecoration id={author?.profile_decoration} size={40} animated={false}>
+        <PfpRing
+          effect={author?.pfp_effect ?? "none"}
+          size={34}
+          className="relative z-10"
+          animated={false}
+        >
           {author?.avatar_url ? (
             <img
               src={author.avatar_url}

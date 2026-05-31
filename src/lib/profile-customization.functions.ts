@@ -8,6 +8,14 @@ import {
   selectableProfileBadgeIds,
   ProfileBadgeId,
 } from "@/lib/profile-badges";
+import {
+  isValidProfileUsername,
+  normalizeProfileUsername,
+} from "@/lib/profile-username";
+import {
+  canUseReservedCosmetics,
+  isReservedProfileDecoration,
+} from "@/lib/profile-cosmetics";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const PROFILE_EFFECT_IDS = ["none", "sparkle", "aurora", "neon", "holographic", "confetti", "stars", "comet", "runes", "spotlight"] as const;
@@ -18,6 +26,7 @@ const PROFILE_CARD_EFFECT_IDS = ["none", "soft_glow", "aurora_edge", "premium_sh
 const Schema = z
   .object({
     display_name: z.string().min(1).max(64).optional().nullable(),
+    username: z.string().min(2).max(32).optional().nullable(),
     bio: z.string().max(500).optional().nullable(),
     pronouns: z.string().max(32).optional().nullable(),
     location: z.string().max(64).optional().nullable(),
@@ -57,6 +66,16 @@ const Schema = z
   })
   .strict();
 
+function isMissingColumnError(error: any) {
+  const code = error?.code;
+  const message = String(error?.message ?? "");
+  return (
+    code === "42703" ||
+    code === "PGRST204" ||
+    /column .* does not exist|could not find the .* column/i.test(message)
+  );
+}
+
 export const updateProfileCustomization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => Schema.parse(input))
@@ -69,12 +88,56 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
     }
     if (Object.keys(patch).length === 0) return { ok: true };
 
+    let roleList: string[] | null = null;
+    async function getRoleList() {
+      if (roleList) return roleList;
+      const { data: roles } = await (supabase as any)
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      roleList = ((roles ?? []) as { role: string }[]).map((row) => row.role);
+      return roleList;
+    }
+
+    if (patch.username !== undefined) {
+      const username = normalizeProfileUsername(patch.username);
+      if (!isValidProfileUsername(username)) {
+        throw new Error("Username must be 2-32 characters using letters, numbers, underscores, or dots.");
+      }
+
+      const { data: existingUsername, error: usernameError } = await (supabase as any)
+        .from("profiles")
+        .select("id")
+        .eq("username_normalized", username)
+        .neq("id", userId)
+        .maybeSingle();
+
+      if (usernameError && !isMissingColumnError(usernameError)) {
+        throw new Error(usernameError.message);
+      }
+      if (existingUsername?.id) {
+        throw new Error("That username is already taken.");
+      }
+
+      patch.username = username;
+      patch.username_normalized = username;
+    }
+
+    if (
+      patch.profile_decoration !== undefined &&
+      isReservedProfileDecoration(patch.profile_decoration)
+    ) {
+      const roles = await getRoleList();
+      if (!canUseReservedCosmetics(roles)) {
+        throw new Error("That profile decoration is reserved for owners/admins.");
+      }
+    }
+
     if (patch.profile_badges !== undefined) {
-      const [{ data: roles }, { data: existingProfile }] = await Promise.all([
-        (supabase as any).from("user_roles").select("role").eq("user_id", userId),
+      const [roles, { data: existingProfile }] = await Promise.all([
+        getRoleList(),
         (supabase as any).from("profiles").select("profile_badges").eq("id", userId).single(),
       ]);
-      const roleList = ((roles ?? []) as { role: string }[]).map((row) => row.role);
       const preservedEarned = normalizeProfileBadgeIds(existingProfile?.profile_badges).filter(
         (id: ProfileBadgeId) => !selectableProfileBadgeIds([id]).includes(id),
       );
@@ -82,7 +145,7 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
         new Set([
           ...preservedEarned,
           ...selectableProfileBadgeIds(patch.profile_badges),
-          ...roleProfileBadgeIds(roleList),
+          ...roleProfileBadgeIds(roles),
         ]),
       ).slice(0, 12);
     }
@@ -104,11 +167,8 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
       error = res.error;
       if (!error) break;
 
-      const code = (error as any).code;
       const message = String(error.message ?? "");
-      const missing =
-        code === "42703" || code === "PGRST204" || /column .* does not exist|could not find the .* column/i.test(message);
-      if (!missing) break;
+      if (!isMissingColumnError(error)) break;
 
       // Identify the offending column from the error and remove it.
       const match = message.match(/column "?([a-z_]+)"?/i) || message.match(/'([a-z_]+)' column/i);

@@ -11,6 +11,8 @@ type Profile = {
   id: string;
   email: string;
   display_name: string | null;
+  username?: string | null;
+  username_normalized?: string | null;
   avatar_url: string | null;
   banner_url?: string | null;
   bio?: string | null;
@@ -67,7 +69,7 @@ type AuthCtx = {
 const Ctx = createContext<AuthCtx | null>(null);
 
 const PROFILE_SELECT_FULL =
-  "id,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration,onboarding_completed_at,onboarding_step,onboarding_reward_claimed";
+  "id,display_name,username,username_normalized,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration,onboarding_completed_at,onboarding_step,onboarding_reward_claimed";
 
 const PROFILE_SELECT_CORE =
   "id,display_name,avatar_url,bio,specialization,credits,discord_claimed,referral_code,referred_by";
@@ -79,6 +81,8 @@ function withProfileDefaults(profile: Partial<Profile> | null, email: string): P
     id: profile.id,
     email,
     display_name: profile.display_name ?? null,
+    username: profile.username ?? null,
+    username_normalized: profile.username_normalized ?? null,
     avatar_url: profile.avatar_url ?? null,
     bio: profile.bio ?? null,
     specialization: profile.specialization ?? null,

@@ -137,11 +137,13 @@ export function AvatarDecoration({
   size,
   children,
   className = "",
+  animated = true,
 }: {
   id?: string | null;
   size: number;
   children: ReactNode;
   className?: string;
+  animated?: boolean;
 }) {
   const def = DECO_MAP[id ?? "none"] ?? DECO_MAP.none;
   if (def.id === "none") return <div className={className}>{children}</div>;
@@ -297,7 +299,7 @@ export function AvatarDecoration({
 
   return (
     <div
-      className={`relative inline-block ${className}`}
+      className={`relative inline-block ${animated ? "" : "profile-effect-static"} ${className}`}
       style={{ width: size, height: size }}
     >
       {children}

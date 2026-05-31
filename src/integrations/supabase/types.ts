@@ -1372,6 +1372,8 @@ export type Database = {
           status_message: string | null
           theme: string | null
           updated_at: string
+          username: string | null
+          username_normalized: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1424,6 +1426,8 @@ export type Database = {
           status_message?: string | null
           theme?: string | null
           updated_at?: string
+          username?: string | null
+          username_normalized?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1476,6 +1480,8 @@ export type Database = {
           status_message?: string | null
           theme?: string | null
           updated_at?: string
+          username?: string | null
+          username_normalized?: string | null
         }
         Relationships: []
       }

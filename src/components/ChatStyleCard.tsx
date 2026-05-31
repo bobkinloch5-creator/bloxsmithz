@@ -16,6 +16,10 @@ import {
   sanitizeIcon,
 } from "@/lib/chat-customization";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
+import {
+  canUseReservedCosmetics,
+  isReservedChatIcon,
+} from "@/lib/profile-cosmetics";
 
 const ACCENT_PRESETS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
 
@@ -31,7 +35,7 @@ function stopsToCss(stops: string[] | null): string {
 }
 
 export function ChatStyleCard() {
-  const { user, profile, refresh } = useAuth();
+  const { user, profile, refresh, roles } = useAuth();
   const [nameStops, setNameStops] = useState<string[]>([]);
   const [textStops, setTextStops] = useState<string[]>([]);
   const [icon, setIcon] = useState<string | null>(null);
@@ -55,6 +59,7 @@ export function ChatStyleCard() {
 
   const displayName = (nickname.trim() || profile?.display_name || user?.email?.split("@")[0] || "You");
   const Icon = icon ? CHAT_ICON_MAP[icon] : null;
+  const canUseReserved = canUseReservedCosmetics(roles);
 
   const fontStyle = useMemo(() => chatFontStyle(font), [font]);
   const previewName = useMemo(() => ({ ...gradientTextStyle(nameStops.length ? nameStops : null), ...fontStyle }), [nameStops, fontStyle]);
@@ -67,6 +72,9 @@ export function ChatStyleCard() {
       const cleanName = sanitizeGradient(nameStops);
       const cleanText = sanitizeGradient(textStops);
       const cleanIcon = sanitizeIcon(icon);
+      if (cleanIcon && isReservedChatIcon(cleanIcon) && !canUseReserved) {
+        throw new Error("The crown chat icon is reserved for owners/admins.");
+      }
       const cleanFont = sanitizeFont(font);
       const trimmedNick = nickname.trim();
       if (trimmedNick && !NICK_RE.test(trimmedNick)) {
@@ -265,15 +273,19 @@ export function ChatStyleCard() {
         <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-11 gap-1.5">
           {CHAT_ICONS.map(({ id, label, Icon: I }) => {
             const active = icon === id;
+            const locked = isReservedChatIcon(id) && !canUseReserved;
             return (
               <button
                 key={id}
-                title={label}
+                title={locked ? `${label} — owner/admin only` : label}
+                disabled={locked}
                 onClick={() => setIcon(active ? null : id)}
                 className={`relative grid aspect-square place-items-center rounded-lg border transition ${
                   active
                     ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-surface text-muted-foreground hover:text-foreground hover:bg-surface-elevated"
+                    : locked
+                      ? "cursor-not-allowed border-border bg-surface/50 text-muted-foreground/35"
+                      : "border-border bg-surface text-muted-foreground hover:text-foreground hover:bg-surface-elevated"
                 }`}
               >
                 <I
@@ -287,6 +299,11 @@ export function ChatStyleCard() {
                 {active && (
                   <span className="absolute -right-1 -top-1 grid h-3.5 w-3.5 place-items-center rounded-full bg-primary text-primary-foreground">
                     <Check className="h-2.5 w-2.5" />
+                  </span>
+                )}
+                {locked && (
+                  <span className="absolute -right-1 -top-1 grid h-3.5 w-3.5 place-items-center rounded-full border border-border bg-background text-[9px] text-muted-foreground">
+                    x
                   </span>
                 )}
               </button>

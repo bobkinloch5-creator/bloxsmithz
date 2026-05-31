@@ -25,9 +25,11 @@ import {
   type ProfileCardEffectId,
 } from "@/components/profile/ProfileCardEffects";
 import type { ProfileBadgeId } from "@/lib/profile-badges";
+import { profileHandle } from "@/lib/profile-username";
 
 export type ProfileMenuSource = {
   display_name?: string | null;
+  username?: string | null;
   email?: string | null;
   hide_email?: boolean | null;
   avatar_url?: string | null;
@@ -137,7 +139,7 @@ export function ProfileMenuAvatar({
   }, [src, fallback]);
 
   const decoration =
-    !renderAnimated || (compact && !COMPACT_DECORATION_IDS.has(effects.decoration))
+    compact && !COMPACT_DECORATION_IDS.has(effects.decoration)
       ? "none"
       : effects.decoration;
   const decorationSuppressed = effects.decoration !== "none" && decoration === "none";
@@ -148,6 +150,7 @@ export function ProfileMenuAvatar({
       <AvatarDecoration
         id={decoration}
         size={decorationSize}
+        animated={renderAnimated}
         className={decoration !== "none" ? "overflow-visible" : ""}
       >
         <PfpRing effect={effects.pfpEffect} size={size} animated={renderAnimated}>
@@ -201,9 +204,9 @@ export function ProfileMenuPreview({
 }) {
   const effects = getProfileMenuEffects(profile);
   const displayName = profile?.display_name || "Builder";
+  const handle = profileHandle(profile?.username);
   const showEmail = profile?.hide_email === false && !!profile?.email;
-  const cardEffect = lightweight ? "none" : effects.cardEffect;
-  const profileEffect = lightweight ? "none" : effects.profileEffect;
+  const staticEffectClass = lightweight ? "profile-effect-static" : "";
   const showFlair = hasProfileMenuFlair({
     ...profile,
     banner_url: bannerUrl ?? profile?.banner_url ?? null,
@@ -214,14 +217,22 @@ export function ProfileMenuPreview({
       className={`relative overflow-hidden rounded-xl border shadow-2xl backdrop-blur-xl ${className}`}
       style={menuChromeStyle(effects.cardColor)}
     >
-      <ProfileCardEffect effect={cardEffect} color={effects.cardColor} />
+      <ProfileCardEffect
+        effect={effects.cardEffect}
+        color={effects.cardColor}
+        className={staticEffectClass}
+      />
       <div className="relative h-28 overflow-hidden bg-gradient-brand">
         {bannerUrl ? (
           <img src={bannerUrl} alt="Profile banner" className="h-full w-full object-cover" />
         ) : (
           <ProfileBackground id={effects.background} customUrl={effects.customBackgroundUrl} />
         )}
-        <ProfileEffect effect={profileEffect} accent={effects.accent} />
+        <ProfileEffect
+          effect={effects.profileEffect}
+          accent={effects.accent}
+          className={staticEffectClass}
+        />
         {!bannerUrl && effects.background === "none" && (
           <div
             className="absolute inset-0"
@@ -246,6 +257,9 @@ export function ProfileMenuPreview({
           <p className="min-w-0 truncate text-sm font-semibold">{displayName}</p>
           <RoleBadges roles={roles} size="sm" showLabel />
         </div>
+        {handle ? (
+          <p className="truncate text-xs font-semibold text-primary-glow/90">{handle}</p>
+        ) : null}
         {showEmail ? (
           <p className="truncate text-xs text-muted-foreground">{profile?.email}</p>
         ) : null}
