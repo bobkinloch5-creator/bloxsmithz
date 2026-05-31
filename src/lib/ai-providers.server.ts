@@ -365,19 +365,16 @@ export async function resolveAiGateway(opts: {
     return { source: "api_key", provider, modelName, model: gw(modelName) };
   }
 
-  const { data: keyRow } = await supabaseAdmin
-    .from("user_provider_keys")
-    .select("api_key")
-    .eq("user_id", opts.userId)
-    .eq("provider", provider)
-    .maybeSingle();
+  const { data: apiKey } = await supabaseAdmin.rpc("get_provider_api_key" as any, {
+    _user_id: opts.userId,
+    _provider: provider,
+  });
 
-  if (!keyRow?.api_key) {
-    // User toggled to API-key mode but never pasted a key — fall back gracefully.
+  if (!apiKey || typeof apiKey !== "string") {
     return fallback();
   }
 
-  const gw = createProvider(provider, keyRow.api_key);
+  const gw = createProvider(provider, apiKey);
 
   return {
     source: "api_key",
