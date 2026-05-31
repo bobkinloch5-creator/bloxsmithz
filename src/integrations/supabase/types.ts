@@ -971,6 +971,48 @@ export type Database = {
         }
         Relationships: []
       }
+      model_generations_3d: {
+        Row: {
+          created_at: string
+          credits_used: number
+          file_path: string | null
+          file_url: string | null
+          format: string | null
+          id: string
+          project_id: string | null
+          prompt: string
+          status: string
+          tripo_task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number
+          file_path?: string | null
+          file_url?: string | null
+          format?: string | null
+          id?: string
+          project_id?: string | null
+          prompt: string
+          status?: string
+          tripo_task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number
+          file_path?: string | null
+          file_url?: string | null
+          format?: string | null
+          id?: string
+          project_id?: string | null
+          prompt?: string
+          status?: string
+          tripo_task_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       oauth_access_tokens: {
         Row: {
           client_id: string
@@ -2592,7 +2634,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "owner" | "admin" | "moderator" | "user"
+      app_role: "owner" | "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2720,7 +2762,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "admin", "moderator", "user"],
+      app_role: ["owner", "admin", "user"],
     },
   },
 } as const
