@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   SITE_PROVIDER_DEFAULT_MODEL,
   SITE_PROVIDER_MODELS,
+  resolveCometModel,
   resolveNeokensModel,
   type SiteProviderId,
 } from "./ai-models";
@@ -54,6 +55,7 @@ function healthKey(provider: SiteProviderId, modelId: string) {
 function providerConfigured(provider: SiteProviderId) {
   if (provider === "neokens")
     return Boolean(process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY);
+  if (provider === "comet") return Boolean(process.env.COMET_API_KEY);
   return false;
 }
 
@@ -61,6 +63,9 @@ function modelAliases(provider: SiteProviderId, modelId: string) {
   const aliases = new Set([modelId]);
   if (provider === "neokens") {
     aliases.add(resolveNeokensModel(modelId).model);
+  }
+  if (provider === "comet") {
+    aliases.add(resolveCometModel(modelId).model);
   }
   return aliases;
 }
@@ -114,7 +119,12 @@ export async function getSiteModelHealthSnapshot(): Promise<SiteModelHealthRespo
   for (const provider of providers) {
     const configured = providerConfigured(provider);
     for (const modelId of SITE_PROVIDER_MODELS[provider]) {
-      const realModel = provider === "neokens" ? resolveNeokensModel(modelId).model : modelId;
+      const realModel =
+        provider === "neokens"
+          ? resolveNeokensModel(modelId).model
+          : provider === "comet"
+            ? resolveCometModel(modelId).model
+            : modelId;
       const aliases = modelAliases(provider, modelId);
       const relevant = events.filter(
         (event) => event.provider === provider && aliases.has(event.model),

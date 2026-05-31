@@ -25,7 +25,8 @@ import { SITE_PROVIDER_LABELS, SITE_PROVIDER_MODELS, type SiteProviderId } from 
 type SiteOnlyProviderId = SiteProviderId;
 type ProviderId = SiteOnlyProviderId;
 type Mode = "mcp" | "api_key";
-const isSiteProvider = (value: unknown): value is SiteOnlyProviderId => value === "neokens";
+const isSiteProvider = (value: unknown): value is SiteOnlyProviderId =>
+  value === "neokens" || value === "comet";
 
 type McpRow = {
   id: string;
@@ -38,16 +39,19 @@ type McpRow = {
 
 const PROVIDER_LABELS: Record<ProviderId, string> = {
   neokens: SITE_PROVIDER_LABELS.neokens,
+  comet: SITE_PROVIDER_LABELS.comet,
 };
 
 const PROVIDER_MODELS: Record<ProviderId, string[]> = {
   neokens: [...SITE_PROVIDER_MODELS.neokens],
+  comet: [...SITE_PROVIDER_MODELS.comet],
 };
 
-const SITE_ONLY_PROVIDERS: SiteOnlyProviderId[] = ["neokens"];
+const SITE_ONLY_PROVIDERS: SiteOnlyProviderId[] = ["comet", "neokens"];
 
 const PROVIDER_KEY_HINTS: Record<ProviderId, string> = {
   neokens: "Site-wide key managed by admin (NEOKENS_API_KEY)",
+  comet: "Site-wide key managed by admin (COMET_API_KEY)",
 };
 
 export function AiSourceSettings({
@@ -229,7 +233,7 @@ export function AiSourceSettings({
                   <Server className="h-3.5 w-3.5" /> Built-in
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Default BloxSmith pipeline running on Neokens. Uses your credits.
+                  Default BloxSmith pipeline using the protected site gateway. Uses your credits.
                 </p>
               </button>
               <button
@@ -248,7 +252,7 @@ export function AiSourceSettings({
                   <Key className="h-3.5 w-3.5" /> Free API
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Use the site Neokens key with the Roblox model you pick. No OpenAI or Anthropic
+                  Use the site gateway key with the Roblox model you pick. No OpenAI or Anthropic
                   keys needed.
                 </p>
               </button>
@@ -365,11 +369,15 @@ export function AiSourceSettings({
                   </label>
                 </div>
 
-                {provider === "neokens" ? (
+                {provider === "neokens" || provider === "comet" ? (
                   <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] text-foreground">
                     <span className="font-semibold">{PROVIDER_LABELS[provider]}</span> uses a shared
-                    site key (<span className="font-mono">NEOKENS_API_KEY</span>) — no per-user key
-                    needed. One balance covers GPT, Claude, and Gemini models.
+                    site key (
+                    <span className="font-mono">
+                      {provider === "comet" ? "COMET_API_KEY" : "NEOKENS_API_KEY"}
+                    </span>
+                    ) — no per-user key needed. The app still charges BloxSmith credits and
+                    rate-limits usage to protect the shared balance.
                   </div>
                 ) : (
                   <div>

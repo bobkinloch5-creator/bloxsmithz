@@ -9,9 +9,14 @@ import {
   createGroqProvider,
   sanitizingFetch,
 } from "./ai-gateway.server";
-import { SITE_PROVIDER_DEFAULT_MODEL, SITE_PROVIDER_MODELS } from "./ai-models";
+import {
+  SITE_PROVIDER_DEFAULT_MODEL,
+  SITE_PROVIDER_MODELS,
+  resolveCometModel,
+  resolveNeokensModel,
+} from "./ai-models";
 
-export type ProviderId = "openai" | "anthropic" | "google" | "groq" | "neokens";
+export type ProviderId = "openai" | "anthropic" | "google" | "groq" | "neokens" | "comet";
 export type ModelKind = "chat" | "build" | "fast" | "large";
 
 export type ModelProfile = {
@@ -78,6 +83,7 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
   google: "Google Gemini",
   groq: "Groq",
   neokens: "Neokens (multi-model)",
+  comet: "CometAPI (multi-model)",
 };
 
 // Curated model lists per provider. Keep the lists short — only models that
@@ -109,6 +115,7 @@ export const PROVIDER_MODELS: Record<ProviderId, string[]> = {
   // We list whichever Neokens has working on their side at the moment;
   // Claude Sonnet 4.6/4.7 were tried and removed (Bad Gateway from Neokens).
   neokens: [...SITE_PROVIDER_MODELS.neokens],
+  comet: [...SITE_PROVIDER_MODELS.comet],
 };
 
 export const PROVIDER_DEFAULT_MODEL: Record<ProviderId, string> = {
@@ -117,6 +124,7 @@ export const PROVIDER_DEFAULT_MODEL: Record<ProviderId, string> = {
   google: "gemini-2.5-flash",
   groq: "llama-3.3-70b-versatile",
   neokens: SITE_PROVIDER_DEFAULT_MODEL.neokens,
+  comet: SITE_PROVIDER_DEFAULT_MODEL.comet,
 };
 
 // Some model IDs in the UI are virtual aliases — they map to a real provider
@@ -205,7 +213,9 @@ export function getModelProfile(
       isClaude ||
       (isOpenAI && !id.includes("nano")) ||
       (provider === "neokens" &&
-        (id.includes("gemini") || id.includes("gpt-5") || id.includes("claude"))),
+        (id.includes("gemini") || id.includes("gpt-5") || id.includes("claude"))) ||
+      (provider === "comet" &&
+        (id.includes("gemini") || id.includes("gpt-") || id.includes("claude"))),
     historyTurns: opts.thinking ? (isHuge ? 8 : 5) : isSmall ? 3 : 5,
     historyChars: opts.thinking ? (isHuge ? 1_800 : 1_200) : isSmall ? 700 : 1_000,
   };
@@ -216,6 +226,13 @@ const NEOKENS_MODEL_BY_KIND: Record<ModelKind, string> = {
   build: "gemini-3-flash",
   fast: "gemini-3-flash",
   large: "gemini-3.1-pro",
+};
+
+const COMET_MODEL_BY_KIND: Record<ModelKind, string> = {
+  chat: "gpt-5.4-nano",
+  build: "deepseek-v4-flash",
+  fast: "gpt-5.4-nano",
+  large: "gpt-5.4-mini",
 };
 
 /*
@@ -256,6 +273,11 @@ function providerEndpoint(provider: ProviderId): { name: string; baseURL: string
     case "neokens":
       // Neokens credits gateway — OpenAI-compatible, one key for many models.
       return { name: "neokens", baseURL: "https://api.quatarly.cloud/v1" };
+    case "comet":
+      return {
+        name: "comet",
+        baseURL: process.env.COMET_BASE_URL || "https://api.cometapi.com/v1",
+      };
   }
 }
 
@@ -284,6 +306,15 @@ export function resolveBuiltInGateway(opts: {
   kind: ModelKind;
   thinking?: boolean;
 }): ResolvedGateway {
+  const cometKey = process.env.COMET_API_KEY;
+  if (cometKey) {
+    const uiModelName = COMET_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.comet;
+    const { model: modelName, thinking: implicitThinking } = resolveCometModel(uiModelName);
+    if (implicitThinking) opts.thinking = true;
+    const gw = createProvider("comet", cometKey);
+    return { source: "mcp", provider: "comet", modelName, model: gw(modelName) };
+  }
+
   const neokensKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
   if (neokensKey) {
     const modelName = NEOKENS_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.neokens;
@@ -293,7 +324,9 @@ export function resolveBuiltInGateway(opts: {
 
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey)
-    throw new Error("AI gateway not configured — NEOKENS_API_KEY or GROQ_API_KEY missing.");
+    throw new Error(
+      "AI gateway not configured — COMET_API_KEY, NEOKENS_API_KEY, or GROQ_API_KEY missing.",
+    );
   const gw = createGroqProvider(groqKey);
   const modelName =
     opts.kind === "large"
@@ -339,18 +372,18 @@ export async function resolveAiGateway(opts: {
   const provider = settings.provider as ProviderId;
   const rawModel = settings.model || PROVIDER_DEFAULT_MODEL[provider];
 
-  // Neokens & Groq are site-wide gateways — use env keys, no per-user key.
-  if (provider === "neokens") {
+  // Comet, Neokens & Groq are site-wide gateways — use env keys, no per-user key.
+  if (provider === "neokens" || provider === "comet") {
     const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
-    if (!neoKey) return fallback();
+    const cometKey = process.env.COMET_API_KEY;
+    const key = provider === "comet" ? cometKey : neoKey;
+    if (!key) return fallback();
     const { chooseAvailableSiteModel } = await import("./ai-model-health.server");
     const availableModel = await chooseAvailableSiteModel(provider, rawModel);
-    // Map the UI model id to the real Neokens id (+ thinking flag). This is the
-    // single place that decides what model string Neokens actually receives.
-    const { resolveNeokensModel } = await import("./ai-models");
-    const { model: modelName, thinking: implicitThinking } = resolveNeokensModel(availableModel);
+    const resolver = provider === "comet" ? resolveCometModel : resolveNeokensModel;
+    const { model: modelName, thinking: implicitThinking } = resolver(availableModel);
     if (implicitThinking) opts.thinking = true;
-    const gw = createProvider("neokens", neoKey);
+    const gw = createProvider(provider, key);
     return { source: "api_key", provider, modelName, model: gw(modelName) };
   }
 

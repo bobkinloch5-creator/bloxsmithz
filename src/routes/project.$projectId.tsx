@@ -4,6 +4,7 @@ import { Header } from "@/components/layout";
 import { AiSourceSettings } from "@/components/AiSourceSettings";
 import { ModelPicker } from "@/components/ModelPicker";
 import { useAiBusySounds } from "@/hooks/useSounds";
+import { SITE_PROVIDER_LABELS, type SiteProviderId } from "@/lib/ai-models";
 
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
@@ -74,7 +75,11 @@ import { TaskBoard } from "@/components/TaskBoard";
 import { MessagesSquare, Kanban } from "lucide-react";
 
 export const Route = createFileRoute("/project/$projectId")({
-  component: () => (<RequireAuth><ProjectEditor /></RequireAuth>),
+  component: () => (
+    <RequireAuth>
+      <ProjectEditor />
+    </RequireAuth>
+  ),
   head: () => ({ meta: [{ title: "Project — BloxSmith" }] }),
 });
 
@@ -512,10 +517,13 @@ function ProjectEditor() {
   const [aiUsage, setAiUsage] = useState<{
     used_5h: number;
     limit_5h: number;
+    used_24h?: number;
+    limit_24h?: number;
     used_7d: number;
     limit_7d: number;
     owner?: boolean;
     reset_5h?: string | null;
+    reset_24h?: string | null;
   } | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -1107,14 +1115,17 @@ function ProjectEditor() {
       /\b(replica|replicate|recreate|1\s*:?\s*1|one[-\s]?to[-\s]?one|attached image|reference image|full game|entire game)\b/i.test(
         userPrompt,
       );
-    const watchdog = setTimeout(() => {
-      watchdogFired = true;
-      try {
-        controller.abort();
-      } catch {
-        /* noop */
-      }
-    }, heavyVisionBuild ? 150_000 : 90_000);
+    const watchdog = setTimeout(
+      () => {
+        watchdogFired = true;
+        try {
+          controller.abort();
+        } catch {
+          /* noop */
+        }
+      },
+      heavyVisionBuild ? 150_000 : 90_000,
+    );
     if (!opts?.skipUserBubble) {
       const bubble = imgs.length
         ? `${userPrompt}\n\n_📎 attached ${imgs.length} image${imgs.length === 1 ? "" : "s"}_`
@@ -1126,12 +1137,8 @@ function ProjectEditor() {
     // happened" (a blank bubble). We replace this id with the real result, or
     // remove it on error.
     const thinkingId = crypto.randomUUID();
-    setMessages((m) => [
-      ...m,
-      { id: thinkingId, role: "assistant", content: "_Thinking…_" },
-    ]);
-    const removeThinking = () =>
-      setMessages((m) => m.filter((x) => x.id !== thinkingId));
+    setMessages((m) => [...m, { id: thinkingId, role: "assistant", content: "_Thinking…_" }]);
+    const removeThinking = () => setMessages((m) => m.filter((x) => x.id !== thinkingId));
     try {
       // Call the REAL AI generation server function (Claude Sonnet via the
       // gateway, with tools, clothing, validation, and the error-feedback
@@ -1167,23 +1174,24 @@ function ProjectEditor() {
       removeThinking();
 
       const v = out.validation;
-      const vLine = v && ((v.errors?.length ?? 0) > 0 || (v.warnings?.length ?? 0) > 0)
-        ? `\n\nSync check: ${v.errors?.length ?? 0} blocked · ${v.warnings?.length ?? 0} warning(s).` +
-          (v.errors?.length
-            ? "\n" +
-              v.errors
-                .slice(0, 5)
-                .map((e: any) => `  ✗ ${e.target} — ${e.message}`)
-                .join("\n")
-            : "") +
-          (v.warnings?.length
-            ? "\n" +
-              v.warnings
-                .slice(0, 3)
-                .map((w: any) => `  ⚠ ${w.target} — ${w.message}`)
-                .join("\n")
-            : "")
-        : "";
+      const vLine =
+        v && ((v.errors?.length ?? 0) > 0 || (v.warnings?.length ?? 0) > 0)
+          ? `\n\nSync check: ${v.errors?.length ?? 0} blocked · ${v.warnings?.length ?? 0} warning(s).` +
+            (v.errors?.length
+              ? "\n" +
+                v.errors
+                  .slice(0, 5)
+                  .map((e: any) => `  ✗ ${e.target} — ${e.message}`)
+                  .join("\n")
+              : "") +
+            (v.warnings?.length
+              ? "\n" +
+                v.warnings
+                  .slice(0, 3)
+                  .map((w: any) => `  ⚠ ${w.target} — ${w.message}`)
+                  .join("\n")
+              : "")
+          : "";
       const askLine =
         (out.queuedCount ?? 0) > 0 && out.status !== "executing"
           ? `\n\nReview the ${out.queuedCount} operation${out.queuedCount === 1 ? "" : "s"} below — push to Studio when ready.`
@@ -1204,10 +1212,7 @@ function ProjectEditor() {
           ? `Queued ${out.queuedCount ?? out.actions?.length} operation${(out.queuedCount ?? out.actions?.length) === 1 ? "" : "s"} for Studio.`
           : "The AI didn't return a build this time. Try again, or rephrase into a smaller step (e.g. 'just the spawn area' or 'just the shop UI').");
       const fullContent = baseMessage + vLine + dangerLine + askLine;
-      setMessages((m) => [
-        ...m,
-        { id: tempId, role: "assistant", content: fullContent },
-      ]);
+      setMessages((m) => [...m, { id: tempId, role: "assistant", content: fullContent }]);
       // Snapshot pre-state of every file the AI is about to touch, so the user
       // can hit "Revert" to undo this batch (restore old content / delete new
       // files / queue plugin deletes in Studio).
@@ -1231,11 +1236,7 @@ function ProjectEditor() {
         dangers: out.dangers ?? [],
         snapshot,
       };
-      const realId = await persistMsg(
-        "assistant",
-        fullContent,
-        actionsMeta,
-      );
+      const realId = await persistMsg("assistant", fullContent, actionsMeta);
       const finalId = realId ?? tempId;
       setMessages((m) =>
         m.map((x) => (x.id === tempId ? { ...x, id: finalId, actions: actionsMeta } : x)),
@@ -1298,9 +1299,8 @@ function ProjectEditor() {
       // Surface the real cause. A generation failure is almost always an AI
       // problem (missing GROQ_API_KEY, model error, bad JSON), NOT a Studio
       // plugin issue — so don't blame the plugin connection.
-      const timeoutLike = /operation was aborted|aborted due to timeout|took too long|timeout|timed out/i.test(
-        msg,
-      );
+      const timeoutLike =
+        /operation was aborted|aborted due to timeout|took too long|timeout|timed out/i.test(msg);
       if (timeoutLike) {
         friendly =
           "The AI provider timed out before finishing this build. I refunded any credits charged for this failed run. Try again, switch to Gemini Flash, or split the request into a smaller step.";
@@ -1584,31 +1584,32 @@ function ProjectEditor() {
         ? `\n\nAssumptions:\n${out.assumptions.map((a) => `  • ${a}`).join("\n")}`
         : "";
       const v = (out as any).validation;
-      const vLine = v && ((v.errors ?? 0) > 0 || (v.warnings ?? 0) > 0)
-        ? `\n\nSync check: ${v.errors ?? 0} blocked · ${v.warnings ?? 0} warning(s) across ${v.phases?.length ?? 0} phase(s).` +
-          (v.phases ?? [])
-            .filter((p: any) => p.errors?.length || p.warnings?.length)
-            .slice(0, 4)
-            .map(
-              (p: any) =>
-                `\n  ${p.title}:` +
-                (p.errors?.length
-                  ? "\n" +
-                    p.errors
-                      .slice(0, 3)
-                      .map((e: any) => `    ✗ ${e.target} — ${e.message}`)
-                      .join("\n")
-                  : "") +
-                (p.warnings?.length
-                  ? "\n" +
-                    p.warnings
-                      .slice(0, 2)
-                      .map((w: any) => `    ⚠ ${w.target} — ${w.message}`)
-                      .join("\n")
-                  : ""),
-            )
-            .join("")
-        : "";
+      const vLine =
+        v && ((v.errors ?? 0) > 0 || (v.warnings ?? 0) > 0)
+          ? `\n\nSync check: ${v.errors ?? 0} blocked · ${v.warnings ?? 0} warning(s) across ${v.phases?.length ?? 0} phase(s).` +
+            (v.phases ?? [])
+              .filter((p: any) => p.errors?.length || p.warnings?.length)
+              .slice(0, 4)
+              .map(
+                (p: any) =>
+                  `\n  ${p.title}:` +
+                  (p.errors?.length
+                    ? "\n" +
+                      p.errors
+                        .slice(0, 3)
+                        .map((e: any) => `    ✗ ${e.target} — ${e.message}`)
+                        .join("\n")
+                    : "") +
+                  (p.warnings?.length
+                    ? "\n" +
+                      p.warnings
+                        .slice(0, 2)
+                        .map((w: any) => `    ⚠ ${w.target} — ${w.message}`)
+                        .join("\n")
+                    : ""),
+              )
+              .join("")
+          : "";
       const summary = `${out.summary}\n\nBuild plan:\n${phaseList}${assumptions}\n\nQueued ${out.totalActions} actions covering ${out.totalFiles} files. Waiting for the Studio plugin to confirm each action before calling it applied.${vLine}`;
       await pushMsg("assistant", summary, {
         kind: "autopilot",
@@ -2831,7 +2832,13 @@ function ProjectEditor() {
                       }
                     >
                       <Send className="h-3.5 w-3.5" />
-                      {chatMode ? "Chat" : planMode ? "Plan" : autoExecute ? "Apply to Studio" : "Preview"}
+                      {chatMode
+                        ? "Chat"
+                        : planMode
+                          ? "Plan"
+                          : autoExecute
+                            ? "Apply to Studio"
+                            : "Preview"}
                     </button>
                   )}
                 </div>
@@ -2907,7 +2914,11 @@ function ProjectEditor() {
 
                   <ModelPicker
                     projectId={projectId}
-                    provider={aiSettings.provider === "neokens" ? aiSettings.provider : null}
+                    provider={
+                      aiSettings.provider && aiSettings.provider in SITE_PROVIDER_LABELS
+                        ? (aiSettings.provider as SiteProviderId)
+                        : null
+                    }
                     model={aiSettings.model}
                     onChange={(p, m) => setAiSettings({ mode: "api_key", provider: p, model: m })}
                   />
@@ -2915,23 +2926,21 @@ function ProjectEditor() {
                   {aiUsage &&
                     !aiUsage.owner &&
                     (() => {
-                      const pct5 = Math.min(
-                        100,
-                        Math.round((aiUsage.used_5h / aiUsage.limit_5h) * 100),
-                      );
-                      const near = pct5 >= 80;
-                      const full = pct5 >= 100;
+                      const used = aiUsage.used_24h ?? aiUsage.used_5h;
+                      const limit = aiUsage.limit_24h ?? aiUsage.limit_5h;
+                      const pct = Math.min(100, Math.round((used / limit) * 100));
+                      const near = pct >= 80;
+                      const full = pct >= 100;
                       return (
                         <div
                           className={`inline-flex items-center gap-1.5 rounded-full bg-surface-elevated/60 border px-2.5 py-0.5 text-[10px] tabular-nums ${full ? "border-destructive/60" : near ? "border-amber-400/60" : "border-border/40"}`}
-                          title={`AI usage: ${aiUsage.used_5h}/${aiUsage.limit_5h} in last 5h · ${aiUsage.used_7d}/${aiUsage.limit_7d} in last 7d${aiUsage.reset_5h ? ` · resets ${new Date(aiUsage.reset_5h).toLocaleTimeString()}` : ""}`}
+                          title={`AI timer: ${used}/${limit} in last 24h · ${aiUsage.used_7d}/${aiUsage.limit_7d} in last 7d${aiUsage.reset_24h ? ` · resets ${new Date(aiUsage.reset_24h).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}` : ""}`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${full ? "bg-destructive" : near ? "bg-amber-400" : "bg-emerald-500/70"}`}
                           />
                           <span className="text-muted-foreground">
-                            Usage {aiUsage.used_5h}/{aiUsage.limit_5h} · {aiUsage.used_7d}/
-                            {aiUsage.limit_7d}
+                            24h {used}/{limit} · 7d {aiUsage.used_7d}/{aiUsage.limit_7d}
                           </span>
                         </div>
                       );

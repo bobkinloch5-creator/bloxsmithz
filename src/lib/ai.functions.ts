@@ -28,7 +28,9 @@ type GenAction = { type: string; [k: string]: any };
 // markdown code fences, a leading sentence before the JSON, trailing commas,
 // and raw newlines/tabs inside Luau source strings — all common reasons a
 // build came back "empty" even though the model actually produced one.
-function extractBuildJson(raw: string): { message?: string; files?: any[]; actions?: any[] } | null {
+function extractBuildJson(
+  raw: string,
+): { message?: string; files?: any[]; actions?: any[] } | null {
   if (!raw) return null;
   let text = raw.trim();
 
@@ -68,10 +70,13 @@ function isBuildIntent(prompt: string): boolean {
 }
 
 function isBuildingReplicaPrompt(prompt: string): boolean {
-  return /\b(1\s*:?\s*1|one[-\s]?to[-\s]?one|replica|replicate|recreate|clone|copy|match|reference|from (the )?(image|picture|photo)|attached image)\b[\s\S]{0,120}\b(building|house|home|tower|castle|temple|facade|structure|mansion|shop|store|base)\b/i.test(
-    prompt,
-  ) || /\b(building|house|home|tower|castle|temple|facade|structure|mansion|shop|store|base)\b[\s\S]{0,120}\b(1\s*:?\s*1|one[-\s]?to[-\s]?one|replica|replicate|recreate|clone|copy|match|reference|from (the )?(image|picture|photo)|attached image)\b/i.test(
-    prompt,
+  return (
+    /\b(1\s*:?\s*1|one[-\s]?to[-\s]?one|replica|replicate|recreate|clone|copy|match|reference|from (the )?(image|picture|photo)|attached image)\b[\s\S]{0,120}\b(building|house|home|tower|castle|temple|facade|structure|mansion|shop|store|base)\b/i.test(
+      prompt,
+    ) ||
+    /\b(building|house|home|tower|castle|temple|facade|structure|mansion|shop|store|base)\b[\s\S]{0,120}\b(1\s*:?\s*1|one[-\s]?to[-\s]?one|replica|replicate|recreate|clone|copy|match|reference|from (the )?(image|picture|photo)|attached image)\b/i.test(
+      prompt,
+    )
   );
 }
 
@@ -94,7 +99,11 @@ function getBuildFallback(
     className: "ScreenGui",
     name,
     parent: "StarterGui/BloxsmithUI",
-    properties: { ResetOnSpawn: false, IgnoreGuiInset: true, ZIndexBehavior: { __t: "Enum", enum: "ZIndexBehavior", value: "Sibling" } },
+    properties: {
+      ResetOnSpawn: false,
+      IgnoreGuiInset: true,
+      ZIndexBehavior: { __t: "Enum", enum: "ZIndexBehavior", value: "Sibling" },
+    },
   });
 
   // Main menu (the case in the user's screenshot).
@@ -152,13 +161,99 @@ end
             BackgroundTransparency: 0.05,
           },
           children: [
-            { className: "UICorner", name: "Corner", properties: { CornerRadius: { __t: "UDim", s: 0, o: 16 } } },
-            { className: "UIStroke", name: "Stroke", properties: { Thickness: 1.5, Transparency: 0.4 } },
-            { className: "UIListLayout", name: "List", properties: { Padding: { __t: "UDim", s: 0, o: 12 }, HorizontalAlignment: { __t: "Enum", enum: "HorizontalAlignment", value: "Center" }, VerticalAlignment: { __t: "Enum", enum: "VerticalAlignment", value: "Center" }, SortOrder: { __t: "Enum", enum: "SortOrder", value: "LayoutOrder" } } },
-            { className: "TextLabel", name: "Title", properties: { LayoutOrder: 1, Size: { __t: "UDim2", xs: 0.8, xo: 0, ys: 0, yo: 48 }, BackgroundTransparency: 1, Text: "MY GAME", Font: { __t: "Enum", enum: "Font", value: "GothamBlack" }, TextScaled: true, TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 } } },
-            { className: "TextButton", name: "PlayButton", properties: { LayoutOrder: 2, Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 }, BackgroundColor3: { __t: "Color3", r: 90, g: 170, b: 255 }, Text: "Play", Font: { __t: "Enum", enum: "Font", value: "GothamBold" }, TextScaled: true, TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 } }, children: [{ className: "UICorner", name: "C", properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } } }] },
-            { className: "TextButton", name: "ShopButton", properties: { LayoutOrder: 3, Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 }, BackgroundColor3: { __t: "Color3", r: 40, g: 40, b: 52 }, Text: "Shop", Font: { __t: "Enum", enum: "Font", value: "GothamBold" }, TextScaled: true, TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 } }, children: [{ className: "UICorner", name: "C", properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } } }] },
-            { className: "TextButton", name: "SettingsButton", properties: { LayoutOrder: 4, Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 }, BackgroundColor3: { __t: "Color3", r: 40, g: 40, b: 52 }, Text: "Settings", Font: { __t: "Enum", enum: "Font", value: "GothamBold" }, TextScaled: true, TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 } }, children: [{ className: "UICorner", name: "C", properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } } }] },
+            {
+              className: "UICorner",
+              name: "Corner",
+              properties: { CornerRadius: { __t: "UDim", s: 0, o: 16 } },
+            },
+            {
+              className: "UIStroke",
+              name: "Stroke",
+              properties: { Thickness: 1.5, Transparency: 0.4 },
+            },
+            {
+              className: "UIListLayout",
+              name: "List",
+              properties: {
+                Padding: { __t: "UDim", s: 0, o: 12 },
+                HorizontalAlignment: { __t: "Enum", enum: "HorizontalAlignment", value: "Center" },
+                VerticalAlignment: { __t: "Enum", enum: "VerticalAlignment", value: "Center" },
+                SortOrder: { __t: "Enum", enum: "SortOrder", value: "LayoutOrder" },
+              },
+            },
+            {
+              className: "TextLabel",
+              name: "Title",
+              properties: {
+                LayoutOrder: 1,
+                Size: { __t: "UDim2", xs: 0.8, xo: 0, ys: 0, yo: 48 },
+                BackgroundTransparency: 1,
+                Text: "MY GAME",
+                Font: { __t: "Enum", enum: "Font", value: "GothamBlack" },
+                TextScaled: true,
+                TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 },
+              },
+            },
+            {
+              className: "TextButton",
+              name: "PlayButton",
+              properties: {
+                LayoutOrder: 2,
+                Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 },
+                BackgroundColor3: { __t: "Color3", r: 90, g: 170, b: 255 },
+                Text: "Play",
+                Font: { __t: "Enum", enum: "Font", value: "GothamBold" },
+                TextScaled: true,
+                TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 },
+              },
+              children: [
+                {
+                  className: "UICorner",
+                  name: "C",
+                  properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } },
+                },
+              ],
+            },
+            {
+              className: "TextButton",
+              name: "ShopButton",
+              properties: {
+                LayoutOrder: 3,
+                Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 },
+                BackgroundColor3: { __t: "Color3", r: 40, g: 40, b: 52 },
+                Text: "Shop",
+                Font: { __t: "Enum", enum: "Font", value: "GothamBold" },
+                TextScaled: true,
+                TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 },
+              },
+              children: [
+                {
+                  className: "UICorner",
+                  name: "C",
+                  properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } },
+                },
+              ],
+            },
+            {
+              className: "TextButton",
+              name: "SettingsButton",
+              properties: {
+                LayoutOrder: 4,
+                Size: { __t: "UDim2", xs: 0.7, xo: 0, ys: 0, yo: 44 },
+                BackgroundColor3: { __t: "Color3", r: 40, g: 40, b: 52 },
+                Text: "Settings",
+                Font: { __t: "Enum", enum: "Font", value: "GothamBold" },
+                TextScaled: true,
+                TextColor3: { __t: "Color3", r: 255, g: 255, b: 255 },
+              },
+              children: [
+                {
+                  className: "UICorner",
+                  name: "C",
+                  properties: { CornerRadius: { __t: "UDim", s: 0, o: 8 } },
+                },
+              ],
+            },
           ],
         },
         { type: "select", path: "StarterGui.BloxsmithUI.MainMenu.Panel" },
@@ -189,9 +284,11 @@ end
   };
 }
 
-function getBuildingReplicaFallback(
-  prompt: string,
-): { message: string; files: GenFile[]; actions: GenAction[] } {
+function getBuildingReplicaFallback(prompt: string): {
+  message: string;
+  files: GenFile[];
+  actions: GenAction[];
+} {
   const actions: GenAction[] = [];
   const v3 = (x: number, y: number, z: number) => ({ __t: "Vector3", x, y, z });
   const color = (r: number, g: number, b: number) => ({ __t: "Color3", r, g, b });
@@ -209,12 +306,32 @@ function getBuildingReplicaFallback(
   const medieval = /\b(castle|stone|medieval|tower|fort)\b/i.test(prompt);
   const modern = /\b(modern|glass|city|office|skyscraper|store)\b/i.test(prompt);
   const wallMaterial = medieval ? "Slate" : modern ? "Concrete" : "Brick";
-  const wallColor = medieval ? color(115, 118, 122) : modern ? color(205, 210, 215) : color(166, 92, 65);
-  const trimColor = medieval ? color(74, 75, 78) : modern ? color(36, 43, 54) : color(235, 220, 188);
+  const wallColor = medieval
+    ? color(115, 118, 122)
+    : modern
+      ? color(205, 210, 215)
+      : color(166, 92, 65);
+  const trimColor = medieval
+    ? color(74, 75, 78)
+    : modern
+      ? color(36, 43, 54)
+      : color(235, 220, 188);
   const roofColor = medieval ? color(70, 70, 76) : modern ? color(32, 35, 44) : color(95, 42, 38);
 
-  actions.push({ type: "create", className: "Folder", name: "Map", parent: "Workspace", properties: {} });
-  actions.push({ type: "create", className: "Folder", name: "Buildings", parent: "Workspace/Map", properties: {} });
+  actions.push({
+    type: "create",
+    className: "Folder",
+    name: "Map",
+    parent: "Workspace",
+    properties: {},
+  });
+  actions.push({
+    type: "create",
+    className: "Folder",
+    name: "Buildings",
+    parent: "Workspace/Map",
+    properties: {},
+  });
   actions.push({
     type: "create",
     className: "Part",
@@ -252,7 +369,14 @@ function getBuildingReplicaFallback(
   });
 
   const parent = "Workspace/Map/Buildings/ReferenceBuildingReplica";
-  const part = (name: string, size: any, pos: any, material: string, col: any, extra: Record<string, any> = {}) =>
+  const part = (
+    name: string,
+    size: any,
+    pos: any,
+    material: string,
+    col: any,
+    extra: Record<string, any> = {},
+  ) =>
     actions.push({
       type: "create",
       className: "Part",
@@ -289,14 +413,33 @@ function getBuildingReplicaFallback(
   const windowXs = [-18, -9, 9, 18];
   for (const x of windowXs) {
     for (const y of [8, 20]) {
-      part(`WindowGlass_${x}_${y}`, v3(5, 5, 0.35), v3(x, y, 17.25), "Glass", color(135, 210, 255), {
-        Transparency: 0.35,
-        Reflectance: 0.12,
-      });
+      part(
+        `WindowGlass_${x}_${y}`,
+        v3(5, 5, 0.35),
+        v3(x, y, 17.25),
+        "Glass",
+        color(135, 210, 255),
+        {
+          Transparency: 0.35,
+          Reflectance: 0.12,
+        },
+      );
       part(`WindowTrimTop_${x}_${y}`, v3(6, 0.45, 0.45), v3(x, y + 2.75, 17.5), "Wood", trimColor);
-      part(`WindowTrimBottom_${x}_${y}`, v3(6, 0.45, 0.45), v3(x, y - 2.75, 17.5), "Wood", trimColor);
+      part(
+        `WindowTrimBottom_${x}_${y}`,
+        v3(6, 0.45, 0.45),
+        v3(x, y - 2.75, 17.5),
+        "Wood",
+        trimColor,
+      );
       part(`WindowTrimLeft_${x}_${y}`, v3(0.45, 6, 0.45), v3(x - 2.75, y, 17.5), "Wood", trimColor);
-      part(`WindowTrimRight_${x}_${y}`, v3(0.45, 6, 0.45), v3(x + 2.75, y, 17.5), "Wood", trimColor);
+      part(
+        `WindowTrimRight_${x}_${y}`,
+        v3(0.45, 6, 0.45),
+        v3(x + 2.75, y, 17.5),
+        "Wood",
+        trimColor,
+      );
     }
   }
 
@@ -311,7 +454,8 @@ function getBuildingReplicaFallback(
 
   part("BalconySlab", v3(20, 1, 6), v3(0, 15, 23.5), "Concrete", trimColor);
   part("BalconyRailFront", v3(21, 2, 0.5), v3(0, 17, 26.5), "Metal", trimColor);
-  for (let x = -9; x <= 9; x += 3) part(`BalconyPost_${x}`, v3(0.45, 3, 0.45), v3(x, 16.5, 26.5), "Metal", trimColor);
+  for (let x = -9; x <= 9; x += 3)
+    part(`BalconyPost_${x}`, v3(0.45, 3, 0.45), v3(x, 16.5, 26.5), "Metal", trimColor);
 
   actions.push({
     type: "create",
@@ -389,9 +533,11 @@ function getBuildingReplicaFallback(
 // A genuine procedural map/tycoon: ground, spawn, central hub, player plots,
 // and connecting paths. Used when the model fails on a map/world/tycoon prompt
 // so the user gets a real, usable build instead of an empty folder.
-function getProceduralMapFallback(
-  p: string,
-): { message: string; files: GenFile[]; actions: GenAction[] } {
+function getProceduralMapFallback(p: string): {
+  message: string;
+  files: GenFile[];
+  actions: GenAction[];
+} {
   const isTycoon = /\btycoon\b/.test(p);
   const plotCount = isTycoon ? 6 : 4;
   const actions: GenAction[] = [];
@@ -401,9 +547,27 @@ function getProceduralMapFallback(
   const mat = (m: string) => ({ __t: "Enum", enum: "Material", value: m });
 
   // Folders
-  actions.push({ type: "create", className: "Folder", name: "Map", parent: "Workspace", properties: {} });
-  actions.push({ type: "create", className: "Folder", name: "Plots", parent: "Workspace/Map", properties: {} });
-  actions.push({ type: "create", className: "Folder", name: "Paths", parent: "Workspace/Map", properties: {} });
+  actions.push({
+    type: "create",
+    className: "Folder",
+    name: "Map",
+    parent: "Workspace",
+    properties: {},
+  });
+  actions.push({
+    type: "create",
+    className: "Folder",
+    name: "Plots",
+    parent: "Workspace/Map",
+    properties: {},
+  });
+  actions.push({
+    type: "create",
+    className: "Folder",
+    name: "Paths",
+    parent: "Workspace/Map",
+    properties: {},
+  });
 
   // Big ground
   actions.push({
@@ -437,7 +601,11 @@ function getProceduralMapFallback(
       Orientation: v3(0, 0, 90),
     },
     children: [
-      { className: "PointLight", name: "HubLight", properties: { Brightness: 2, Range: 40, Color: color(255, 240, 200) } },
+      {
+        className: "PointLight",
+        name: "HubLight",
+        properties: { Brightness: 2, Range: 40, Color: color(255, 240, 200) },
+      },
     ],
   });
   actions.push({
@@ -492,7 +660,11 @@ function getProceduralMapFallback(
         {
           className: "BillboardGui",
           name: "Label",
-          properties: { Size: { __t: "UDim2", xs: 0, xo: 200, ys: 0, yo: 50 }, StudsOffset: v3(0, 8, 0), AlwaysOnTop: true },
+          properties: {
+            Size: { __t: "UDim2", xs: 0, xo: 200, ys: 0, yo: 50 },
+            StudsOffset: v3(0, 8, 0),
+            AlwaysOnTop: true,
+          },
           children: [
             {
               className: "TextLabel",
@@ -548,7 +720,6 @@ function getProceduralMapFallback(
     actions,
   };
 }
-
 
 async function assertProjectOwner(supabase: any, projectId: string, userId: string) {
   const { data: project, error } = await supabase
@@ -732,6 +903,13 @@ export const generateWithAI = createServerFn({ method: "POST" })
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
+    const { enforceAiUsageLimit } = await import("./ai-usage-limits.server");
+    await enforceAiUsageLimit({
+      userId,
+      supabase,
+      source: `project_${mode}`,
+      metadata: { projectId, thinking: !!thinking, hasImage: !!imageDataUrl },
+    });
 
     const baseCost = mode === "generate" ? 3 : 1;
     let cost = baseCost;
@@ -745,9 +923,8 @@ export const generateWithAI = createServerFn({ method: "POST" })
 
     const { generateText, Output, stepCountIs } = await import("ai");
     const { SYSTEM_PROMPT, SLIM_SYSTEM_PROMPT } = await import("./ai-gateway.server");
-    const { getModelProfile, resolveAiGateway, createProvider, resolveBuiltInGateway } = await import(
-      "./ai-providers.server"
-    );
+    const { getModelProfile, resolveAiGateway, createProvider, resolveBuiltInGateway } =
+      await import("./ai-providers.server");
     const { NEOKENS_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
@@ -789,7 +966,10 @@ export const generateWithAI = createServerFn({ method: "POST" })
     if (!isOwner && surcharge > 0) {
       const { error: surErr } = await supabase.rpc("spend_credits_atomic", { _amount: surcharge });
       if (surErr) {
-        await supabase.rpc("refund_credits", { _amount: baseCost, _reason: "tier surcharge unaffordable" });
+        await supabase.rpc("refund_credits", {
+          _amount: baseCost,
+          _reason: "tier surcharge unaffordable",
+        });
         throw new Error(
           `Not enough credits — model ${resolved.modelName} costs ${totalCost} credits. Pick a cheaper model or buy more on the Pricing page.`,
         );
@@ -1131,7 +1311,10 @@ export const generateWithAI = createServerFn({ method: "POST" })
           (result as any)._fallbackNoCharge = true;
         } else {
           if (!isOwner)
-            await supabase.rpc("refund_credits", { _amount: cost, _reason: "ai generation failed" });
+            await supabase.rpc("refund_credits", {
+              _amount: cost,
+              _reason: "ai generation failed",
+            });
           throw new Error("AI generation failed: " + msg);
         }
       }
@@ -1396,6 +1579,13 @@ export const planBuild = createServerFn({ method: "POST" })
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
+    const { enforceAiUsageLimit } = await import("./ai-usage-limits.server");
+    await enforceAiUsageLimit({
+      userId,
+      supabase,
+      source: "project_plan",
+      metadata: { projectId, thinking: !!thinking, hasImage: !!imageDataUrl },
+    });
 
     const PLAN_COST = 1;
     if (!isOwner) {
@@ -1422,7 +1612,10 @@ export const planBuild = createServerFn({ method: "POST" })
           _amount: planSurcharge,
         });
         if (surErr) {
-          await supabase.rpc("refund_credits", { _amount: PLAN_COST, _reason: "tier surcharge unaffordable" });
+          await supabase.rpc("refund_credits", {
+            _amount: PLAN_COST,
+            _reason: "tier surcharge unaffordable",
+          });
           throw new Error(
             `Not enough credits — planning with ${builtIn.modelName} costs ${planTotalCost} credits. Buy more on the Pricing page.`,
           );
@@ -1596,6 +1789,17 @@ export const chatWithAI = createServerFn({ method: "POST" })
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
+    const { enforceAiUsageLimit } = await import("./ai-usage-limits.server");
+    await enforceAiUsageLimit({
+      userId,
+      supabase,
+      source: "project_chat",
+      metadata: {
+        projectId: projectId ?? null,
+        thinking: !!thinking,
+        attachments: attachments?.length ?? 0,
+      },
+    });
 
     const CHAT_COST = 1;
     if (!isOwner) {
@@ -1636,7 +1840,10 @@ export const chatWithAI = createServerFn({ method: "POST" })
         _amount: chatSurcharge,
       });
       if (surErr) {
-        await supabase.rpc("refund_credits", { _amount: CHAT_COST, _reason: "tier surcharge unaffordable" });
+        await supabase.rpc("refund_credits", {
+          _amount: CHAT_COST,
+          _reason: "tier surcharge unaffordable",
+        });
         throw new Error(
           `Not enough credits — chat with ${resolved.modelName} costs ${chatTotal} credits. Pick a cheaper model or buy more on the Pricing page.`,
         );
@@ -1921,10 +2128,7 @@ export const improvePrompt = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ImprovePromptSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as { supabase: any; userId: string };
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some(
       (r: { role: string }) => r.role === "owner" || r.role === "admin",
     );
@@ -1997,6 +2201,13 @@ export const fixErrorsWithAI = createServerFn({ method: "POST" })
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
+    const { enforceAiUsageLimit } = await import("./ai-usage-limits.server");
+    await enforceAiUsageLimit({
+      userId,
+      supabase,
+      source: "project_fix",
+      metadata: { projectId },
+    });
 
     const baseCost = 2;
     let cost = baseCost;
@@ -2019,9 +2230,14 @@ export const fixErrorsWithAI = createServerFn({ method: "POST" })
       const totalCost = applyModelCreditMultiplier(baseCost, builtIn.modelName);
       const surcharge = totalCost - baseCost;
       if (!isOwner && surcharge > 0) {
-        const { error: surErr } = await supabase.rpc("spend_credits_atomic", { _amount: surcharge });
+        const { error: surErr } = await supabase.rpc("spend_credits_atomic", {
+          _amount: surcharge,
+        });
         if (surErr) {
-          await supabase.rpc("refund_credits", { _amount: baseCost, _reason: "tier surcharge unaffordable" });
+          await supabase.rpc("refund_credits", {
+            _amount: baseCost,
+            _reason: "tier surcharge unaffordable",
+          });
           throw new Error(
             `Not enough credits — fixing with ${builtIn.modelName} costs ${totalCost} credits. Buy more on the Pricing page.`,
           );
@@ -2239,6 +2455,13 @@ export const autopilotBuild = createServerFn({ method: "POST" })
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isOwner = (roles ?? []).some((r) => r.role === "owner" || r.role === "admin");
+    const { enforceAiUsageLimit } = await import("./ai-usage-limits.server");
+    await enforceAiUsageLimit({
+      userId,
+      supabase,
+      source: "project_autopilot",
+      metadata: { projectId },
+    });
 
     const baseCost = 10;
     let cost = baseCost;
@@ -2267,9 +2490,14 @@ export const autopilotBuild = createServerFn({ method: "POST" })
       const totalCost = applyModelCreditMultiplier(baseCost, builtIn.modelName);
       const surcharge = totalCost - baseCost;
       if (!isOwner && surcharge > 0) {
-        const { error: surErr } = await supabase.rpc("spend_credits_atomic", { _amount: surcharge });
+        const { error: surErr } = await supabase.rpc("spend_credits_atomic", {
+          _amount: surcharge,
+        });
         if (surErr) {
-          await supabase.rpc("refund_credits", { _amount: baseCost, _reason: "tier surcharge unaffordable" });
+          await supabase.rpc("refund_credits", {
+            _amount: baseCost,
+            _reason: "tier surcharge unaffordable",
+          });
           throw new Error(
             `Not enough credits — autopilot with ${builtIn.modelName} costs ${totalCost} credits. Buy more on the Pricing page.`,
           );

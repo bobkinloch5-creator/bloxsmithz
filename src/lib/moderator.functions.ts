@@ -77,14 +77,16 @@ export const loadModeratorDashboard = createServerFn({ method: "GET" })
       rolesByUser.set(row.user_id, [...(rolesByUser.get(row.user_id) ?? []), row.role]);
     }
 
-    const users = ((profiles ?? []) as Array<{
-      id: string;
-      display_name: string | null;
-      credits: number;
-      banned: boolean;
-      ban_reason: string | null;
-      created_at: string;
-    }>).map((profile) => ({
+    const users = (
+      (profiles ?? []) as Array<{
+        id: string;
+        display_name: string | null;
+        credits: number;
+        banned: boolean;
+        ban_reason: string | null;
+        created_at: string;
+      }>
+    ).map((profile) => ({
       ...profile,
       email: emailMap.get(profile.id) ?? "",
       roles: rolesByUser.get(profile.id) ?? ["user"],
@@ -107,13 +109,12 @@ export const loadModeratorDashboard = createServerFn({ method: "GET" })
       )
       .reduce((sum, action) => sum + Math.max(0, action.amount ?? 0), 0);
 
-    const todaysPromoCount = actionList
-      .filter(
-        (action) =>
-          action.actor_id === userId &&
-          action.action === "create_promo" &&
-          action.created_at >= todayIso(),
-      ).length;
+    const todaysPromoCount = actionList.filter(
+      (action) =>
+        action.actor_id === userId &&
+        action.action === "create_promo" &&
+        action.created_at >= todayIso(),
+    ).length;
 
     return {
       users,
@@ -227,7 +228,9 @@ export const resendConfirmationForUser = createServerFn({ method: "POST" })
     });
     const redirectTo =
       process.env.SITE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/dashboard` : "https://bloxsmith.pro/dashboard");
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}/dashboard`
+        : "https://bloxsmith.pro/dashboard");
     const { error } = await authClient.auth.resend({
       type: "signup",
       email: data.email,
@@ -257,7 +260,9 @@ export const getModeratorModelStatus = createServerFn({ method: "GET" })
             ? Boolean(process.env.GROQ_API_KEY)
             : provider === "neokens"
               ? Boolean(process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY)
-              : false,
+              : provider === "comet"
+                ? Boolean(process.env.COMET_API_KEY)
+                : false,
         models,
       })),
     };

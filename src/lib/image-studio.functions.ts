@@ -1,8 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateStoredStudioImage, GENERATOR_CREDIT_COSTS, type StudioImageModel } from "./generator-images.server";
-import { ensureCreditsAvailable, isGeneratorOwner, spendCreditsAfterSuccess } from "./generator-credits.server";
+import {
+  generateStoredStudioImage,
+  GENERATOR_CREDIT_COSTS,
+  type StudioImageModel,
+} from "./generator-images.server";
+import {
+  ensureCreditsAvailable,
+  isGeneratorOwner,
+  spendCreditsAfterSuccess,
+} from "./generator-credits.server";
 
 const ModelEnum = z.enum([
   "google/gemini-2.5-flash-image",
@@ -10,6 +18,9 @@ const ModelEnum = z.enum([
   "google/gemini-3.1-flash-image-preview",
   "openai/gpt-image-2",
   "openai/gpt-image-1-mini",
+  "comet/nano-banana-2",
+  "comet/gpt-image-2",
+  "comet/gemini-3-pro-image-preview",
 ]);
 
 const AspectEnum = z.enum(["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]);
@@ -33,7 +44,13 @@ const InputSchema = z.object({
 export type GenerateImageInput = z.infer<typeof InputSchema>;
 export type GeneratedImage = { url: string; model: string };
 export type GenerateImageResult =
-  | { ok: true; images: GeneratedImage[]; modelUsed: string; fellBack: boolean; creditsSpent: number }
+  | {
+      ok: true;
+      images: GeneratedImage[];
+      modelUsed: string;
+      fellBack: boolean;
+      creditsSpent: number;
+    }
   | { ok: false; error: string };
 
 const STYLE_HINTS: Record<string, string> = {
@@ -56,6 +73,13 @@ export const generateImageStudio = createServerFn({ method: "POST" })
     const { supabase, userId } = context as { supabase: any; userId: string };
     const isOwner = await isGeneratorOwner(userId, supabase);
     const creditsNeeded = data.variations * GENERATOR_CREDIT_COSTS.imagePerVariation;
+    const { enforceAiUsageLimit } = await import("./ai-usage-limits.server");
+    await enforceAiUsageLimit({
+      userId,
+      supabase,
+      source: "image_studio",
+      metadata: { model: data.model, variations: data.variations },
+    });
 
     await ensureCreditsAvailable({ userId, amount: creditsNeeded, isOwner });
 

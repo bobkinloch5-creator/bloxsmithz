@@ -12,7 +12,9 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { tryComfyUI } from "@/lib/comfyui.server";
 
-export type GenImageResult = { imageUrl: string; markdown: string; modelUsed?: string } | { error: string };
+export type GenImageResult =
+  | { imageUrl: string; markdown: string; modelUsed?: string }
+  | { error: string };
 
 const ASPECT_HINTS: Record<string, string> = {
   "16:9": "Compose as a wide 16:9 landscape image.",
@@ -43,6 +45,16 @@ async function saveImage(
     markdown: `![${altText.slice(0, 80)}](${pub.publicUrl})`,
     modelUsed,
   };
+}
+
+export async function saveGeneratedImage(
+  userId: string | undefined,
+  bytes: Buffer,
+  mime: string,
+  altText: string,
+  modelUsed?: string,
+): Promise<GenImageResult> {
+  return saveImage(userId, bytes, mime, altText, modelUsed);
 }
 
 /**
@@ -122,7 +134,7 @@ export async function generateImageFromPrompt(opts: {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${lovableKey}`,
+          Authorization: `Bearer ${lovableKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -152,19 +164,21 @@ export async function generateImageFromPrompt(opts: {
       } else if (r.status === 429) {
         return { error: "Image generation is rate-limited. Try again in a moment." };
       } else if (r.status === 402) {
-        return { error: "Lovable AI credits exhausted. Add credits in Settings → Workspace → Usage." };
+        return {
+          error: "Lovable AI credits exhausted. Add credits in Settings → Workspace → Usage.",
+        };
       } else {
         const txt = await r.text().catch(() => "");
-        console.warn(`[image-gen] Lovable AI gateway HTTP ${r.status}: ${txt.slice(0, 200)} — falling back`);
+        console.warn(
+          `[image-gen] Lovable AI gateway HTTP ${r.status}: ${txt.slice(0, 200)} — falling back`,
+        );
       }
     } catch (e: any) {
       console.warn("[image-gen] Lovable AI gateway error, falling back:", e?.message || e);
     }
   }
 
-  const neokensKey =
-    process.env.NEOKENS_API_KEY ||
-    process.env.NEOKENS_KEY;
+  const neokensKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
 
   if (neokensKey) {
     try {
@@ -189,7 +203,7 @@ export async function generateImageFromPrompt(opts: {
       const r = await fetch("https://api.quatarly.cloud/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${neokensKey}`,
+          Authorization: `Bearer ${neokensKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

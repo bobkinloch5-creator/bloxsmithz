@@ -1,7 +1,8 @@
-export type SiteProviderId = "neokens";
+export type SiteProviderId = "neokens" | "comet";
 
 export const SITE_PROVIDER_LABELS: Record<SiteProviderId, string> = {
   neokens: "Neokens (free)",
+  comet: "CometAPI (protected)",
 };
 
 export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
@@ -21,15 +22,41 @@ export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
     "claude-sonnet-4-6-thinking",
     "claude-haiku-4-5-20251001",
   ],
+  comet: [
+    // Budget-first defaults to protect the shared site key.
+    "gpt-5.4-nano",
+    "deepseek-v4-flash",
+    "gpt-5.4-mini",
+    "gemini-3-flash",
+    "grok-4.3",
+    // Premium picks are available, but intentionally later in the list.
+    "claude-haiku-4-5",
+    "claude-sonnet-4-6-thinking",
+    "claude-opus-4-7-thinking",
+    "claude-opus-4-8-thinking",
+  ],
 };
 
 export const SITE_PROVIDER_DEFAULT_MODEL: Record<SiteProviderId, string> = {
   neokens: "gemini-3-flash",
+  comet: "gpt-5.4-nano",
 };
 
 export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
+  "gpt-5.4-nano":
+    "Ultra-cheap Comet model for quick chat, small Roblox edits, short fixes, and simple UI tweaks. Best when you want speed without burning site credits.",
+  "deepseek-v4-flash":
+    "Low-cost Comet coding model for everyday Roblox/Luau builds. Best default for scripts, RemoteEvents, leaderstats, shops, and compact systems.",
+  "gpt-5.4-mini":
+    "Balanced Comet model for medium Roblox systems with better reasoning than nano while staying budget-friendly.",
+  "grok-4.3":
+    "Fast creative Comet model for brainstorming game ideas, names, mechanics, and lighter code help.",
+  "claude-haiku-4-5":
+    "Cheap Claude option through Comet for careful cleanup, refactors, and tidy Luau explanations.",
   "claude-opus-4-7-thinking":
     "Highest-depth Claude reasoning with adaptive thinking. Best for very large Roblox systems, deep debugging, architecture decisions, and hard multi-file builds. What it does for your game: plans entire game architectures, designs anti-exploit, ProfileService data, and complex combat systems end-to-end.",
+  "claude-opus-4-8-thinking":
+    "Experimental Comet Claude Opus 4.8 slot with adaptive thinking. Use only for the hardest builds; health checks will disable it automatically if Comet has not enabled that model id yet.",
   "claude-opus-4-6-thinking":
     "Previous-gen Opus with deep reasoning. Best for large multi-system builds and tough debugging when you want maximum care. What it does for your game: architects full games, designs save systems, and untangles complex script bugs.",
   "claude-sonnet-4-7-thinking":
@@ -63,7 +90,14 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
 // next to each model so users can pick by budget.
 // ─────────────────────────────────────────────────────────────────────────
 export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
+  // Comet budget models
+  "gpt-5.4-nano": 0.35,
+  "deepseek-v4-flash": 0.5,
+  "gpt-5.4-mini": 0.8,
+  "grok-4.3": 2,
+  "claude-haiku-4-5": 1,
   // Claude
+  "claude-opus-4-8-thinking": 8,
   "claude-opus-4-7-thinking": 5,
   "claude-opus-4-6-thinking": 5,
   "claude-sonnet-4-7-thinking": 3,
@@ -105,9 +139,8 @@ export function getModelCreditMultiplier(modelName: string | null | undefined): 
  */
 export function applyModelCreditMultiplier(baseCost: number, modelName: string | null | undefined) {
   const mult = getModelCreditMultiplier(modelName);
-  return Math.max(baseCost, Math.ceil(baseCost * mult));
+  return Math.max(1, Math.ceil(baseCost * mult));
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────
 // Neokens model mapping.
@@ -147,6 +180,13 @@ export const NEOKENS_MODEL_MAP: Record<string, { neokens: string; thinking?: boo
 // a selected model errors at the gateway. Set this to your most reliable id.
 export const NEOKENS_SAFE_FALLBACK_MODEL = "gemini-3-flash";
 
+export const COMET_MODEL_MAP: Record<string, { comet: string; thinking?: boolean }> = {
+  "claude-opus-4-8-thinking": { comet: "claude-opus-4-8", thinking: true },
+  "claude-opus-4-7-thinking": { comet: "claude-opus-4-7", thinking: true },
+  "claude-sonnet-4-6-thinking": { comet: "claude-sonnet-4-6", thinking: true },
+  "claude-haiku-4-5": { comet: "claude-haiku-4-5" },
+};
+
 /**
  * Resolve a UI model id to the real Neokens model id + thinking flag.
  * Unmapped ids pass through unchanged (thinking inferred from a "-thinking"
@@ -157,6 +197,15 @@ export function resolveNeokensModel(uiModelId: string): { model: string; thinkin
   if (mapped) return { model: mapped.neokens, thinking: !!mapped.thinking };
   // Safety net: if a "-thinking" id wasn't explicitly mapped, strip the suffix
   // and turn on thinking rather than sending an invalid "...-thinking" string.
+  if (uiModelId.endsWith("-thinking")) {
+    return { model: uiModelId.slice(0, -"-thinking".length), thinking: true };
+  }
+  return { model: uiModelId, thinking: false };
+}
+
+export function resolveCometModel(uiModelId: string): { model: string; thinking: boolean } {
+  const mapped = COMET_MODEL_MAP[uiModelId];
+  if (mapped) return { model: mapped.comet, thinking: !!mapped.thinking };
   if (uiModelId.endsWith("-thinking")) {
     return { model: uiModelId.slice(0, -"-thinking".length), thinking: true };
   }

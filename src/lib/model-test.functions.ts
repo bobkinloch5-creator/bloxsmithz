@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { LanguageModel } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { SITE_PROVIDER_MODELS, resolveNeokensModel, type SiteProviderId } from "./ai-models";
+import {
+  SITE_PROVIDER_MODELS,
+  resolveCometModel,
+  resolveNeokensModel,
+  type SiteProviderId,
+} from "./ai-models";
 import { recordProviderHealth, type ProviderHealthEvent } from "./ai-providers.server";
 
 export type ModelTestResult = {
@@ -80,7 +85,9 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
   const realModel =
     provider === "neokens"
       ? resolveNeokensModel(modelId).model
-      : resolveModelAlias(modelId).realModel;
+      : provider === "comet"
+        ? resolveCometModel(modelId).model
+        : resolveModelAlias(modelId).realModel;
 
   let model: LanguageModel;
   try {
@@ -98,6 +105,21 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
         };
       }
       const gw = createProvider("neokens", key);
+      model = gw(realModel);
+    } else if (provider === "comet") {
+      const key = process.env.COMET_API_KEY;
+      if (!key) {
+        return {
+          provider,
+          modelId,
+          realModel,
+          ok: false,
+          durationMs: 0,
+          errorKind: "not_configured",
+          errorMessage: "COMET_API_KEY env var not set on the server.",
+        };
+      }
+      const gw = createProvider("comet", key);
       model = gw(realModel);
     } else if (provider === "groq") {
       const key = process.env.GROQ_API_KEY;

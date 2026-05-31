@@ -5,7 +5,7 @@
 // image backend and ONE key to configure (GEMINI_API_KEY). The older Lovable
 // gateway path was removed because the project only has a Gemini key.
 
-import { generateImageFromPrompt } from "./image-gen.server";
+import { generateImageFromPrompt, saveGeneratedImage } from "./image-gen.server";
 
 // UI exposes several model ids; with a Gemini-only key we map them all to the
 // configured Gemini image model. The mapping is kept so the UI/types don't have
@@ -15,7 +15,10 @@ export type StudioImageModel =
   | "google/gemini-3-pro-image-preview"
   | "google/gemini-3.1-flash-image-preview"
   | "openai/gpt-image-2"
-  | "openai/gpt-image-1-mini";
+  | "openai/gpt-image-1-mini"
+  | "comet/nano-banana-2"
+  | "comet/gpt-image-2"
+  | "comet/gemini-3-pro-image-preview";
 
 type Quality = "low" | "medium" | "high";
 type Aspect = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3";
@@ -56,6 +59,91 @@ function parseDataUrl(dataUrl?: string): { base64: string; mime: string } | null
   return { base64: dataUrl.slice(comma + 1), mime };
 }
 
+function toCometSize(a: Aspect): string {
+  switch (a) {
+    case "16:9":
+    case "3:2":
+      return "1536x1024";
+    case "9:16":
+    case "2:3":
+      return "1024x1536";
+    case "4:3":
+      return "1280x960";
+    case "3:4":
+      return "960x1280";
+    default:
+      return "1024x1024";
+  }
+}
+
+async function fetchImageBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+  if (!res.ok) throw new Error(`Comet image download failed (HTTP ${res.status}).`);
+  const mime = res.headers.get("content-type") || "image/png";
+  return { bytes: Buffer.from(await res.arrayBuffer()), mime };
+}
+
+async function generateCometStudioImage(opts: {
+  userId: string;
+  model: StudioImageModel;
+  prompt: string;
+  aspectRatio: Aspect;
+  quality: Quality;
+  altText: string;
+}) {
+  const cometKey = process.env.COMET_API_KEY;
+  if (!cometKey)
+    throw new Error("Comet image generation is unavailable. Set COMET_API_KEY on the server.");
+
+  const model = opts.model.replace(/^comet\//, "");
+  const res = await fetch(
+    `${process.env.COMET_BASE_URL || "https://api.cometapi.com/v1"}/images/generations`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cometKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        prompt: opts.prompt,
+        n: 1,
+        size: toCometSize(opts.aspectRatio),
+        quality: opts.quality === "high" ? "hd" : "standard",
+        response_format: "b64_json",
+      }),
+      signal: AbortSignal.timeout(90_000),
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    if (res.status === 401 || res.status === 403) throw new Error("Comet rejected the API key.");
+    if (res.status === 429)
+      throw new Error("Comet image generation is rate-limited. Try again later.");
+    throw new Error(`Comet image generation failed (HTTP ${res.status}): ${text.slice(0, 180)}`);
+  }
+
+  const json = (await res.json()) as {
+    data?: Array<{ b64_json?: string; url?: string }>;
+  };
+  const item = json?.data?.[0];
+  let bytes: Buffer | null = null;
+  let mime = "image/png";
+  if (item?.b64_json) {
+    bytes = Buffer.from(String(item.b64_json), "base64");
+  } else if (item?.url) {
+    const fetched = await fetchImageBytes(String(item.url));
+    bytes = fetched.bytes;
+    mime = fetched.mime;
+  }
+
+  if (!bytes) throw new Error("Comet did not return an image. Try a simpler prompt.");
+  const saved = await saveGeneratedImage(opts.userId, bytes, mime, opts.altText, `comet/${model}`);
+  if ("error" in saved) throw new Error(saved.error);
+  return saved;
+}
+
 export async function generateStoredStudioImage(opts: {
   userId: string;
   prompt: string;
@@ -79,6 +167,23 @@ export async function generateStoredStudioImage(opts: {
 
   const ref = parseDataUrl(opts.referenceImageDataUrl);
 
+  if (opts.model.startsWith("comet/") && !ref) {
+    const result = await generateCometStudioImage({
+      userId: opts.userId,
+      model: opts.model,
+      prompt: basePrompt,
+      aspectRatio: opts.aspectRatio,
+      quality: opts.quality,
+      altText: opts.altText,
+    });
+    return {
+      url: result.imageUrl,
+      modelUsed: result.modelUsed || opts.model,
+      fellBack: false,
+      promptUsed: basePrompt,
+    };
+  }
+
   const result = await generateImageFromPrompt({
     userId: opts.userId,
     prompt: basePrompt,
@@ -94,7 +199,8 @@ export async function generateStoredStudioImage(opts: {
 
   return {
     url: result.imageUrl,
-    modelUsed: result.modelUsed || process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image-preview",
+    modelUsed:
+      result.modelUsed || process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image-preview",
     fellBack: false,
     promptUsed: basePrompt,
   };

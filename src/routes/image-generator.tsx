@@ -48,13 +48,23 @@ type Model =
   | "google/gemini-3-pro-image-preview"
   | "google/gemini-3.1-flash-image-preview"
   | "openai/gpt-image-2"
-  | "openai/gpt-image-1-mini";
+  | "openai/gpt-image-1-mini"
+  | "comet/nano-banana-2"
+  | "comet/gpt-image-2"
+  | "comet/gemini-3-pro-image-preview";
 
 const MODELS: { value: Model; label: string; tag: string }[] = [
   {
     value: "google/gemini-3.1-flash-image-preview",
     label: "Gemini 3.1 Flash",
     tag: "Fast · Default",
+  },
+  { value: "comet/nano-banana-2", label: "Comet Nano Banana 2", tag: "Comet · Good" },
+  { value: "comet/gpt-image-2", label: "Comet GPT Image 2", tag: "Comet · Sharp" },
+  {
+    value: "comet/gemini-3-pro-image-preview",
+    label: "Comet Gemini 3 Pro",
+    tag: "Comet · Quality",
   },
   { value: "google/gemini-3-pro-image-preview", label: "Gemini 3 Pro", tag: "Best quality" },
   { value: "google/gemini-2.5-flash-image", label: "Gemini 2.5 Flash", tag: "Legacy" },

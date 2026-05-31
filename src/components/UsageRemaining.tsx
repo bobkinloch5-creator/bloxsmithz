@@ -17,6 +17,9 @@ type Usage = {
   limit_5h: number;
   used_5h: number;
   reset_5h?: string | null;
+  limit_24h?: number;
+  used_24h?: number;
+  reset_24h?: string | null;
   limit_7d: number;
   used_7d: number;
   reset_7d?: string | null;
@@ -66,7 +69,7 @@ export function UsageRemaining({ defaultOpen = true }: { defaultOpen?: boolean }
     if (data) setUsage(data as unknown as Usage);
     const since = new Date();
     since.setDate(since.getDate() - 7);
-    const { data: evs } = await (supabase as any)
+    const { data: evs } = await supabase
       .from("ai_usage_events")
       .select("created_at")
       .gte("created_at", since.toISOString())
@@ -97,6 +100,9 @@ export function UsageRemaining({ defaultOpen = true }: { defaultOpen?: boolean }
   }
 
   const pct5h = Math.min(100, Math.round((usage.used_5h / usage.limit_5h) * 100));
+  const used24h = usage.used_24h ?? usage.used_5h;
+  const limit24h = usage.limit_24h ?? usage.limit_5h;
+  const pct24h = Math.min(100, Math.round((used24h / limit24h) * 100));
   const pct7d = Math.min(100, Math.round((usage.used_7d / usage.limit_7d) * 100));
 
   return (
@@ -115,8 +121,12 @@ export function UsageRemaining({ defaultOpen = true }: { defaultOpen?: boolean }
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
         <Stat label="Today" value={todayCount} sub="messages" />
+        <Stat
+          label="24h limit"
+          value={`${used24h}/${limit24h}`}
+          sub={`resets ${fmtReset(usage.reset_24h)}`}
+        />
         <Stat label="Past 7d" value={weekTotal} sub={`of ${usage.limit_7d}`} />
-        <Stat label="5h limit" value={`${usage.used_5h}/${usage.limit_5h}`} sub={`resets ${fmtReset(usage.reset_5h)}`} />
       </div>
 
       <div className="mt-3 h-24 w-full">
@@ -128,7 +138,12 @@ export function UsageRemaining({ defaultOpen = true }: { defaultOpen?: boolean }
                 <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.25} vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="hsl(var(--border))"
+              opacity={0.25}
+              vertical={false}
+            />
             <XAxis
               dataKey="label"
               stroke="hsl(var(--muted-foreground))"
@@ -160,6 +175,7 @@ export function UsageRemaining({ defaultOpen = true }: { defaultOpen?: boolean }
       </div>
 
       <div className="mt-3 space-y-2">
+        <Bar label="Daily timer" used={used24h} limit={limit24h} pct={pct24h} />
         <Bar label="Past 5h" used={usage.used_5h} limit={usage.limit_5h} pct={pct5h} />
         <Bar label="Past 7d" used={usage.used_7d} limit={usage.limit_7d} pct={pct7d} />
       </div>
@@ -184,13 +200,25 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
   );
 }
 
-function Bar({ label, used, limit, pct }: { label: string; used: number; limit: number; pct: number }) {
+function Bar({
+  label,
+  used,
+  limit,
+  pct,
+}: {
+  label: string;
+  used: number;
+  limit: number;
+  pct: number;
+}) {
   const tone = pct >= 100 ? "bg-destructive" : pct >= 80 ? "bg-amber-500" : "bg-primary";
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-[11px]">
         <span className="text-foreground">{label}</span>
-        <span className="text-muted-foreground">{used} / {limit} · {pct}%</span>
+        <span className="text-muted-foreground">
+          {used} / {limit} · {pct}%
+        </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-surface-elevated">
         <div className={`h-full ${tone} transition-all`} style={{ width: `${pct}%` }} />

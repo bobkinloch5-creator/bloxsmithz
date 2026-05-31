@@ -2,6 +2,16 @@
 
 ## Latest Updates
 
+### CometAPI Gateway, Budget Models & AI Timer
+
+- Added CometAPI as a protected site-wide AI gateway with budget-first model routing and Neokens kept as a fallback.
+- Added cheaper Comet model choices, premium Claude Opus/Sonnet options, and model credit multipliers so expensive models cost more credits while budget models cost less.
+- Added Comet image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
+- Added a 24-hour AI usage timer and server-side request limit for normal users, with owner/admin/moderator bypass.
+- Added Supabase migration support for Comet provider settings and the new AI rate-limit event table.
+- Added safe environment documentation for `COMET_API_KEY`, `COMET_BASE_URL`, and daily AI limit settings.
+- Updated the project usage indicator to show the 24-hour timer with AM/PM reset time.
+
 ### MCP & Provider Secret Vault Migration
 
 - Removed stale UI and server references to the dropped `user_mcp_servers.auth_header` column.
