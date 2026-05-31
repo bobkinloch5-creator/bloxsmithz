@@ -33,15 +33,29 @@ async function insertCreditTransaction(opts: {
   reason: string;
 }) {
   if (!opts.userId || opts.amount <= 0) return;
+  // Record the spend with the canonical 'ai_spend' reason so refund_credits
+  // (which sums recent ai_spend rows) can refund it if the generation later
+  // fails. opts.reason is preserved in metadata only.
   try {
     await opts.supabase.from("credit_transactions").insert({
       user_id: opts.userId,
       amount: -Math.abs(opts.amount),
       type: "spend",
-      reason: opts.reason,
+      reason: "ai_spend",
+      metadata: { detail: opts.reason },
     });
   } catch {
-    // Some schemas log transactions inside spend_credits_atomic already.
+    // Older schemas without a metadata column: retry the minimal canonical row.
+    try {
+      await opts.supabase.from("credit_transactions").insert({
+        user_id: opts.userId,
+        amount: -Math.abs(opts.amount),
+        type: "spend",
+        reason: "ai_spend",
+      });
+    } catch {
+      // Ledger logging must never break a successful spend.
+    }
   }
 }
 
@@ -100,12 +114,9 @@ export async function spendCreditsAfterSuccess(opts: {
 
   const { error } = await opts.supabase.rpc("spend_credits_atomic", { _amount: opts.amount });
   if (!error) {
-    await insertCreditTransaction({
-      supabase: opts.supabase,
-      userId: opts.userId,
-      amount: opts.amount,
-      reason,
-    });
+    // spend_credits_atomic already writes the canonical 'ai_spend' ledger row,
+    // so we must NOT insert a second one here — a duplicate spend row both
+    // double-counts spend history and would let refund_credits over-refund.
     await recordAiUsageEvent({
       userId: opts.userId,
       source: reason,

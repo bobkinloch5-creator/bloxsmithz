@@ -6,6 +6,7 @@ import {
   normalizeProfileBadgeIds,
   roleProfileBadgeIds,
   selectableProfileBadgeIds,
+  ProfileBadgeId,
 } from "@/lib/profile-badges";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -75,7 +76,7 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
       ]);
       const roleList = ((roles ?? []) as { role: string }[]).map((row) => row.role);
       const preservedEarned = normalizeProfileBadgeIds(existingProfile?.profile_badges).filter(
-        (id) => !selectableProfileBadgeIds([id]).includes(id),
+        (id: ProfileBadgeId) => !selectableProfileBadgeIds([id]).includes(id),
       );
       patch.profile_badges = Array.from(
         new Set([
@@ -86,12 +87,40 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
       ).slice(0, 12);
     }
 
-    const { data: row, error } = await (supabase as any)
-      .from("profiles")
-      .update(patch)
-      .eq("id", userId)
-      .select("profile_badges, profile_decoration")
-      .single();
+    let row: { profile_badges?: unknown; profile_decoration?: unknown } | null = null;
+    let error: any = null;
+    // Up to a few attempts: if the live DB is missing a column the app writes,
+    // Postgres rejects the whole UPDATE (code 42703). Rather than losing every
+    // change the user made, drop the unknown column and retry with the rest.
+    const droppedColumns: string[] = [];
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const res = await (supabase as any)
+        .from("profiles")
+        .update(patch)
+        .eq("id", userId)
+        .select("profile_badges, profile_decoration")
+        .single();
+      row = res.data;
+      error = res.error;
+      if (!error) break;
+
+      const code = (error as any).code;
+      const message = String(error.message ?? "");
+      const missing =
+        code === "42703" || code === "PGRST204" || /column .* does not exist|could not find the .* column/i.test(message);
+      if (!missing) break;
+
+      // Identify the offending column from the error and remove it.
+      const match = message.match(/column "?([a-z_]+)"?/i) || message.match(/'([a-z_]+)' column/i);
+      const col = match?.[1];
+      if (!col || !(col in patch)) break;
+      delete patch[col];
+      droppedColumns.push(col);
+      if (Object.keys(patch).length === 0) {
+        error = null;
+        break;
+      }
+    }
 
     if (error) {
       console.error("[updateProfileCustomization] update failed", {
@@ -103,6 +132,16 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
         sentDecoration: patch.profile_decoration,
       });
       throw new Error(error.message);
+    }
+
+    if (droppedColumns.length > 0) {
+      // Surface this clearly: the save mostly succeeded but the database is
+      // behind on a migration, so a few fields could not be stored.
+      console.error("[updateProfileCustomization] skipped columns missing from DB", droppedColumns);
+      return {
+        ok: true,
+        warning: `Saved, but these fields aren't available yet: ${droppedColumns.join(", ")}. A database migration is pending.`,
+      };
     }
 
     // If badges/decoration didn't actually persist, retry them in isolation
