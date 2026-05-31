@@ -57,14 +57,17 @@ export async function runMcpHealthCheck(
   const started = Date.now();
   const { data: server, error } = await supabase
     .from("user_mcp_servers")
-    .select("id,name,url,auth_header")
+    .select("id,name,url")
     .eq("id", serverId)
     .maybeSingle();
   if (error || !server) {
     return { ok: false, error: "Server not found", latencyMs: Date.now() - started };
   }
 
-  let authHeader = normalizeMcpAuthHeader(server.auth_header);
+  const { data: storedHeader } = await supabase.rpc("get_mcp_auth_header" as any, {
+    _server_id: serverId,
+  });
+  let authHeader = normalizeMcpAuthHeader(typeof storedHeader === "string" ? storedHeader : null);
 
   const pointsAtUs = isOwnMcpUrl(server.url);
   if (pointsAtUs) {

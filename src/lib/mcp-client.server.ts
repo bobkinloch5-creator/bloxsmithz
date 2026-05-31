@@ -16,7 +16,6 @@ type McpServer = {
   id: string;
   name: string;
   url: string;
-  auth_header: string | null;
 };
 
 function randomToken(len = 32) {
@@ -54,7 +53,10 @@ async function resolveAuthHeader(server: McpServer, userId: string): Promise<str
     const token = await ensureOwnToken(userId);
     return `Bearer ${token}`;
   }
-  return normalizeMcpAuthHeader(server.auth_header);
+  const { data: rawHeader } = await supabaseAdmin.rpc("get_mcp_auth_header" as any, {
+    _server_id: server.id,
+  });
+  return normalizeMcpAuthHeader(typeof rawHeader === "string" ? rawHeader : null);
 }
 
 async function mcpRpc(server: McpServer, authHeader: string, method: string, params?: any, id = 1) {
@@ -106,7 +108,7 @@ function sanitizeName(s: string) {
 export async function buildUserMcpTools(userId: string) {
   const { data: servers } = await supabaseAdmin
     .from("user_mcp_servers")
-    .select("id,name,url,auth_header")
+    .select("id,name,url")
     .eq("user_id", userId)
     .eq("enabled", true);
   if (!servers || servers.length === 0) return {};

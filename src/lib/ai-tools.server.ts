@@ -776,9 +776,13 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
         if (rawAuth) {
           await supabaseAdmin
             .from("user_mcp_servers")
-            .update({ auth_header: rawAuth, enabled: true })
+            .update({ enabled: true })
             .eq("id", existing.id)
             .eq("user_id", ctx.userId);
+          await supabaseAdmin.rpc("set_mcp_auth_header" as any, {
+            _server_id: existing.id,
+            _value: rawAuth,
+          });
           return {
             success: true,
             updated: true,
@@ -794,12 +798,17 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
           user_id: ctx.userId,
           name: name.trim(),
           url: url.trim(),
-          auth_header: rawAuth || null,
           enabled: true,
         })
         .select("id,name,url,enabled")
         .single();
       if (error) return { error: error.message };
+      if (rawAuth && data?.id) {
+        await supabaseAdmin.rpc("set_mcp_auth_header" as any, {
+          _server_id: data.id,
+          _value: rawAuth,
+        });
+      }
       return {
         success: true,
         server: data,
@@ -852,7 +861,6 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
       const patch: any = { updated_at: new Date().toISOString() };
       if (name) patch.name = name.trim();
       if (url) patch.url = url.trim();
-      if (rawAuth) patch.auth_header = rawAuth;
       if (typeof enabled === "boolean") patch.enabled = enabled;
       const { data, error } = await supabaseAdmin
         .from("user_mcp_servers")
@@ -862,6 +870,12 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
         .select("id,name,url,enabled")
         .single();
       if (error) return { error: error.message };
+      if (rawAuth && targetId) {
+        await supabaseAdmin.rpc("set_mcp_auth_header" as any, {
+          _server_id: targetId,
+          _value: rawAuth,
+        });
+      }
       return { success: true, server: data };
     },
   }),
