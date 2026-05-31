@@ -66,7 +66,7 @@ const changelogItems = [
         icon: Box,
         title: "Unique Roblox Visual Options",
         detail:
-          "Every model style, animation type, easing, motion style, body focus, material, quality, format, texture, and 3D text control now uses its own Roblox-style image tile instead of repeated text-only choices.",
+          "Every model style, animation type, easing, motion style, body focus, material, quality, format, texture, and 3D text control now uses a purpose-built Roblox-style image tile that matches the option instead of repeated scenery.",
       },
       {
         category: "Security",
