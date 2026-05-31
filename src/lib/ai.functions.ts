@@ -656,6 +656,12 @@ function classifyAIError(
   return "unknown";
 }
 
+function isTimeoutAIMessage(message: string): boolean {
+  return /took too long|operation was aborted|aborted due to timeout|\babort(?:ed)?\b|timeout|timed out|ETIMEDOUT/i.test(
+    message,
+  );
+}
+
 function pickGenerationTools(
   prompt: string,
   allTools: Record<string, any>,
@@ -1107,6 +1113,20 @@ export const generateWithAI = createServerFn({ method: "POST" })
             });
           result = fb;
           // Note this was a fallback so we don't double-charge later.
+          recovered = true;
+          (result as any)._fallbackNoCharge = true;
+        } else if (isTimeoutAIMessage(msg)) {
+          if (!isOwner)
+            await supabase.rpc("refund_credits", {
+              _amount: cost,
+              _reason: "ai generation timeout",
+            });
+          result = {
+            message:
+              "The AI provider timed out before it could finish that reply, so I refunded the credits for this run. Try again with a smaller step, or switch to Gemini Flash for the fastest builds.",
+            files: [],
+            actions: [],
+          };
           recovered = true;
           (result as any)._fallbackNoCharge = true;
         } else {

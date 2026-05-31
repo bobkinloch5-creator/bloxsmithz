@@ -6,29 +6,25 @@ export const SITE_PROVIDER_LABELS: Record<SiteProviderId, string> = {
 
 export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
   neokens: [
+    // Recommended defaults first: fast + currently valid ids.
+    "gemini-3-flash",
+    "gpt-5.2",
+    "gpt-5.2-codex",
+    "gpt-5.1",
+    "gpt-5.1-codex",
+    "gpt-5.1-codex-max",
+    "gemini-3.1-pro",
     // Claude
     "claude-opus-4-7-thinking",
     "claude-opus-4-6-thinking",
     "claude-sonnet-4-7-thinking",
     "claude-sonnet-4-6-thinking",
     "claude-haiku-4-5-20251001",
-    // GPT
-    "gpt-5.5",
-    "gpt-5.4",
-    "gpt-5.3-codex",
-    "gpt-5.2",
-    "gpt-5.2-codex",
-    "gpt-5.1",
-    "gpt-5.1-codex",
-    "gpt-5.1-codex-max",
-    // Gemini
-    "gemini-3.1-pro",
-    "gemini-3-flash",
   ],
 };
 
 export const SITE_PROVIDER_DEFAULT_MODEL: Record<SiteProviderId, string> = {
-  neokens: "gpt-5.5",
+  neokens: "gemini-3-flash",
 };
 
 export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
@@ -42,14 +38,8 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
     "Frontier reasoning with adaptive thinking. Best for full-game architecture, complex anti-exploit, and hard debugging where it should slow down and think first. What it does for your game: builds full simulators/tycoons with leaderstats, gamepasses, and DataStore saves.",
   "claude-haiku-4-5-20251001":
     "Cheap and careful for cleaning messy Luau, refactoring scripts, and writing tidy ModuleScripts. What it does for your game: tidies up existing scripts, renames variables, adds comments, and splits monolith scripts into ModuleScripts.",
-  "gpt-5.5":
-    "OpenAI's newest flagship — strongest at agentic coding, multi-step Roblox builds, and complex Luau refactors. Use for full games and ambitious systems. What it does for your game: drives multi-step generations — folders, RemoteEvents, server + client + UI in one shot.",
-  "gpt-5.4":
-    "Strong reasoning for combat formulas, anti-exploit checks, ProfileService logic, and complex math. What it does for your game: balances damage curves, validates server-side input, and fixes math-heavy gameplay loops.",
-  "gpt-5.3-codex":
-    "Code specialist. Best for long Luau files, OOP classes, CFrame math, and raycast logic. What it does for your game: writes clean ModuleScripts, weapon systems, hitbox raycasts, and pathfinding code.",
   "gpt-5.2":
-    "Balanced flagship for general Roblox building and refactors. What it does for your game: handles full systems, UI, and scripts with solid all-round quality.",
+    "OpenAI flagship for general Roblox building and refactors. What it does for your game: handles full systems, UI, and scripts with solid all-round quality.",
   "gpt-5.2-codex":
     "Code-tuned 5.2 for heavier Luau work. What it does for your game: long ModuleScripts, OOP class systems, and math-heavy gameplay code.",
   "gpt-5.1":
@@ -80,9 +70,6 @@ export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
   "claude-sonnet-4-6-thinking": 3,
   "claude-haiku-4-5-20251001": 1,
   // GPT
-  "gpt-5.5": 3,
-  "gpt-5.4": 2,
-  "gpt-5.3-codex": 2,
   "gpt-5.2": 2,
   "gpt-5.2-codex": 2,
   "gpt-5.1": 1,
@@ -145,11 +132,15 @@ export const NEOKENS_MODEL_MAP: Record<string, { neokens: string; thinking?: boo
   "claude-opus-4-6-thinking": { neokens: "claude-opus-4-6", thinking: true },
   "claude-sonnet-4-7-thinking": { neokens: "claude-sonnet-4-7", thinking: true },
   "claude-sonnet-4-6-thinking": { neokens: "claude-sonnet-4-6", thinking: true },
+  // Backwards compatibility for projects saved while these experimental UI ids existed.
+  "gpt-5.5": { neokens: "gpt-5.2" },
+  "gpt-5.4": { neokens: "gpt-5.2" },
+  "gpt-5.3-codex": { neokens: "gpt-5.2-codex" },
 
   // Everything else (gpt-*, gemini-*, claude-haiku-*) passes through unchanged
   // because the UI id already equals the real Neokens id. Add an entry here
   // only if your dashboard later uses a different id, e.g.:
-  // "gpt-5.5": { neokens: "gpt-5.5" },
+  // "custom-ui-id": { neokens: "real-provider-id" },
 };
 
 // A Neokens model id that is known to work, used as a last-resort fallback when

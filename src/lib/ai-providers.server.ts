@@ -84,7 +84,11 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
 // reliably handle Lua/Luau and tool calling.
 export const PROVIDER_MODELS: Record<ProviderId, string[]> = {
   openai: [
-    "gpt-5.5",
+    "gpt-5.2",
+    "gpt-5.2-codex",
+    "gpt-5.1",
+    "gpt-5.1-codex",
+    "gpt-5.1-codex-max",
     "gpt-5",
     "gpt-5-mini",
     "gpt-5-nano",
@@ -108,7 +112,7 @@ export const PROVIDER_MODELS: Record<ProviderId, string[]> = {
 };
 
 export const PROVIDER_DEFAULT_MODEL: Record<ProviderId, string> = {
-  openai: "gpt-5.5",
+  openai: "gpt-5.2",
   anthropic: "claude-sonnet-4-6",
   google: "gemini-2.5-flash",
   groq: "llama-3.3-70b-versatile",
@@ -152,9 +156,8 @@ export function getModelProfile(
     id.includes("gemini-2.5-pro") ||
     id.includes("claude-opus") ||
     id.includes("gpt-5-codex") ||
-    id.includes("gpt-5.3") ||
-    id.includes("gpt-5.4") ||
-    id.includes("gpt-5.5") ||
+    id.includes("gpt-5.1") ||
+    id.includes("gpt-5.2") ||
     id.includes("70b") ||
     id.includes("sonnet");
   const isGemini = provider === "google" || id.includes("gemini");

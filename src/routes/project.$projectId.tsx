@@ -1298,12 +1298,19 @@ function ProjectEditor() {
       // Surface the real cause. A generation failure is almost always an AI
       // problem (missing GROQ_API_KEY, model error, bad JSON), NOT a Studio
       // plugin issue — so don't blame the plugin connection.
-      if (
+      const timeoutLike = /operation was aborted|aborted due to timeout|took too long|timeout|timed out/i.test(
+        msg,
+      );
+      if (timeoutLike) {
+        friendly =
+          "The AI provider timed out before finishing this build. I refunded any credits charged for this failed run. Try again, switch to Gemini Flash, or split the request into a smaller step.";
+      }
+      const generationFailure =
         friendly.includes("Failed to call a function") ||
         friendly.includes("generation failed") ||
         friendly.includes("AI returned") ||
-        friendly.includes("Autopilot failed")
-      ) {
+        friendly.includes("Autopilot failed");
+      if (!timeoutLike && generationFailure) {
         friendly =
           "The AI build request failed on the server" +
           (msg && msg !== "Failed" ? `: ${msg}` : ".") +

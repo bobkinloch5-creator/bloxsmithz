@@ -46,6 +46,39 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.8.4",
+    date: "May 31, 2026",
+    title: "AI Timeout Recovery & Model Cleanup",
+    description:
+      "AI builds now handle provider timeouts more kindly and avoid legacy model ids that can fail upstream.",
+    updates: [
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "Removed Legacy GPT-5.5 Default",
+        detail:
+          "The model picker now defaults to Gemini Flash and maps old gpt-5.5, gpt-5.4, and gpt-5.3-codex project settings onto current supported GPT-5.2 ids.",
+      },
+      {
+        category: "Reliability",
+        tagColor: tagStyles.backend,
+        icon: Clock,
+        title: "Timeouts Refund Cleanly",
+        detail:
+          "If an AI provider times out before finishing, the user gets a clear retry message and the run is marked as no-charge instead of surfacing a scary server generation error.",
+      },
+      {
+        category: "Credits",
+        tagColor: tagStyles.backend,
+        icon: CreditCard,
+        title: "Saved Model Repair Migration",
+        detail:
+          "Added a Supabase cleanup migration that updates saved legacy Neokens model ids to supported GPT-5.2 equivalents.",
+      },
+    ],
+  },
+  {
     version: "v3.8.3",
     date: "May 31, 2026",
     title: "Private Project Picker & Plugin Access",

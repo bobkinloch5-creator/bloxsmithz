@@ -82,7 +82,7 @@ function actualUsageModelName(
         : sourceText.includes("template")
           ? "template-system"
           : (creditsUsed ?? 0) >= 10
-            ? "gpt-5.5"
+            ? "gpt-5.2"
             : (creditsUsed ?? 0) >= 3
               ? "claude-sonnet-4-6-thinking"
               : "gemini-3-flash";
@@ -357,7 +357,7 @@ function Account() {
 
     const absAmt = Math.abs(t.amount);
     if (absAmt === 15) {
-      modelName = "gpt-5.5";
+      modelName = "gpt-5.2";
       actionType = "AI Generation";
     } else if (absAmt === 5) {
       modelName = "claude-sonnet-4-6-thinking";
@@ -380,7 +380,7 @@ function Account() {
       } else if (lowerReason.includes("sonnet")) {
         modelName = "claude-sonnet-4-6-thinking";
       } else if (lowerReason.includes("gpt-5")) {
-        modelName = "gpt-5.5";
+        modelName = "gpt-5.2";
       } else if (lowerReason.includes("haiku")) {
         modelName = "claude-haiku-4-5-20251001";
       }
