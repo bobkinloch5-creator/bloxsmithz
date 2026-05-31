@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { SITE_PROVIDER_MODELS } from "@/lib/ai-models";
+import { hasCometApiKey } from "@/lib/comet-config.server";
 
 async function getRoles(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -261,7 +262,7 @@ export const getModeratorModelStatus = createServerFn({ method: "GET" })
             : provider === "neokens"
               ? Boolean(process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY)
               : provider === "comet"
-                ? Boolean(process.env.COMET_API_KEY)
+                ? hasCometApiKey()
                 : false,
         models,
       })),

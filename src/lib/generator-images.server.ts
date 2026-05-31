@@ -6,6 +6,7 @@
 // gateway path was removed because the project only has a Gemini key.
 
 import { generateImageFromPrompt, saveGeneratedImage } from "./image-gen.server";
+import { getCometApiKey, getCometBaseUrl } from "./comet-config.server";
 
 // UI exposes several model ids; with a Gemini-only key we map them all to the
 // configured Gemini image model. The mapping is kept so the UI/types don't have
@@ -91,7 +92,7 @@ async function generateCometStudioImage(opts: {
   quality: Quality;
   altText: string;
 }) {
-  const cometKey = process.env.COMET_API_KEY;
+  const cometKey = getCometApiKey();
   if (!cometKey)
     throw new Error(
       "BloxSmith AI image generation is unavailable. Ask an admin to check the server key.",
@@ -99,7 +100,7 @@ async function generateCometStudioImage(opts: {
 
   const model = opts.model.replace(/^comet\//, "");
   const res = await fetch(
-    `${process.env.COMET_BASE_URL || "https://api.cometapi.com/v1"}/images/generations`,
+    `${getCometBaseUrl()}/images/generations`,
     {
       method: "POST",
       headers: {

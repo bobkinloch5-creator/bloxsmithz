@@ -16,6 +16,7 @@ import {
   resolveCometModel,
   resolveNeokensModel,
 } from "./ai-models";
+import { getCometApiKey, getCometBaseUrl } from "./comet-config.server";
 
 export type ProviderId = "openai" | "anthropic" | "google" | "groq" | "neokens" | "comet";
 export type ModelKind = "chat" | "build" | "fast" | "large";
@@ -281,7 +282,7 @@ function providerEndpoint(provider: ProviderId): { name: string; baseURL: string
     case "comet":
       return {
         name: "comet",
-        baseURL: process.env.COMET_BASE_URL || "https://api.cometapi.com/v1",
+        baseURL: getCometBaseUrl(),
       };
   }
 }
@@ -311,7 +312,7 @@ export function resolveBuiltInGateway(opts: {
   kind: ModelKind;
   thinking?: boolean;
 }): ResolvedGateway {
-  const cometKey = process.env.COMET_API_KEY;
+  const cometKey = getCometApiKey();
   if (cometKey) {
     const uiModelName = COMET_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.comet;
     const { model: modelName, thinking: implicitThinking } = resolveCometModel(uiModelName);
@@ -330,7 +331,7 @@ export function resolveBuiltInGateway(opts: {
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey)
     throw new Error(
-      "AI gateway not configured — COMET_API_KEY, NEOKENS_API_KEY, or GROQ_API_KEY missing.",
+      "AI gateway not configured — COMETAPI_KEY/COMET_API_KEY, NEOKENS_API_KEY, or GROQ_API_KEY missing.",
     );
   const gw = createGroqProvider(groqKey);
   const modelName =
@@ -380,7 +381,7 @@ export async function resolveAiGateway(opts: {
   // BloxSmith AI, Neokens & Groq are site-wide gateways — use env keys, no per-user key.
   if (provider === "neokens" || provider === "comet") {
     const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
-    const cometKey = process.env.COMET_API_KEY;
+    const cometKey = getCometApiKey();
     const key = provider === "comet" ? cometKey : neoKey;
     if (!key) return fallback();
     const { chooseAvailableSiteModel } = await import("./ai-model-health.server");

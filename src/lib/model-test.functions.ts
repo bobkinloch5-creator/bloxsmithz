@@ -8,6 +8,7 @@ import {
   type SiteProviderId,
 } from "./ai-models";
 import { recordProviderHealth, type ProviderHealthEvent } from "./ai-providers.server";
+import { getCometApiKey } from "./comet-config.server";
 
 export type ModelTestResult = {
   provider: SiteProviderId;
@@ -107,7 +108,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
       const gw = createProvider("neokens", key);
       model = gw(realModel);
     } else if (provider === "comet") {
-      const key = process.env.COMET_API_KEY;
+      const key = getCometApiKey();
       if (!key) {
         return {
           provider,
@@ -116,7 +117,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
           ok: false,
           durationMs: 0,
           errorKind: "not_configured",
-          errorMessage: "COMET_API_KEY env var not set on the server.",
+          errorMessage: "COMETAPI_KEY or COMET_API_KEY env var not set on the server.",
         };
       }
       const gw = createProvider("comet", key);
