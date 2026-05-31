@@ -45,6 +45,47 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.8.1",
+    date: "May 31, 2026",
+    title: "MCP & Provider Secret Vault Migration",
+    description:
+      "MCP authorization headers and provider API keys now flow through encrypted vault storage instead of removed database columns.",
+    updates: [
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Encrypted MCP Auth Storage",
+        detail:
+          "MCP server authorization headers are saved, removed, and resolved server-side through encrypted vault secrets.",
+      },
+      {
+        category: "Integrations",
+        tagColor: tagStyles.integrations,
+        icon: Server,
+        title: "MCP UI Schema Cleanup",
+        detail:
+          "The MCP server pages no longer select or insert the dropped auth_header column, preventing stale schema errors after migration.",
+      },
+      {
+        category: "Backend",
+        tagColor: tagStyles.backend,
+        icon: Wrench,
+        title: "Provider Key Vault Reads",
+        detail:
+          "Provider API key save, clear, and gateway resolution paths now use vault-backed secrets instead of the old api_key column.",
+      },
+      {
+        category: "Backend",
+        tagColor: tagStyles.backend,
+        icon: CheckCircle,
+        title: "Migration Backfill",
+        detail:
+          "Added a migration that moves legacy MCP auth headers and provider API keys into vault secrets before dropping the old columns.",
+      },
+    ],
+  },
+  {
     version: "v3.8.0",
     date: "May 31, 2026",
     title: "AI Model Status & Availability",

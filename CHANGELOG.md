@@ -2,6 +2,17 @@
 
 ## Latest Updates
 
+### MCP & Provider Secret Vault Migration
+
+- Removed stale UI and server references to the dropped `user_mcp_servers.auth_header` column.
+- Removed provider API key reads/writes from the dropped `user_provider_keys.api_key` column.
+- Added server-side MCP add/remove functions so optional MCP authorization headers are stored in the encrypted vault instead of being written from the browser.
+- Updated MCP health checks and MCP tool loading to resolve authorization headers from the vault.
+- Updated user provider-key save, clear, and AI gateway resolution paths to use vault-backed secrets.
+- Added a database migration that backfills old `auth_header` and `api_key` values into vault secrets before dropping the legacy columns.
+- Regenerated the local Supabase TypeScript contract for the dropped secret columns.
+- Verified the changes with TypeScript and a production build.
+
 ### AI Model Status & Availability
 
 - Added green/red availability indicators to the AI model picker so users can immediately see which models are online and which are temporarily down.

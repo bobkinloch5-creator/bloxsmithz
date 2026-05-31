@@ -64,7 +64,7 @@ function McpServersPage() {
     const { data, error } = await supabase
       .from("user_mcp_servers")
       .select(
-        "id,name,url,auth_header,enabled,last_tested_at,last_test_ok,last_test_error,tool_count,tools_cache",
+        "id,name,url,auth_header_set,enabled,last_tested_at,last_test_ok,last_test_error,tool_count,tools_cache",
       )
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
@@ -351,7 +351,7 @@ function McpServersPage() {
                           </div>
                           <div className="text-xs text-muted-foreground truncate">{s.url}</div>
                           <div className="text-xs text-muted-foreground">
-                            {s.auth_header && <span className="mr-2">🔐 auth set</span>}
+                            {s.auth_header_set && <span className="mr-2">🔐 auth set</span>}
                             {s.last_tested_at && (
                               <span>
                                 Last checked {new Date(s.last_tested_at).toLocaleString()}
