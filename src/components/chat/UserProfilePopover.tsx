@@ -16,8 +16,8 @@ import { ProfileCardEffect, cardChromeStyle } from "@/components/profile/Profile
 import { RoleBadges, type Role } from "@/components/RoleBadge";
 import {
   mergeProfileBadgeIds,
+  normalizeProfileBadgeIds,
   roleProfileBadgeIds,
-  selectableProfileBadgeIds,
 } from "@/lib/profile-badges";
 
 
@@ -186,7 +186,7 @@ export function UserProfilePopover({
     () =>
       mergeProfileBadgeIds([
         ...roleProfileBadgeIds(roles),
-        ...selectableProfileBadgeIds(profile?.profile_badges),
+        ...normalizeProfileBadgeIds(profile?.profile_badges),
       ]),
     [profile?.profile_badges, roles],
   );

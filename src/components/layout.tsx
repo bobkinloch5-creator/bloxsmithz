@@ -44,8 +44,8 @@ import { RoleBadges } from "@/components/RoleBadge";
 import { ProfileBadgeRow, getBadgeDef } from "@/components/profile/ProfileBadges";
 import {
   mergeProfileBadgeIds,
+  normalizeProfileBadgeIds,
   roleProfileBadgeIds,
-  selectableProfileBadgeIds,
 } from "@/lib/profile-badges";
 
 type NavItem = {
@@ -61,7 +61,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/templates", label: "Templates" },
   { to: "/clothing", label: "Clothing" },
   { to: "/image-generator", label: "Images" },
-  { to: "/generate-3d", label: "3D Models" },
+  { to: "/generate-3d", label: "3D Model Generator" },
   { to: "/ui-generator", label: "UI Generator" },
   { to: "/showcase", label: "Showcase" },
   { to: "/browse", label: "Community Chat" },
@@ -86,7 +86,7 @@ const MOBILE_NAV_ITEMS: readonly NavItem[] = [
   { to: "/templates", label: "Templates", icon: Sparkles },
   { to: "/clothing", label: "Clothing", icon: Shirt },
   { to: "/image-generator", label: "Images", icon: ImageIcon },
-  { to: "/generate-3d", label: "3D Models", icon: Box },
+  { to: "/generate-3d", label: "3D Model Generator", icon: Box },
   { to: "/ui-generator", label: "UI Generator", icon: LayoutIcon },
   { to: "/showcase", label: "Showcase", icon: Star },
   { to: "/browse", label: "Community Chat", icon: Users },
@@ -140,7 +140,7 @@ export function Header() {
   const fallbackAvatar = createRobloxStyleAvatar(user?.id || user?.email);
   const menuBadgeIds = mergeProfileBadgeIds([
     ...roleProfileBadgeIds(roles),
-    ...selectableProfileBadgeIds((profile as any)?.profile_badges),
+    ...normalizeProfileBadgeIds((profile as any)?.profile_badges),
     (profile as any)?.discord_claimed ? "booster" : "",
     (profile as any)?.credits > 0 ? "supporter" : "",
   ]);
@@ -209,18 +209,18 @@ export function Header() {
                 </Link>
                 <div className="grid grid-cols-2 gap-2">
                   <Link
+                    to="/generate-3d"
+                    className="rounded-lg border border-border/60 bg-background/50 p-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-surface"
+                  >
+                    <Box className="mb-1 h-4 w-4 text-primary" />
+                    3D Model Generator
+                  </Link>
+                  <Link
                     to="/ui-generator"
                     className="rounded-lg border border-border/60 bg-background/50 p-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-surface"
                   >
                     <LayoutIcon className="mb-1 h-4 w-4 text-primary" />
                     Fancy UI Generator
-                  </Link>
-                  <Link
-                    to="/clothing"
-                    className="rounded-lg border border-border/60 bg-background/50 p-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-surface"
-                  >
-                    <Shirt className="mb-1 h-4 w-4 text-primary" />
-                    Clothing Studio
                   </Link>
                 </div>
               </div>
@@ -244,7 +244,7 @@ export function Header() {
                   rel="noopener noreferrer"
                   className="w-full cursor-pointer"
                 >
-                  3D Models
+                  External 3D Model Site
                 </a>
               </DropdownMenuItem>
               {user && (
@@ -443,7 +443,7 @@ export function Header() {
             rel="noopener noreferrer"
             className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface/60 px-3 py-2 text-xs font-semibold text-foreground active:scale-[0.98] hover:bg-surface-elevated"
           >
-            <Box className="h-3.5 w-3.5 text-primary" /> 3D
+            <Box className="h-3.5 w-3.5 text-primary" /> 3D Model Generator
           </a>
           <a
             href="https://discord.gg/ZzdqTpntB"

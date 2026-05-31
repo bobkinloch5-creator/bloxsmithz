@@ -39,6 +39,15 @@ export const PROFILE_BADGES: BadgeDef[] = [
   { id: "explorer",   label: "Explorer",     description: "Tried every section of the app.",                 from: "#67E8F9", to: "#155E75", glow: "#22D3EE", glyph: "✈" },
   { id: "artist",     label: "Artist",       description: "Shares amazing creations.",                       from: "#FDA4AF", to: "#9F1239", glow: "#FB7185", glyph: "✿" },
   { id: "scripter",   label: "Scripter",     description: "Master of Luau wizardry.",                        from: "#FCD34D", to: "#92400E", glow: "#F59E0B", glyph: "⌘" },
+  { id: "onboarding", label: "BloxSmith Ready", description: "Completed the BloxSmith onboarding tour.",       from: "#5EEAD4", to: "#0F766E", glow: "#14B8A6", glyph: "✓", pulse: true },
+  { id: "asset_smith", label: "Asset Smith",  description: "Generated assets with BloxSmith tools.",          from: "#FDBA74", to: "#C2410C", glow: "#F97316", glyph: "◆" },
+  { id: "model_maker", label: "3D Model Maker", description: "Generated a Roblox-ready 3D model.",            from: "#93C5FD", to: "#1D4ED8", glow: "#3B82F6", glyph: "3D", pulse: true },
+  { id: "ui_architect", label: "UI Architect", description: "Built Roblox UI with the UI generator.",          from: "#C4B5FD", to: "#7C3AED", glow: "#8B5CF6", glyph: "UI" },
+  { id: "image_artist", label: "Image Artist", description: "Generated image assets for Roblox.",             from: "#F9A8D4", to: "#BE185D", glow: "#EC4899", glyph: "IMG" },
+  { id: "clothier",   label: "Clothier",     description: "Created Roblox clothing or avatar wearables.",     from: "#A7F3D0", to: "#047857", glow: "#10B981", glyph: "T" },
+  { id: "inviter",    label: "Inviter",      description: "Invited friends into BloxSmith.",                  from: "#FDE68A", to: "#D97706", glow: "#F59E0B", glyph: "+" },
+  { id: "project_milestone", label: "Project Builder", description: "Reached a project creation milestone.",  from: "#BAE6FD", to: "#0284C7", glow: "#0EA5E9", glyph: "P" },
+  { id: "credit_milestone", label: "Power User", description: "Reached a credit usage milestone.",            from: "#FECACA", to: "#DC2626", glow: "#EF4444", glyph: "XP", pulse: true },
 ];
 
 const BADGE_MAP: Record<string, BadgeDef> = Object.fromEntries(

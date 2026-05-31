@@ -24,6 +24,7 @@ import {
   roleProfileBadgeIds,
   selectableProfileBadgeIds,
   SELECTABLE_PROFILE_BADGE_IDS,
+  normalizeProfileBadgeIds,
 } from "@/lib/profile-badges";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
@@ -103,7 +104,18 @@ export function ProfileCustomizationCard() {
     () => (state.display_name || "U").slice(0, 1).toUpperCase(),
     [state.display_name],
   );
-  const earnedRoleBadgeIds = useMemo(() => roleProfileBadgeIds(roles), [roles]);
+  const earnedRoleBadgeIds = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...roleProfileBadgeIds(roles),
+          ...normalizeProfileBadgeIds((profile as any)?.profile_badges).filter(
+            (id) => !state.profile_badges.includes(id),
+          ),
+        ]),
+      ),
+    [roles, profile, state.profile_badges],
+  );
   const previewBadgeIds = useMemo(
     () => Array.from(new Set([...earnedRoleBadgeIds, ...state.profile_badges])),
     [earnedRoleBadgeIds, state.profile_badges],
@@ -529,12 +541,12 @@ export function ProfileCustomizationCard() {
       {/* BADGES */}
       <Section icon={<Award className="h-4 w-4" />} title={`Badges (${previewBadgeIds.length}/12)`}>
         <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
-          Pick display badges for your profile. Owner, staff, moderator, and verified badges are earned from your account role.
+          Pick display badges for your profile. Special badges unlock from onboarding, generation activity, 3D models, Discord, invites, milestones, and account roles.
         </p>
         {earnedRoleBadgeIds.length > 0 && (
           <div className="mb-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
             <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary-glow">
-              Role badges
+              Earned badges
             </div>
             <ProfileBadgeRow ids={earnedRoleBadgeIds} size={28} />
           </div>

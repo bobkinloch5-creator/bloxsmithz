@@ -44,6 +44,9 @@ type Profile = {
   last_seen_at?: string | null;
   profile_badges?: string[] | null;
   profile_decoration?: string | null;
+  onboarding_completed_at?: string | null;
+  onboarding_step?: number | null;
+  onboarding_reward_claimed?: boolean | null;
 };
 
 type Role = "owner" | "admin" | "moderator" | "user";
@@ -96,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase
           .from("profiles")
           .select(
-            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration",
+            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration,onboarding_completed_at,onboarding_step,onboarding_reward_claimed",
           )
           .eq("id", uid)
           .maybeSingle(),

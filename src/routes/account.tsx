@@ -42,6 +42,7 @@ import { RoleBadges } from "@/components/RoleBadge";
 import { ProfileBadgeRow, getBadgeDef } from "@/components/profile/ProfileBadges";
 import { formatCreditBalance } from "@/lib/credit-display";
 import {
+  activityProfileBadgeIds,
   mergeProfileBadgeIds,
   roleProfileBadgeIds,
   selectableProfileBadgeIds,
@@ -115,6 +116,7 @@ function Account() {
   const [prs, setPrs] = useState<PR[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [projectCount, setProjectCount] = useState(0);
+  const [model3dCount, setModel3dCount] = useState(0);
   const runToken = useServerFn(generatePluginToken);
   const runDelete = useServerFn(deleteOwnAccount);
   const [confirmText, setConfirmText] = useState("");
@@ -250,6 +252,11 @@ function Account() {
         setProjects(data ?? []);
         setProjectCount(data?.length ?? 0);
       });
+    (supabase as any)
+      .from("model_generations_3d")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .then(({ count }: { count: number | null }) => setModel3dCount(count ?? 0));
     loadRedemptions();
   }, [user]);
 
@@ -423,12 +430,16 @@ function Account() {
   const earnedBadgeIds = mergeProfileBadgeIds([
       ...roleProfileBadgeIds(roles),
       ...selectedBadgeIds,
-      projectCount > 0 ? "creator" : "",
-      projectCount >= 3 ? "developer" : "",
-      totalCreditsUsed > 0 ? "active" : "",
-      totalCreditsUsed >= 25 ? "scripter" : "",
-      (profile as any)?.discord_claimed ? "booster" : "",
-      (profile as any)?.credits > 0 ? "supporter" : "",
+      ...activityProfileBadgeIds({
+        projectCount,
+        creditsUsed: totalCreditsUsed,
+        usageSources: usageEvents.map((e) => e.source ?? ""),
+        model3dCount,
+        discordClaimed: (profile as any)?.discord_claimed,
+        referredBy: (profile as any)?.referred_by,
+        onboardingCompleted: !!(profile as any)?.onboarding_completed_at,
+        credits: (profile as any)?.credits,
+      }),
     ]);
 
   return (

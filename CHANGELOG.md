@@ -2,6 +2,14 @@
 
 ## Latest Updates
 
+### 3D Model Generator, Profile Themes & Onboarding
+
+- Renamed and surfaced the 3D tool as a clear **3D Model Generator** website feature for Roblox text-to-3D and image-to-3D assets.
+- Added new animated Roblox-style profile backgrounds including futuristic, simulator, tycoon, anime, fantasy, city, neon, dark, and premium themes.
+- Added more earnable profile badges for onboarding, asset generation, 3D model creation, UI generation, image generation, clothing, invites, project milestones, and credit milestones.
+- Rebuilt onboarding into a saved account tour with feature highlights, tooltips, progress steps, mobile-friendly layout, and a completion reward badge/free-credit grant.
+- Added Supabase persistence for onboarding progress, completion, reward claiming, profile themes, and earned badge unlocks.
+
 ### Profile Badges & Role Labels
 
 - Added owner/admin/moderator role labels and earned role badges to the account dropdown and public profile popover.

@@ -317,8 +317,9 @@ function Generate3DPage() {
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary mb-3">
             <Box className="h-3.5 w-3.5" /> 3D Model Generator
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold">Text → 3D model for Roblox</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold">3D Model Generator for Roblox</h1>
           <p className="mt-2 text-muted-foreground">
+            A dedicated BloxSmith website feature for text-to-3D and image-to-3D Roblox assets.
             Describe an object, tune the settings, preview it in 3D, and import into Studio.
           </p>
           <div className="mt-3 inline-flex flex-wrap items-center justify-center gap-3 text-xs">

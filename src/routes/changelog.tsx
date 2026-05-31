@@ -50,6 +50,38 @@ const changelogItems = [
       "The Roblox UI Generator is faster, more reliable, and much better-looking. Generations now fall back to complete Roblox ScreenGui specs instead of empty output, the page has a cleaner builder workspace, generated templates now use more premium styling, Global Chat now explains rules and consequences, and image-based building replicas are more reliable.",
     updates: [
       {
+        category: "3D",
+        tagColor: tagStyles.tools,
+        icon: Box,
+        title: "3D Model Generator Website Feature",
+        detail:
+          "The 3D tool is now clearly presented as BloxSmith's 3D Model Generator for Roblox text-to-3D and image-to-3D assets, with onboarding and navigation pointing users to it directly.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.ui,
+        icon: Palette,
+        title: "Roblox-Style Profile Themes",
+        detail:
+          "Profiles now include more animated background themes: futuristic, simulator, obby, tycoon, anime, fantasy, city, neon, dark, and premium-style looks.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.security,
+        icon: Award,
+        title: "Earnable Badge Milestones",
+        detail:
+          "Badges now unlock from onboarding, site usage, asset generation, 3D model creation, UI generation, image generation, clothing, invites, Discord, project milestones, premium/credits, and account roles.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "Saved Onboarding Tour",
+        detail:
+          "New users now get a full account-saved onboarding tour with feature highlights, tooltips, progress steps, mobile-friendly layout, and a completion reward badge/free credits.",
+      },
+      {
         category: "Account",
         tagColor: tagStyles.security,
         icon: ShieldCheck,
