@@ -3,6 +3,7 @@
 // authenticated server function so it persists to the database.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { createRobloxStyleAvatar } from "@/lib/generated-avatar";
 import { useServerFn } from "@tanstack/react-start";
 import { updateProfileCustomization } from "@/lib/profile-customization.functions";
 import { setCustomBackground } from "@/lib/profile-media.functions";
@@ -13,8 +14,9 @@ import { PROFILE_BACKGROUNDS, ProfileBackground, type ProfileBackgroundId } from
 import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
 import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award, Palette } from "lucide-react";
-import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow } from "./profile/ProfileBadges";
+import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow, getBadgeDef } from "./profile/ProfileBadges";
 import { PROFILE_DECORATIONS, AvatarDecoration } from "./profile/ProfileDecoration";
+import { ProfileMenuPreview } from "./profile/ProfileMenuPreview";
 import {
   PROFILE_CARD_EFFECTS,
   ProfileCardChrome,
@@ -25,6 +27,7 @@ import {
   selectableProfileBadgeIds,
   SELECTABLE_PROFILE_BADGE_IDS,
   normalizeProfileBadgeIds,
+  type ProfileBadgeId,
 } from "@/lib/profile-badges";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
@@ -118,10 +121,44 @@ export function ProfileCustomizationCard() {
     [roles, profile, state.profile_badges],
   );
   const previewBadgeIds = useMemo(
-    () => Array.from(new Set([...earnedRoleBadgeIds, ...state.profile_badges])),
+    () => Array.from(new Set([...earnedRoleBadgeIds, ...state.profile_badges])) as ProfileBadgeId[],
     [earnedRoleBadgeIds, state.profile_badges],
   );
   const selectableBadgeLimit = Math.max(0, 12 - earnedRoleBadgeIds.length);
+  const previewFallbackAvatar = useMemo(
+    () => createRobloxStyleAvatar(user?.id || user?.email),
+    [user?.id, user?.email],
+  );
+  const previewBadgeNames = useMemo(
+    () =>
+      previewBadgeIds
+        .map((id) => getBadgeDef(id)?.label)
+        .filter(Boolean)
+        .join(", "),
+    [previewBadgeIds],
+  );
+  const previewProfile = useMemo(
+    () => ({
+      ...(profile as any),
+      display_name:
+        state.display_name ||
+        (profile as any)?.display_name ||
+        user?.email?.split("@")[0] ||
+        "Builder",
+      email: user?.email ?? (profile as any)?.email ?? null,
+      hide_email: state.hide_email,
+      profile_accent: state.profile_accent,
+      profile_card_color: state.profile_card_color,
+      profile_card_effect: state.profile_card_effect,
+      profile_effect: state.profile_effect,
+      profile_background: state.profile_background,
+      custom_background_url: state.custom_background_url,
+      pfp_effect: state.pfp_effect,
+      profile_decoration: state.profile_decoration,
+      profile_badges: previewBadgeIds,
+    }),
+    [profile, previewBadgeIds, state, user?.email],
+  );
 
   async function onSave() {
     if (!user) return;
@@ -242,6 +279,20 @@ export function ProfileCustomizationCard() {
           </div>
         </div>
       </ProfileCardChrome>
+
+      <Section icon={<CircleUserRound className="h-4 w-4" />} title="Profile menu preview">
+        <div className="max-w-sm">
+          <ProfileMenuPreview
+            profile={previewProfile}
+            roles={roles}
+            avatarUrl={p.avatar_url}
+            fallbackAvatar={previewFallbackAvatar}
+            bannerUrl={p.banner_url}
+            badgeIds={previewBadgeIds}
+            badgeNames={previewBadgeNames}
+          />
+        </div>
+      </Section>
 
       {/* SUB TABS SELECTION */}
       <div className="flex border-b border-border/30 gap-1 sm:gap-2 overflow-x-auto scrollbar-none pb-px">

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { createRobloxStyleAvatar } from "@/lib/generated-avatar";
 import logo from "@/assets/logo.png";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   User,
   Settings,
@@ -40,13 +40,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { creditBalanceTitle, formatCreditBalance } from "@/lib/credit-display";
-import { RoleBadges } from "@/components/RoleBadge";
-import { ProfileBadgeRow, getBadgeDef } from "@/components/profile/ProfileBadges";
+import { getBadgeDef } from "@/components/profile/ProfileBadges";
 import {
   mergeProfileBadgeIds,
   normalizeProfileBadgeIds,
   roleProfileBadgeIds,
 } from "@/lib/profile-badges";
+import { ProfileMenuAvatar, ProfileMenuPreview } from "@/components/profile/ProfileMenuPreview";
 
 type NavItem = {
   to: string;
@@ -100,36 +100,6 @@ const MOBILE_NAV_ITEMS: readonly NavItem[] = [
   { to: "/changelog", label: "Changelog", icon: FileText },
   { to: "/faq", label: "FAQ", icon: HelpCircle },
 ];
-
-function ProfileAvatar({
-  src,
-  fallback,
-  size = "sm",
-}: {
-  src?: string | null;
-  fallback: string;
-  size?: "sm" | "lg";
-}) {
-  const sizeClass = size === "lg" ? "h-14 w-14" : "h-6 w-6";
-  const [currentSrc, setCurrentSrc] = useState(src || fallback);
-
-  useEffect(() => {
-    setCurrentSrc(src || fallback);
-  }, [src, fallback]);
-
-  return (
-    <span
-      className={`grid ${sizeClass} shrink-0 place-items-center overflow-hidden rounded-full bg-primary/15 ring-1 ring-primary/20`}
-    >
-      <img
-        src={currentSrc}
-        alt="Profile avatar"
-        className="h-full w-full object-cover"
-        onError={() => setCurrentSrc(fallback)}
-      />
-    </span>
-  );
-}
 
 export function Header() {
   const { user, signOut, profile, isOwner, roles } = useAuth();
@@ -297,10 +267,10 @@ export function Header() {
               <Link
                 to="/pricing"
                 className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary/10 border border-primary/25 px-3 text-xs font-semibold text-primary-glow hover:bg-primary/20 transition whitespace-nowrap tabular-nums"
-                title={creditBalanceTitle(profile?.credits, isOwner)}
-                aria-label={creditBalanceTitle(profile?.credits, isOwner)}
+                title={profile ? creditBalanceTitle(profile.credits, isOwner) : "Loading credits"}
+                aria-label={profile ? creditBalanceTitle(profile.credits, isOwner) : "Loading credits"}
               >
-                {formatCreditBalance(profile?.credits, isOwner, { compact: true })}
+                {profile ? formatCreditBalance(profile.credits, isOwner, { compact: true }) : "..."}
               </Link>
 
               <div className="relative">
@@ -311,7 +281,13 @@ export function Header() {
                   aria-label="Open profile menu"
                   type="button"
                 >
-                  <ProfileAvatar src={avatarUrl} fallback={fallbackAvatar} />
+                  <ProfileMenuAvatar
+                    src={avatarUrl}
+                    fallback={fallbackAvatar}
+                    profile={profile as any}
+                    size={24}
+                    compact
+                  />
                   <span className="hidden 2xl:inline min-w-0 max-w-[7rem] truncate">
                     {profile?.display_name || "Builder"}
                   </span>
@@ -322,74 +298,52 @@ export function Header() {
                 {profileOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-64 z-50 rounded-xl bg-surface-elevated border border-border shadow-2xl overflow-hidden animate-fade-in">
-                      <div className="relative h-20 bg-gradient-brand">
-                        {bannerUrl && (
-                          <img
-                            src={bannerUrl}
-                            alt="Profile banner"
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-surface-elevated via-surface-elevated/25 to-transparent" />
-                      </div>
-                      <div className="-mt-7 px-4 pb-3 border-b border-border/40 relative">
-                        <ProfileAvatar src={avatarUrl} fallback={fallbackAvatar} size="lg" />
-                        <div className="mt-2 flex min-w-0 items-center gap-2">
-                          <p className="min-w-0 text-sm font-semibold truncate">
-                            {profile?.display_name || "Builder"}
-                          </p>
-                          <RoleBadges roles={roles} size="sm" showLabel />
+                    <div className="absolute right-0 top-full mt-2 z-50 w-[20rem] sm:w-[22rem]">
+                      <ProfileMenuPreview
+                        profile={profile as any}
+                        roles={roles}
+                        avatarUrl={avatarUrl}
+                        fallbackAvatar={fallbackAvatar}
+                        bannerUrl={bannerUrl}
+                        badgeIds={menuBadgeIds}
+                        badgeNames={menuBadgeNames}
+                      >
+                        <div className="relative z-10 py-1.5">
+                          <Link
+                            to="/account"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground/90 hover:bg-surface transition"
+                          >
+                            <User className="h-3.5 w-3.5 text-muted-foreground" /> Profile
+                          </Link>
+                          <Link
+                            to="/account"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground/90 hover:bg-surface transition"
+                          >
+                            <Settings className="h-3.5 w-3.5 text-muted-foreground" /> Settings
+                          </Link>
+                          <Link
+                            to="/pricing"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground/90 hover:bg-surface transition"
+                          >
+                            <CreditCard className="h-3.5 w-3.5 text-muted-foreground" /> Buy Credits
+                          </Link>
                         </div>
-                        {profile?.hide_email === false && profile?.email ? (
-                          <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
-                        ) : null}
-                        {menuBadgeIds.length > 0 && (
-                          <div className="mt-2">
-                            <ProfileBadgeRow ids={menuBadgeIds} size={24} max={8} />
-                            {menuBadgeNames && (
-                              <p className="mt-1 text-[10px] text-muted-foreground line-clamp-2">
-                                {menuBadgeNames}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="py-1.5">
-                        <Link
-                          to="/account"
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground/90 hover:bg-surface transition"
-                        >
-                          <User className="h-3.5 w-3.5 text-muted-foreground" /> Profile
-                        </Link>
-                        <Link
-                          to="/account"
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground/90 hover:bg-surface transition"
-                        >
-                          <Settings className="h-3.5 w-3.5 text-muted-foreground" /> Settings
-                        </Link>
-                        <Link
-                          to="/pricing"
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground/90 hover:bg-surface transition"
-                        >
-                          <CreditCard className="h-3.5 w-3.5 text-muted-foreground" /> Buy Credits
-                        </Link>
-                      </div>
-                      <div className="border-t border-border/40 py-1.5">
-                        <button
-                          onClick={() => {
-                            setProfileOpen(false);
-                            signOut();
-                          }}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 w-full transition"
-                          type="button"
-                        >
-                          <LogOut className="h-3.5 w-3.5" /> Sign out
-                        </button>
-                      </div>
+                        <div className="relative z-10 border-t border-border/40 py-1.5">
+                          <button
+                            onClick={() => {
+                              setProfileOpen(false);
+                              signOut();
+                            }}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 w-full transition"
+                            type="button"
+                          >
+                            <LogOut className="h-3.5 w-3.5" /> Sign out
+                          </button>
+                        </div>
+                      </ProfileMenuPreview>
                     </div>
                   </>
                 )}
@@ -429,7 +383,13 @@ export function Header() {
                 className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface/60 px-3 py-2 text-xs font-semibold text-foreground active:scale-[0.98] hover:bg-surface-elevated"
               >
                 {isProfile ? (
-                  <ProfileAvatar src={avatarUrl} fallback={fallbackAvatar} />
+                  <ProfileMenuAvatar
+                    src={avatarUrl}
+                    fallback={fallbackAvatar}
+                    profile={profile as any}
+                    size={24}
+                    compact
+                  />
                 ) : (
                   Icon && <Icon className="h-3.5 w-3.5 text-primary" />
                 )}
