@@ -315,6 +315,14 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  // Safety watchdog: if `sending` ever stays true (e.g. an awaited call never
+  // settles), the textarea and send button stay disabled and the user can't
+  // send anything with no visible error. Force-clear it so the input recovers.
+  useEffect(() => {
+    if (!sending) return;
+    const t = setTimeout(() => setSending(false), 12000);
+    return () => clearTimeout(t);
+  }, [sending]);
   const [slow, setSlow] = useState(0);
   const [muted, setMuted] = useState<Date | null>(null);
   const [unread, setUnread] = useState(0);
@@ -1091,11 +1099,19 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         return;
       }
 
-      // AI moderation (best-effort)
+      // AI moderation (best-effort). MUST NOT be able to hang the send:
+      // if the gateway is slow/unreachable and this await never settles,
+      // `sending` stays true forever and the input locks up with no error.
+      // Race it against a timeout and fail open.
       if (trimmed.length > 5) {
         try {
-          const verdict = await moderate({ data: { content: trimmed } });
-          if (!verdict.allow) {
+          const verdict = await Promise.race([
+            moderate({ data: { content: trimmed } }),
+            new Promise<{ allow: boolean; reason?: string | null }>((resolve) =>
+              setTimeout(() => resolve({ allow: true, reason: null }), 6000),
+            ),
+          ]);
+          if (verdict && !verdict.allow) {
             toast.error(`Blocked by AI moderation: ${verdict.reason || "violates rules"}`);
             setSending(false);
             return;
