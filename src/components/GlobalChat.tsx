@@ -268,10 +268,22 @@ function realtimeTopic(prefix: string) {
 
 function formatTime(iso: string) {
   try {
-    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return new Date(iso).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   } catch {
     return "";
   }
+}
+
+function formatClock(date: Date) {
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 // Tiny safe markdown: **bold**, *italic*, `code`, links + @mentions
@@ -461,6 +473,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [robloxUrl, setRobloxUrl] = useState("");
   const [robloxCaption, setRobloxCaption] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [clockTime, setClockTime] = useState(() => formatClock(new Date()));
   const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
   const [chatBubbles, setChatBubbles] = useState<
     {
@@ -541,6 +554,13 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   useEffect(() => {
     prefsRef.current = prefs;
   }, [prefs]);
+
+  useEffect(() => {
+    const tick = () => setClockTime(formatClock(new Date()));
+    tick();
+    const timer = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const mergeAuthorProfile = useCallback((p: any) => {
     if (!p?.id) return;
@@ -2156,21 +2176,28 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-bold leading-tight">Global Chat</div>
-                <div className="flex items-center gap-1.5 text-[10.5px] leading-tight text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10.5px] leading-tight text-muted-foreground">
                   {slow > 0 ? (
-                    <span className="inline-flex items-center gap-1 text-amber-500">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-amber-500">
                       <VolumeX className="h-3 w-3" /> Slow {slow}s
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap">
                       <Volume2 className="h-3 w-3" /> Live
                     </span>
                   )}
                   <span>·</span>
+                  <span
+                    className="inline-flex items-center gap-1 whitespace-nowrap tabular-nums"
+                    title="Local time"
+                  >
+                    <Clock className="h-3 w-3" /> {clockTime}
+                  </span>
+                  <span>·</span>
                   <button
                     type="button"
                     onClick={() => setShowUsers((v) => !v)}
-                    className="inline-flex items-center gap-1 hover:text-foreground"
+                    className="inline-flex items-center gap-1 whitespace-nowrap hover:text-foreground"
                   >
                     <Users className="h-3 w-3" /> {onlineUsers.length} online
                   </button>
