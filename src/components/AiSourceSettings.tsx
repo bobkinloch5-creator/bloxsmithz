@@ -51,7 +51,7 @@ const SITE_ONLY_PROVIDERS: SiteOnlyProviderId[] = ["comet", "neokens"];
 
 const PROVIDER_KEY_HINTS: Record<ProviderId, string> = {
   neokens: "Site-wide key managed by admin (NEOKENS_API_KEY)",
-  comet: "Site-wide key managed by admin (COMET_API_KEY)",
+  comet: "Site-wide BloxSmith AI key managed by admin",
 };
 
 export function AiSourceSettings({
@@ -252,8 +252,8 @@ export function AiSourceSettings({
                   <Key className="h-3.5 w-3.5" /> Free API
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Use the site gateway key with the Roblox model you pick. No OpenAI or Anthropic
-                  keys needed.
+                  Use the BloxSmith AI gateway with the Roblox model you pick. No OpenAI or
+                  Anthropic keys needed.
                 </p>
               </button>
             </div>
@@ -372,12 +372,9 @@ export function AiSourceSettings({
                 {provider === "neokens" || provider === "comet" ? (
                   <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] text-foreground">
                     <span className="font-semibold">{PROVIDER_LABELS[provider]}</span> uses a shared
-                    site key (
-                    <span className="font-mono">
-                      {provider === "comet" ? "COMET_API_KEY" : "NEOKENS_API_KEY"}
-                    </span>
-                    ) — no per-user key needed. The app still charges BloxSmith credits and
-                    rate-limits usage to protect the shared balance.
+                    site key {provider === "neokens" ? "(NEOKENS_API_KEY)" : ""} — no per-user key
+                    needed. The app still charges BloxSmith credits and rate-limits usage to protect
+                    the shared balance.
                   </div>
                 ) : (
                   <div>

@@ -78,7 +78,7 @@ function toCometSize(a: Aspect): string {
 
 async function fetchImageBytes(url: string): Promise<{ bytes: Buffer; mime: string }> {
   const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-  if (!res.ok) throw new Error(`Comet image download failed (HTTP ${res.status}).`);
+  if (!res.ok) throw new Error(`BloxSmith AI image download failed (HTTP ${res.status}).`);
   const mime = res.headers.get("content-type") || "image/png";
   return { bytes: Buffer.from(await res.arrayBuffer()), mime };
 }
@@ -93,7 +93,9 @@ async function generateCometStudioImage(opts: {
 }) {
   const cometKey = process.env.COMET_API_KEY;
   if (!cometKey)
-    throw new Error("Comet image generation is unavailable. Set COMET_API_KEY on the server.");
+    throw new Error(
+      "BloxSmith AI image generation is unavailable. Ask an admin to check the server key.",
+    );
 
   const model = opts.model.replace(/^comet\//, "");
   const res = await fetch(
@@ -118,10 +120,13 @@ async function generateCometStudioImage(opts: {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    if (res.status === 401 || res.status === 403) throw new Error("Comet rejected the API key.");
+    if (res.status === 401 || res.status === 403)
+      throw new Error("BloxSmith AI rejected the server key.");
     if (res.status === 429)
-      throw new Error("Comet image generation is rate-limited. Try again later.");
-    throw new Error(`Comet image generation failed (HTTP ${res.status}): ${text.slice(0, 180)}`);
+      throw new Error("BloxSmith AI image generation is rate-limited. Try again later.");
+    throw new Error(
+      `BloxSmith AI image generation failed (HTTP ${res.status}): ${text.slice(0, 180)}`,
+    );
   }
 
   const json = (await res.json()) as {
@@ -138,7 +143,7 @@ async function generateCometStudioImage(opts: {
     mime = fetched.mime;
   }
 
-  if (!bytes) throw new Error("Comet did not return an image. Try a simpler prompt.");
+  if (!bytes) throw new Error("BloxSmith AI did not return an image. Try a simpler prompt.");
   const saved = await saveGeneratedImage(opts.userId, bytes, mime, opts.altText, `comet/${model}`);
   if ("error" in saved) throw new Error(saved.error);
   return saved;

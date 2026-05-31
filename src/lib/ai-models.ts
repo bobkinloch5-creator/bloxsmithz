@@ -2,7 +2,7 @@ export type SiteProviderId = "neokens" | "comet";
 
 export const SITE_PROVIDER_LABELS: Record<SiteProviderId, string> = {
   neokens: "Neokens (free)",
-  comet: "CometAPI (protected)",
+  comet: "BloxSmith AI",
 };
 
 export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
@@ -26,9 +26,15 @@ export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
     // Budget-first defaults to protect the shared site key.
     "gpt-5.4-nano",
     "deepseek-v4-flash",
+    "minimax-m2.7",
+    "qwen3.6-plus",
     "gpt-5.4-mini",
+    "qwen3.7-max",
     "gemini-3-flash",
+    "gemini-3.5-flash",
+    "gemini-3.1-pro",
     "grok-4.3",
+    "deepseek-v4-pro",
     // Premium picks are available, but intentionally later in the list.
     "claude-haiku-4-5",
     "claude-sonnet-4-6-thinking",
@@ -44,19 +50,29 @@ export const SITE_PROVIDER_DEFAULT_MODEL: Record<SiteProviderId, string> = {
 
 export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
   "gpt-5.4-nano":
-    "Ultra-cheap Comet model for quick chat, small Roblox edits, short fixes, and simple UI tweaks. Best when you want speed without burning site credits.",
+    "Cheapest BloxSmith AI model for quick chat, tiny Roblox edits, short bug fixes, prompt cleanup, and simple UI copy. Best when users need fast help without burning many credits.",
   "deepseek-v4-flash":
-    "Low-cost Comet coding model for everyday Roblox/Luau builds. Best default for scripts, RemoteEvents, leaderstats, shops, and compact systems.",
+    "Budget coding workhorse for Roblox/Luau. Strong for RemoteEvents, leaderstats, shops, tycoon loops, compact ModuleScripts, and fixing common Studio errors.",
+  "minimax-m2.7":
+    "Cheap long-context builder for bigger Roblox prompts. Good for reading more project context, planning several scripts at once, and keeping output fast.",
+  "qwen3.6-plus":
+    "Low-cost structured coding model. Good for clean Luau formatting, JSON-style build outputs, admin commands, small combat systems, and precise edits.",
   "gpt-5.4-mini":
-    "Balanced Comet model for medium Roblox systems with better reasoning than nano while staying budget-friendly.",
+    "Balanced BloxSmith AI model for medium Roblox systems with better reasoning than nano while staying budget-friendly. Good default for most users.",
+  "qwen3.7-max":
+    "Smart mid-price model for larger Roblox scripts, UI logic, economy balancing, and refactors where clean structure matters.",
+  "gemini-3.5-flash":
+    "Latest fast Gemini option in the BloxSmith AI pool. Good for grounded answers, visual/screenshot-style reasoning, long project context, and quick build planning.",
   "grok-4.3":
-    "Fast creative Comet model for brainstorming game ideas, names, mechanics, and lighter code help.",
+    "Creative reasoning model for Roblox game ideas, mechanics, naming, quests, monetization concepts, and agentic tool-use style tasks.",
+  "deepseek-v4-pro":
+    "Higher-quality DeepSeek option for harder Roblox coding, multi-file systems, deeper debugging, and larger architecture decisions.",
   "claude-haiku-4-5":
-    "Cheap Claude option through Comet for careful cleanup, refactors, and tidy Luau explanations.",
+    "Cheap Claude-style cleanup model for careful refactors, readable Luau explanations, script tidying, and comments.",
   "claude-opus-4-7-thinking":
     "Highest-depth Claude reasoning with adaptive thinking. Best for very large Roblox systems, deep debugging, architecture decisions, and hard multi-file builds. What it does for your game: plans entire game architectures, designs anti-exploit, ProfileService data, and complex combat systems end-to-end.",
   "claude-opus-4-8-thinking":
-    "Experimental Comet Claude Opus 4.8 slot with adaptive thinking. Use only for the hardest builds; health checks will disable it automatically if Comet has not enabled that model id yet.",
+    "Very expensive deepest-reasoning model for rare, difficult builds only: full game architecture, severe bugs, security-sensitive economy/DataStore work, and large multi-system rewrites. Normal users are capped tightly so it cannot drain the shared balance.",
   "claude-opus-4-6-thinking":
     "Previous-gen Opus with deep reasoning. Best for large multi-system builds and tough debugging when you want maximum care. What it does for your game: architects full games, designs save systems, and untangles complex script bugs.",
   "claude-sonnet-4-7-thinking":
@@ -90,15 +106,20 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
 // next to each model so users can pick by budget.
 // ─────────────────────────────────────────────────────────────────────────
 export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
-  // Comet budget models
+  // BloxSmith AI budget models
   "gpt-5.4-nano": 0.35,
   "deepseek-v4-flash": 0.5,
+  "minimax-m2.7": 0.65,
+  "qwen3.6-plus": 0.75,
   "gpt-5.4-mini": 0.8,
+  "qwen3.7-max": 1.5,
+  "gemini-3.5-flash": 2,
   "grok-4.3": 2,
+  "deepseek-v4-pro": 2.5,
   "claude-haiku-4-5": 1,
   // Claude
-  "claude-opus-4-8-thinking": 8,
-  "claude-opus-4-7-thinking": 5,
+  "claude-opus-4-8-thinking": 20,
+  "claude-opus-4-7-thinking": 7,
   "claude-opus-4-6-thinking": 5,
   "claude-sonnet-4-7-thinking": 3,
   "claude-sonnet-4-6-thinking": 3,

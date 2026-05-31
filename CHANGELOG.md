@@ -2,13 +2,16 @@
 
 ## Latest Updates
 
-### CometAPI Gateway, Budget Models & AI Timer
+### BloxSmith AI Gateway, Budget Models & AI Timer
 
-- Added CometAPI as a protected site-wide AI gateway with budget-first model routing and Neokens kept as a fallback.
-- Added cheaper Comet model choices, premium Claude Opus/Sonnet options, and model credit multipliers so expensive models cost more credits while budget models cost less.
-- Added Comet image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
+- Added BloxSmith AI as a protected site-wide gateway with budget-first model routing and Neokens kept as a fallback.
+- Added cheaper BloxSmith AI model choices, premium Claude Opus/Sonnet options, and model credit multipliers so expensive models cost more credits while budget models cost less.
+- Added more Roblox-ready BloxSmith AI models including DeepSeek V4 Flash/Pro, MiniMax-M2.7, Qwen 3.6/3.7, Grok 4.3, Gemini 3.5 Flash, and Gemini 3.1 Pro.
+- Made Claude Opus 4.8 a very expensive protected model with a separate daily cap for normal users.
+- Disabled the project chat/build composer when the daily AI timer is used up so users cannot type messages that cannot be sent.
+- Added BloxSmith AI image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
 - Added a 24-hour AI usage timer and server-side request limit for normal users, with owner/admin/moderator bypass.
-- Added Supabase migration support for Comet provider settings and the new AI rate-limit event table.
+- Added Supabase migration support for BloxSmith AI provider settings and the new AI rate-limit event table.
 - Added safe environment documentation for `COMET_API_KEY`, `COMET_BASE_URL`, and daily AI limit settings.
 - Updated the project usage indicator to show the 24-hour timer with AM/PM reset time.
 

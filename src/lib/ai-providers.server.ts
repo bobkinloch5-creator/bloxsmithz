@@ -83,7 +83,7 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
   google: "Google Gemini",
   groq: "Groq",
   neokens: "Neokens (multi-model)",
-  comet: "CometAPI (multi-model)",
+  comet: "BloxSmith AI",
 };
 
 // Curated model lists per provider. Keep the lists short — only models that
@@ -232,7 +232,7 @@ const COMET_MODEL_BY_KIND: Record<ModelKind, string> = {
   chat: "gpt-5.4-nano",
   build: "deepseek-v4-flash",
   fast: "gpt-5.4-nano",
-  large: "gpt-5.4-mini",
+  large: "qwen3.7-max",
 };
 
 /*
@@ -372,7 +372,7 @@ export async function resolveAiGateway(opts: {
   const provider = settings.provider as ProviderId;
   const rawModel = settings.model || PROVIDER_DEFAULT_MODEL[provider];
 
-  // Comet, Neokens & Groq are site-wide gateways — use env keys, no per-user key.
+  // BloxSmith AI, Neokens & Groq are site-wide gateways — use env keys, no per-user key.
   if (provider === "neokens" || provider === "comet") {
     const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
     const cometKey = process.env.COMET_API_KEY;

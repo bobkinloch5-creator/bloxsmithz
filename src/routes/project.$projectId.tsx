@@ -525,6 +525,18 @@ function ProjectEditor() {
     reset_5h?: string | null;
     reset_24h?: string | null;
   } | null>(null);
+  const aiUsageUsed = aiUsage?.used_24h ?? aiUsage?.used_5h ?? 0;
+  const aiUsageLimit = aiUsage?.limit_24h ?? aiUsage?.limit_5h ?? 0;
+  const aiUsageBlocked = Boolean(
+    aiUsage && !aiUsage.owner && aiUsageLimit > 0 && aiUsageUsed >= aiUsageLimit,
+  );
+  const aiUsageResetLabel = aiUsage?.reset_24h
+    ? new Date(aiUsage.reset_24h).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "later";
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -1425,6 +1437,10 @@ function ProjectEditor() {
 
   const send = async () => {
     if ((!prompt.trim() && attachments.length === 0) || aiBusy) return;
+    if (aiUsageBlocked) {
+      toast.error(`Daily AI timer used up. Try again at ${aiUsageResetLabel}.`);
+      return;
+    }
     const p = prompt;
     const imgs = attachments;
     setPrompt("");
@@ -2668,6 +2684,7 @@ function ProjectEditor() {
                       <button
                         key={tpl}
                         type="button"
+                        disabled={aiUsageBlocked}
                         onClick={() => {
                           if (tpl === "1:1 building replica") {
                             setPrompt(
@@ -2679,11 +2696,17 @@ function ProjectEditor() {
                             setPrompt(tpl);
                           }
                         }}
-                        className="rounded-full border border-border bg-surface/60 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition"
+                        className="rounded-full border border-border bg-surface/60 px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {tpl}
                       </button>
                     ))}
+                  </div>
+                )}
+                {aiUsageBlocked && (
+                  <div className="mb-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    Daily AI timer used up ({aiUsageUsed}/{aiUsageLimit}). Chat and builds unlock
+                    again at {aiUsageResetLabel}.
                   </div>
                 )}
                 <textarea
@@ -2702,6 +2725,10 @@ function ProjectEditor() {
                     }
                   }}
                   onKeyDown={(e) => {
+                    if (aiUsageBlocked) {
+                      e.preventDefault();
+                      return;
+                    }
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       send();
@@ -2709,13 +2736,16 @@ function ProjectEditor() {
                   }}
                   rows={3}
                   placeholder={
-                    chatMode
-                      ? "Ask anything, or attach a screenshot of your game/Studio — the AI will analyze it."
-                      : planMode
-                        ? "Describe the Roblox system or attach a building picture you want planned..."
-                        : "Type any command: build a map, add UI, recreate a building from reference image, fix bugs..."
+                    aiUsageBlocked
+                      ? `Daily AI timer used up. Try again at ${aiUsageResetLabel}.`
+                      : chatMode
+                        ? "Ask anything, or attach a screenshot of your game/Studio — the AI will analyze it."
+                        : planMode
+                          ? "Describe the Roblox system or attach a building picture you want planned..."
+                          : "Type any command: build a map, add UI, recreate a building from reference image, fix bugs..."
                   }
-                  className="min-h-20 w-full resize-none bg-transparent px-1 py-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none"
+                  disabled={aiUsageBlocked}
+                  className="min-h-20 w-full resize-none bg-transparent px-1 py-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                 />
                 <input
                   ref={fileInputRef}
@@ -2756,7 +2786,7 @@ function ProjectEditor() {
                           setImproving(false);
                         }
                       }}
-                      disabled={improving || !prompt.trim()}
+                      disabled={aiUsageBlocked || improving || !prompt.trim()}
                       title="Improve prompt"
                       className="h-8 w-8 grid place-items-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface transition disabled:opacity-40"
                     >
@@ -2790,7 +2820,7 @@ function ProjectEditor() {
                           ? `Max ${MAX_ATTACHMENTS} images`
                           : "Attach image for AI to analyze"
                       }
-                      disabled={attachments.length >= MAX_ATTACHMENTS}
+                      disabled={aiUsageBlocked || attachments.length >= MAX_ATTACHMENTS}
                       className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2 transition disabled:opacity-40 ${attachments.length > 0 ? "border-primary/40 text-primary bg-primary/10" : "border-primary/30 text-primary/90 hover:bg-primary/10"}`}
                     >
                       <ImagePlus className="h-4 w-4" />
@@ -2821,7 +2851,7 @@ function ProjectEditor() {
                   ) : (
                     <button
                       onClick={send}
-                      disabled={!prompt.trim() && attachments.length === 0}
+                      disabled={aiUsageBlocked || (!prompt.trim() && attachments.length === 0)}
                       className="inline-flex h-8 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 transition disabled:opacity-30"
                       title={
                         chatMode

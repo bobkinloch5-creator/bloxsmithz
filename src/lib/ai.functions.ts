@@ -951,6 +951,13 @@ export const generateWithAI = createServerFn({ method: "POST" })
         kind: routingKind,
         thinking,
       });
+      const { enforceExpensiveModelLimit } = await import("./ai-usage-limits.server");
+      await enforceExpensiveModelLimit({
+        userId,
+        supabase,
+        provider: resolved.provider,
+        modelName: resolved.modelName,
+      });
     } catch (e) {
       if (!isOwner)
         await supabase.rpc("refund_credits", {
@@ -1821,6 +1828,13 @@ export const chatWithAI = createServerFn({ method: "POST" })
         projectId: projectId ?? null,
         kind: "fast",
         thinking,
+      });
+      const { enforceExpensiveModelLimit } = await import("./ai-usage-limits.server");
+      await enforceExpensiveModelLimit({
+        userId,
+        supabase,
+        provider: resolved.provider,
+        modelName: resolved.modelName,
       });
     } catch (e) {
       if (!isOwner)
