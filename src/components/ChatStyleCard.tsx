@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { updateProfileCustomization } from "@/lib/profile-customization.functions";
 import { Check, Loader2, Palette, RotateCcw, Sparkles, X } from "lucide-react";
 import {
   CHAT_ICONS,
@@ -16,13 +17,18 @@ import {
   sanitizeIcon,
 } from "@/lib/chat-customization";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
-import {
-  canUseReservedCosmetics,
-  isReservedChatIcon,
-} from "@/lib/profile-cosmetics";
+import { canUseReservedCosmetics, isReservedChatIcon } from "@/lib/profile-cosmetics";
 
-const ACCENT_PRESETS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
-
+const ACCENT_PRESETS = [
+  "#7c3cff",
+  "#00d9ff",
+  "#ff4da6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#a78bfa",
+  "#38bdf8",
+];
 
 const NICK_RE = /^[A-Za-z0-9 _.\-]{0,24}$/;
 
@@ -36,6 +42,7 @@ function stopsToCss(stops: string[] | null): string {
 
 export function ChatStyleCard() {
   const { user, profile, refresh, roles } = useAuth();
+  const saveProfile = useServerFn(updateProfileCustomization);
   const [nameStops, setNameStops] = useState<string[]>([]);
   const [textStops, setTextStops] = useState<string[]>([]);
   const [icon, setIcon] = useState<string | null>(null);
@@ -56,14 +63,20 @@ export function ChatStyleCard() {
     setEffect((p?.profile_effect as ProfileEffectId) ?? "none");
   }, [profile]);
 
-
-  const displayName = (nickname.trim() || profile?.display_name || user?.email?.split("@")[0] || "You");
+  const displayName =
+    nickname.trim() || profile?.display_name || user?.email?.split("@")[0] || "You";
   const Icon = icon ? CHAT_ICON_MAP[icon] : null;
   const canUseReserved = canUseReservedCosmetics(roles);
 
   const fontStyle = useMemo(() => chatFontStyle(font), [font]);
-  const previewName = useMemo(() => ({ ...gradientTextStyle(nameStops.length ? nameStops : null), ...fontStyle }), [nameStops, fontStyle]);
-  const previewText = useMemo(() => ({ ...gradientTextStyle(textStops.length ? textStops : null), ...fontStyle }), [textStops, fontStyle]);
+  const previewName = useMemo(
+    () => ({ ...gradientTextStyle(nameStops.length ? nameStops : null), ...fontStyle }),
+    [nameStops, fontStyle],
+  );
+  const previewText = useMemo(
+    () => ({ ...gradientTextStyle(textStops.length ? textStops : null), ...fontStyle }),
+    [textStops, fontStyle],
+  );
 
   const save = async () => {
     if (!user) return;
@@ -82,9 +95,8 @@ export function ChatStyleCard() {
       }
       const cleanAccent = HEX_RE.test(accent) ? accent : null;
       const cleanEffect = PROFILE_EFFECTS.some((e) => e.id === effect) ? effect : "none";
-      const { error } = await supabase
-        .from("profiles")
-        .update({
+      const result = await saveProfile({
+        data: {
           chat_name_gradient: cleanName,
           chat_text_gradient: cleanText,
           chat_icon: cleanIcon,
@@ -92,13 +104,13 @@ export function ChatStyleCard() {
           chat_font: cleanFont,
           profile_accent: cleanAccent,
           profile_effect: cleanEffect,
-          updated_at: new Date().toISOString(),
-        } as any)
-        .eq("id", user.id);
-      if (error) throw error;
+        },
+      });
 
       await refresh();
-      toast.success("Chat style saved");
+      const warning = (result as any)?.warning;
+      if (warning) toast.warning(warning);
+      else toast.success("Chat style saved");
     } catch (e: any) {
       toast.error(e?.message || "Failed to save chat style");
     } finally {
@@ -115,7 +127,6 @@ export function ChatStyleCard() {
     setAccent("");
     setEffect("none");
   };
-
 
   return (
     <div className="glass rounded-2xl p-5 space-y-5">
@@ -163,10 +174,7 @@ export function ChatStyleCard() {
               </span>
               <span className="text-[10px] text-muted-foreground">just now</span>
             </div>
-            <div
-              className="mt-0.5 text-sm leading-relaxed text-foreground"
-              style={previewText}
-            >
+            <div className="mt-0.5 text-sm leading-relaxed text-foreground" style={previewText}>
               Looking good! This is how your messages will appear.
             </div>
           </div>
@@ -208,7 +216,9 @@ export function ChatStyleCard() {
       <div className="space-y-1.5">
         <div>
           <div className="text-sm font-medium">Font</div>
-          <div className="text-[11px] text-muted-foreground">Applies to your name and messages in chat.</div>
+          <div className="text-[11px] text-muted-foreground">
+            Applies to your name and messages in chat.
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
           {CHAT_FONTS.map((f) => {
@@ -231,7 +241,6 @@ export function ChatStyleCard() {
           })}
         </div>
       </div>
-
 
       {/* Name gradient */}
       <GradientPicker
@@ -290,11 +299,7 @@ export function ChatStyleCard() {
               >
                 <I
                   className="h-4 w-4"
-                  style={
-                    active && nameStops[0]
-                      ? { color: nameStops[0] }
-                      : undefined
-                  }
+                  style={active && nameStops[0] ? { color: nameStops[0] } : undefined}
                 />
                 {active && (
                   <span className="absolute -right-1 -top-1 grid h-3.5 w-3.5 place-items-center rounded-full bg-primary text-primary-foreground">
@@ -317,17 +322,26 @@ export function ChatStyleCard() {
         <div>
           <div className="text-sm font-medium">Profile flair</div>
           <div className="text-[11px] text-muted-foreground">
-            Pick an accent color and an animated effect for your profile card. Visible to everyone who opens your profile.
+            Pick an accent color and an animated effect for your profile card. Visible to everyone
+            who opens your profile.
           </div>
         </div>
 
         {/* Live preview */}
-        <div className="relative h-24 overflow-hidden rounded-xl border border-border bg-background/40"
-          style={accent ? { background: `linear-gradient(135deg, ${accent}55, ${accent}11 60%, transparent)` } : undefined}
+        <div
+          className="relative h-24 overflow-hidden rounded-xl border border-border bg-background/40"
+          style={
+            accent
+              ? { background: `linear-gradient(135deg, ${accent}55, ${accent}11 60%, transparent)` }
+              : undefined
+          }
         >
           <ProfileEffect effect={effect} accent={accent || undefined} />
           <div className="absolute inset-0 grid place-items-center">
-            <span className="text-sm font-bold" style={accent ? { color: accent, textShadow: `0 0 14px ${accent}66` } : undefined}>
+            <span
+              className="text-sm font-bold"
+              style={accent ? { color: accent, textShadow: `0 0 14px ${accent}66` } : undefined}
+            >
               {displayName}
             </span>
           </div>
@@ -393,7 +407,6 @@ export function ChatStyleCard() {
       </div>
 
       <div className="flex justify-end">
-
         <button
           onClick={save}
           disabled={saving}

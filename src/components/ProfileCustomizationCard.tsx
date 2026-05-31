@@ -10,11 +10,37 @@ import { moderateProfileBackground, setCustomBackground } from "@/lib/profile-me
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PROFILE_BACKGROUNDS, ProfileBackground, type ProfileBackgroundId } from "./profile/ProfileBackground";
+import {
+  PROFILE_BACKGROUNDS,
+  ProfileBackground,
+  type ProfileBackgroundId,
+} from "./profile/ProfileBackground";
 import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
-import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award, Palette, ShieldCheck } from "lucide-react";
-import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow, getBadgeDef } from "./profile/ProfileBadges";
+import {
+  Sparkles,
+  Lock,
+  Eye,
+  Activity,
+  Save,
+  Loader2,
+  Wand2,
+  ImagePlus,
+  LayoutPanelTop,
+  CircleUserRound,
+  Upload,
+  Trash2,
+  Film,
+  Award,
+  Palette,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  PROFILE_BADGES,
+  ProfileBadgeIcon,
+  ProfileBadgeRow,
+  getBadgeDef,
+} from "./profile/ProfileBadges";
 import { PROFILE_DECORATIONS, AvatarDecoration } from "./profile/ProfileDecoration";
 import { ProfileMenuPreview } from "./profile/ProfileMenuPreview";
 import {
@@ -29,28 +55,62 @@ import {
   normalizeProfileBadgeIds,
   type ProfileBadgeId,
 } from "@/lib/profile-badges";
-import {
-  normalizeProfileUsername,
-  profileHandle,
-} from "@/lib/profile-username";
-import {
-  canUseReservedCosmetics,
-  isReservedProfileDecoration,
-} from "@/lib/profile-cosmetics";
+import { normalizeProfileUsername, profileHandle } from "@/lib/profile-username";
+import { canUseReservedCosmetics, isReservedProfileDecoration } from "@/lib/profile-cosmetics";
 
-const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
-const CARD_COLORS = ["#0f172a", "#102a2a", "#20133a", "#2a1327", "#2b1d0e", "#111827", "#064e3b", "#1e1b4b"];
-const LAYOUTS: Array<{ id: "classic" | "card" | "cinematic" | "compact"; label: string; hint: string }> = [
+const ACCENTS = [
+  "#7c3cff",
+  "#00d9ff",
+  "#ff4da6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#a78bfa",
+  "#38bdf8",
+];
+const CARD_COLORS = [
+  "#0f172a",
+  "#102a2a",
+  "#20133a",
+  "#2a1327",
+  "#2b1d0e",
+  "#111827",
+  "#064e3b",
+  "#1e1b4b",
+];
+const LAYOUTS: Array<{
+  id: "classic" | "card" | "cinematic" | "compact";
+  label: string;
+  hint: string;
+}> = [
   { id: "classic", label: "Classic", hint: "Banner + avatar overlap" },
   { id: "card", label: "Card", hint: "Centered floating card" },
   { id: "cinematic", label: "Cinematic", hint: "Tall hero banner" },
   { id: "compact", label: "Compact", hint: "Minimal one-row" },
 ];
 const STATUSES = [
-  { id: "online",    label: "Online",          color: "bg-emerald-500", glow: "shadow-[0_0_12px_rgba(16,185,129,0.7)]", icon: "●" },
-  { id: "idle",      label: "Idle",            color: "bg-amber-400",   glow: "shadow-[0_0_10px_rgba(251,191,36,0.6)]", icon: "🌙" },
-  { id: "dnd",       label: "Do not disturb",  color: "bg-rose-500",    glow: "shadow-[0_0_12px_rgba(244,63,94,0.7)]",  icon: "⛔" },
-  { id: "invisible", label: "Invisible",       color: "bg-zinc-500",    glow: "",                                       icon: "○" },
+  {
+    id: "online",
+    label: "Online",
+    color: "bg-emerald-500",
+    glow: "shadow-[0_0_12px_rgba(16,185,129,0.7)]",
+    icon: "●",
+  },
+  {
+    id: "idle",
+    label: "Idle",
+    color: "bg-amber-400",
+    glow: "shadow-[0_0_10px_rgba(251,191,36,0.6)]",
+    icon: "🌙",
+  },
+  {
+    id: "dnd",
+    label: "Do not disturb",
+    color: "bg-rose-500",
+    glow: "shadow-[0_0_12px_rgba(244,63,94,0.7)]",
+    icon: "⛔",
+  },
+  { id: "invisible", label: "Invisible", color: "bg-zinc-500", glow: "", icon: "○" },
 ] as const;
 
 export function ProfileCustomizationCard() {
@@ -194,7 +254,7 @@ export function ProfileCustomizationCard() {
       if (isReservedProfileDecoration(state.profile_decoration) && !canUseReserved) {
         throw new Error("That profile decoration is reserved for owners/admins.");
       }
-      await save({
+      const result = await save({
         data: {
           display_name: state.display_name?.trim() || null,
           username: normalizeProfileUsername(state.username || state.display_name || user.email),
@@ -219,9 +279,38 @@ export function ProfileCustomizationCard() {
           profile_decoration: state.profile_decoration,
         },
       });
+      const saved = (result as any)?.profile;
+      if (saved) {
+        setState((s) => ({
+          ...s,
+          display_name: saved.display_name ?? s.display_name,
+          username: saved.username ?? s.username,
+          bio: saved.bio ?? s.bio,
+          pronouns: saved.pronouns ?? "",
+          location: saved.location ?? "",
+          status_message: saved.status_message ?? "",
+          profile_accent: saved.profile_accent ?? s.profile_accent,
+          profile_card_color: saved.profile_card_color ?? s.profile_card_color,
+          profile_card_effect: saved.profile_card_effect ?? s.profile_card_effect,
+          profile_effect: saved.profile_effect ?? s.profile_effect,
+          profile_background: saved.profile_background ?? s.profile_background,
+          custom_background_url: saved.custom_background_url ?? null,
+          profile_layout: saved.profile_layout ?? s.profile_layout,
+          pfp_effect: saved.pfp_effect ?? s.pfp_effect,
+          private_profile: !!saved.private_profile,
+          hide_email: saved.hide_email !== false,
+          presence_enabled: saved.presence_enabled !== false,
+          show_activity: saved.show_activity !== false,
+          presence_status: saved.presence_status ?? s.presence_status,
+          profile_badges: selectableProfileBadgeIds(saved.profile_badges),
+          profile_decoration: saved.profile_decoration ?? s.profile_decoration,
+        }));
+      }
       await refresh();
       setDirty(false);
-      toast.success("Profile saved");
+      const warning = (result as any)?.warning;
+      if (warning) toast.warning(warning);
+      else toast.success("Profile saved");
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't save profile");
     } finally {
@@ -262,7 +351,10 @@ export function ProfileCustomizationCard() {
         className="rounded-2xl"
       >
         <div className="relative h-40 w-full overflow-hidden">
-          <ProfileBackground id={state.profile_background} customUrl={state.custom_background_url} />
+          <ProfileBackground
+            id={state.profile_background}
+            customUrl={state.custom_background_url}
+          />
           <ProfileEffect effect={state.profile_effect} accent={state.profile_accent} />
           {state.profile_background === "none" && (
             <div
@@ -277,7 +369,11 @@ export function ProfileCustomizationCard() {
           <AvatarDecoration id={state.profile_decoration} size={78}>
             <PfpRing effect={state.pfp_effect} size={72}>
               {p.avatar_url ? (
-                <img src={p.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                <img
+                  src={p.avatar_url}
+                  alt=""
+                  className="h-full w-full rounded-full object-cover"
+                />
               ) : (
                 <span className="text-xl font-bold text-muted-foreground">{initial}</span>
               )}
@@ -287,7 +383,10 @@ export function ProfileCustomizationCard() {
             <div className="flex flex-wrap items-baseline gap-2">
               <h3
                 className="text-lg font-bold truncate"
-                style={{ color: state.profile_accent, textShadow: `0 0 14px ${state.profile_accent}66` }}
+                style={{
+                  color: state.profile_accent,
+                  textShadow: `0 0 14px ${state.profile_accent}66`,
+                }}
               >
                 {state.display_name || "Your name"}
               </h3>
@@ -298,14 +397,18 @@ export function ProfileCustomizationCard() {
                 className={`ml-auto inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] font-medium`}
                 title={STATUSES.find((s) => s.id === state.presence_status)?.label}
               >
-                <span className={`h-2.5 w-2.5 rounded-full ${STATUSES.find((s) => s.id === state.presence_status)?.color}`} />
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${STATUSES.find((s) => s.id === state.presence_status)?.color}`}
+                />
                 {STATUSES.find((s) => s.id === state.presence_status)?.label}
               </span>
             </div>
             {state.status_message && (
               <p className="text-xs text-muted-foreground truncate">{state.status_message}</p>
             )}
-            {state.bio && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{state.bio}</p>}
+            {state.bio && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{state.bio}</p>
+            )}
             {previewBadgeIds.length > 0 && (
               <ProfileBadgeRow ids={previewBadgeIds} size={22} className="mt-2" />
             )}
@@ -406,7 +509,8 @@ export function ProfileCustomizationCard() {
               />
             </div>
             <div className="text-[10px] text-muted-foreground">
-              Unique handle: {profileHandle(state.username) || "pick one"}. Display names can match, usernames cannot.
+              Unique handle: {profileHandle(state.username) || "pick one"}. Display names can match,
+              usernames cannot.
             </div>
           </Field>
           <Field label="Pronouns">
@@ -441,7 +545,7 @@ export function ProfileCustomizationCard() {
               placeholder="Tell people about yourself"
             />
             <div className="text-[10px] text-muted-foreground text-right">
-              {(state.bio?.length ?? 0)} / 500
+              {state.bio?.length ?? 0} / 500
             </div>
           </Field>
         </div>
@@ -475,7 +579,8 @@ export function ProfileCustomizationCard() {
                   if (/^#[0-9a-fA-F]{0,6}$/.test(v)) set("profile_card_color", v);
                 }}
                 onBlur={(e) => {
-                  if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) set("profile_card_color", "#0f172a");
+                  if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value))
+                    set("profile_card_color", "#0f172a");
                 }}
                 className="ml-1 w-24 rounded-lg border border-border bg-background px-2 py-1 text-xs"
                 placeholder="#0f172a"
@@ -573,7 +678,9 @@ export function ProfileCustomizationCard() {
                     type="button"
                     onClick={() => set("profile_background", b.id)}
                     className={`group relative h-16 overflow-hidden rounded-lg border transition ${
-                      active ? "border-primary ring-2 ring-primary/40" : "border-border/60 hover:border-border"
+                      active
+                        ? "border-primary ring-2 ring-primary/40"
+                        : "border-border/60 hover:border-border"
                     }`}
                     title={b.label}
                   >
@@ -603,7 +710,11 @@ export function ProfileCustomizationCard() {
                 setState((s) => ({
                   ...s,
                   custom_background_url: url,
-                  profile_background: url ? "custom" : s.profile_background === "custom" ? "none" : s.profile_background,
+                  profile_background: url
+                    ? "custom"
+                    : s.profile_background === "custom"
+                      ? "none"
+                      : s.profile_background,
                 }));
                 refresh();
               }}
@@ -650,7 +761,11 @@ export function ProfileCustomizationCard() {
                   >
                     <PfpRing effect={e.id} size={40}>
                       {p.avatar_url ? (
-                        <img src={p.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+                        <img
+                          src={p.avatar_url}
+                          alt=""
+                          className="h-full w-full rounded-full object-cover"
+                        />
                       ) : (
                         <span className="text-sm font-bold text-muted-foreground">{initial}</span>
                       )}
@@ -664,7 +779,8 @@ export function ProfileCustomizationCard() {
 
           <Section icon={<Sparkles className="h-4 w-4" />} title="Avatar decoration">
             <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
-              Add premium animated overlays around your avatar. Animated and Pro items move on your public profile too.
+              Add premium animated overlays around your avatar. Animated and Pro items move on your
+              public profile too.
             </p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               {PROFILE_DECORATIONS.map((d) => {
@@ -689,10 +805,12 @@ export function ProfileCustomizationCard() {
                       <span className="absolute right-1.5 top-1.5 rounded-full border border-border bg-background/80 px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
                         Locked
                       </span>
-                    ) : (d.premium || d.animated) && (
-                      <span className="absolute right-1.5 top-1.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary-glow">
-                        {d.animated ? "Anim" : "Pro"}
-                      </span>
+                    ) : (
+                      (d.premium || d.animated) && (
+                        <span className="absolute right-1.5 top-1.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary-glow">
+                          {d.animated ? "Anim" : "Pro"}
+                        </span>
+                      )
                     )}
                     <div className="h-12 grid place-items-center">
                       <AvatarDecoration id={d.id} size={36}>
@@ -708,9 +826,13 @@ export function ProfileCustomizationCard() {
             </div>
           </Section>
 
-          <Section icon={<Award className="h-4 w-4" />} title={`Display badges (${previewBadgeIds.length}/12)`}>
+          <Section
+            icon={<Award className="h-4 w-4" />}
+            title={`Display badges (${previewBadgeIds.length}/12)`}
+          >
             <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
-              Pick display badges for your profile. Special badges unlock from onboarding, generation activity, 3D models, Discord, invites, milestones, and account roles.
+              Pick display badges for your profile. Special badges unlock from onboarding,
+              generation activity, 3D models, Discord, invites, milestones, and account roles.
             </p>
             {earnedRoleBadgeIds.length > 0 && (
               <div className="mb-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
@@ -721,42 +843,44 @@ export function ProfileCustomizationCard() {
               </div>
             )}
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-9">
-              {PROFILE_BADGES.filter((b) => SELECTABLE_PROFILE_BADGE_IDS.includes(b.id)).map((b) => {
-                const active = state.profile_badges.includes(b.id);
-                const atLimit = !active && state.profile_badges.length >= selectableBadgeLimit;
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    disabled={atLimit}
-                    onClick={() => {
-                      setDirty(true);
-                      setState((s) => ({
-                        ...s,
-                        profile_badges: active
-                          ? s.profile_badges.filter((x) => x !== b.id)
-                          : [...s.profile_badges, b.id],
-                      }));
-                    }}
-                    className={`group relative flex flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2 transition disabled:opacity-40 ${
-                      active
-                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
-                        : "border-border/60 bg-background/40 hover:border-border hover:bg-background/70"
-                    }`}
-                    title={`${b.label} — ${b.description}`}
-                  >
-                    <ProfileBadgeIcon id={b.id} size={30} />
-                    <span className="text-[10px] font-medium leading-tight text-center text-foreground/90 line-clamp-1 w-full px-0.5">
-                      {b.label}
-                    </span>
-                    {active && (
-                      <span className="absolute -top-1.5 -right-1.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow">
-                        ✓
+              {PROFILE_BADGES.filter((b) => SELECTABLE_PROFILE_BADGE_IDS.includes(b.id)).map(
+                (b) => {
+                  const active = state.profile_badges.includes(b.id);
+                  const atLimit = !active && state.profile_badges.length >= selectableBadgeLimit;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      disabled={atLimit}
+                      onClick={() => {
+                        setDirty(true);
+                        setState((s) => ({
+                          ...s,
+                          profile_badges: active
+                            ? s.profile_badges.filter((x) => x !== b.id)
+                            : [...s.profile_badges, b.id],
+                        }));
+                      }}
+                      className={`group relative flex flex-col items-center gap-1.5 rounded-xl border px-1 pt-3 pb-2 transition disabled:opacity-40 ${
+                        active
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                          : "border-border/60 bg-background/40 hover:border-border hover:bg-background/70"
+                      }`}
+                      title={`${b.label} — ${b.description}`}
+                    >
+                      <ProfileBadgeIcon id={b.id} size={30} />
+                      <span className="text-[10px] font-medium leading-tight text-center text-foreground/90 line-clamp-1 w-full px-0.5">
+                        {b.label}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
+                      {active && (
+                        <span className="absolute -top-1.5 -right-1.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                },
+              )}
             </div>
           </Section>
         </div>
@@ -887,7 +1011,13 @@ function ToggleRow({
                 : "bg-muted/40 text-muted-foreground border border-border/60"
             }`}
           >
-            {checked ? <><Eye className="h-3 w-3" /> On</> : <>Off</>}
+            {checked ? (
+              <>
+                <Eye className="h-3 w-3" /> On
+              </>
+            ) : (
+              <>Off</>
+            )}
           </span>
         </div>
         <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>
@@ -949,8 +1079,7 @@ function CustomBackgroundUploader({
     try {
       await moderateBackground({ data: { dataUrl: pending.preview } });
       const file = pending.file;
-      const ext =
-        file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+      const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
       const path = `${userId}/bg-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("profile-media")
@@ -1015,7 +1144,11 @@ function CustomBackgroundUploader({
             onClick={() => inputRef.current?.click()}
             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {busy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
             {url ? "Choose replacement" : "Choose image"}
           </button>
           {url && (
@@ -1033,7 +1166,11 @@ function CustomBackgroundUploader({
 
       {pending && (
         <div className="mt-3 overflow-hidden rounded-lg border border-primary/35 bg-primary/5">
-          <img src={pending.preview} alt="Pending background preview" className="h-32 w-full object-cover" />
+          <img
+            src={pending.preview}
+            alt="Pending background preview"
+            className="h-32 w-full object-cover"
+          />
           <div className="flex flex-wrap items-center justify-between gap-2 p-2">
             <span className="text-[11px] text-muted-foreground">
               Preview before save. Unsafe images are blocked.
@@ -1053,7 +1190,11 @@ function CustomBackgroundUploader({
                 onClick={savePending}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                {busy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                )}
                 Save checked image
               </button>
             </div>
@@ -1066,16 +1207,16 @@ function CustomBackgroundUploader({
           type="button"
           onClick={onPick}
           className={`group relative mt-3 block h-28 w-full overflow-hidden rounded-lg border transition ${
-            active ? "border-primary ring-2 ring-primary/40" : "border-border/60 hover:border-border"
+            active
+              ? "border-primary ring-2 ring-primary/40"
+              : "border-border/60 hover:border-border"
           }`}
           title="Use this background"
         >
           <img src={url} alt="Custom background" className="h-full w-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 px-2 py-1 text-[10px] font-semibold text-white">
             <span>{active ? "Selected" : "Click to use"}</span>
-            <span className="rounded bg-white/15 px-1.5 py-0.5">
-              IMAGE
-            </span>
+            <span className="rounded bg-white/15 px-1.5 py-0.5">IMAGE</span>
           </div>
         </button>
       )}

@@ -19,14 +19,12 @@ export const setCustomBackground = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await (supabase as any).rpc("ensure_my_profile");
     const patch: Record<string, unknown> = {
       custom_background_url: data.url,
     };
     if (data.url) patch.profile_background = "custom";
-    const { error } = await (supabase as any)
-      .from("profiles")
-      .update(patch)
-      .eq("id", userId);
+    const { error } = await (supabase as any).from("profiles").update(patch).eq("id", userId);
     if (error) throw new Error(error.message);
 
     // Best-effort cleanup of previous file (only the user's own folder is allowed).
