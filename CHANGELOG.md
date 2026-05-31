@@ -2,6 +2,14 @@
 
 ## Latest Updates
 
+### Profile Decoration & Card Effects
+
+- Added premium animated avatar decorations including cosmic crowns, plasma halos, royal wings, orbit effects, star showers, glitch frames, flame/lightning auras, crystal spikes, coin crowns, and builder goggles.
+- Added profile card color customization so users can tint their public profile card separately from their accent color.
+- Added animated profile card effects including soft glow, aurora edge, premium shine, scanline, starfield, and pixel rain.
+- Added new banner effects for comet trails, glowing runes, and spotlight overlays.
+- Updated public profile cards so saved card colors and effects show in the Global Chat profile popover.
+
 ### Premium Templates, Avatar Preview & Usage Analytics
 
 - Added premium credit-costing Roblox templates for RPG hubs, pet simulator hatcheries, tycoons, battle passes, trading plazas, and moderation suites.

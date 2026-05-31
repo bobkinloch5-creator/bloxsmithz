@@ -7,7 +7,6 @@ import { recordAndEnforceSingleAccount } from "@/lib/account-guard.functions";
 import { getDeviceFingerprint } from "@/lib/device-fingerprint";
 import { toast } from "sonner";
 
-
 type Profile = {
   id: string;
   email: string;
@@ -28,6 +27,8 @@ type Profile = {
   chat_font?: string | null;
   // Profile customization fields
   profile_accent?: string | null;
+  profile_card_color?: string | null;
+  profile_card_effect?: string | null;
   profile_effect?: string | null;
   profile_background?: string | null;
   custom_background_url?: string | null;
@@ -95,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase
           .from("profiles")
           .select(
-            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration",
+            "id,email,display_name,avatar_url,banner_url,bio,specialization,credits,discord_claimed,referral_code,referred_by,hide_email,chat_name_gradient,chat_text_gradient,chat_icon,chat_nickname,chat_font,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,status_message,pronouns,location,private_profile,presence_enabled,presence_status,show_activity,last_seen_at,profile_badges,profile_decoration",
           )
           .eq("id", uid)
           .maybeSingle(),
@@ -154,7 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       qc.invalidateQueries();
     });
 
-
     supabase.auth
       .getSession()
       .then(async ({ data }) => {
@@ -195,8 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session?.user || !authReadyRef.current) return;
     // Respect a "Stay signed in" preference: when the user opted in, keep the long 2h window.
     // Otherwise apply the 30-minute idle auto-logout the user asked for.
-    const stay =
-      typeof window !== "undefined" && localStorage.getItem("bs:stay_signed_in") === "1";
+    const stay = typeof window !== "undefined" && localStorage.getItem("bs:stay_signed_in") === "1";
     const IDLE_MS = stay ? 2 * 60 * 60 * 1000 : 30 * 60 * 1000;
     let lastActivity = Date.now();
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -237,8 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     roles,
     isOwner: roles.includes("owner"),
     isAdmin: roles.includes("admin") || roles.includes("owner"),
-    isModerator:
-      roles.includes("moderator") || roles.includes("admin") || roles.includes("owner"),
+    isModerator: roles.includes("moderator") || roles.includes("admin") || roles.includes("owner"),
     loading,
     signOut: async () => {
       await supabase.auth.signOut();

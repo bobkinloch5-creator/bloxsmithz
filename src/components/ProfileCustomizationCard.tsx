@@ -12,11 +12,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PROFILE_BACKGROUNDS, ProfileBackground, type ProfileBackgroundId } from "./profile/ProfileBackground";
 import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
-import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award } from "lucide-react";
+import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award, Palette } from "lucide-react";
 import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow } from "./profile/ProfileBadges";
 import { PROFILE_DECORATIONS, AvatarDecoration } from "./profile/ProfileDecoration";
+import {
+  PROFILE_CARD_EFFECTS,
+  ProfileCardChrome,
+  type ProfileCardEffectId,
+} from "./profile/ProfileCardEffects";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
+const CARD_COLORS = ["#0f172a", "#102a2a", "#20133a", "#2a1327", "#2b1d0e", "#111827", "#064e3b", "#1e1b4b"];
 const LAYOUTS: Array<{ id: "classic" | "card" | "cinematic" | "compact"; label: string; hint: string }> = [
   { id: "classic", label: "Classic", hint: "Banner + avatar overlap" },
   { id: "card", label: "Card", hint: "Centered floating card" },
@@ -42,6 +48,8 @@ export function ProfileCustomizationCard() {
     location: p.location ?? "",
     status_message: p.status_message ?? "",
     profile_accent: (p.profile_accent ?? "#7c3cff") as string,
+    profile_card_color: (p.profile_card_color ?? "#0f172a") as string,
+    profile_card_effect: (p.profile_card_effect ?? "soft_glow") as ProfileCardEffectId,
     profile_effect: (p.profile_effect ?? "none") as ProfileEffectId,
     profile_background: (p.profile_background ?? "none") as ProfileBackgroundId,
     custom_background_url: (p.custom_background_url ?? null) as string | null,
@@ -69,6 +77,8 @@ export function ProfileCustomizationCard() {
       location: q.location ?? s.location ?? "",
       status_message: q.status_message ?? s.status_message ?? "",
       profile_accent: q.profile_accent ?? s.profile_accent,
+      profile_card_color: q.profile_card_color ?? s.profile_card_color,
+      profile_card_effect: q.profile_card_effect ?? s.profile_card_effect,
       profile_effect: q.profile_effect ?? s.profile_effect,
       profile_background: q.profile_background ?? s.profile_background,
       custom_background_url: q.custom_background_url ?? s.custom_background_url ?? null,
@@ -101,6 +111,8 @@ export function ProfileCustomizationCard() {
           location: state.location?.trim() || null,
           status_message: state.status_message?.trim() || null,
           profile_accent: state.profile_accent,
+          profile_card_color: state.profile_card_color,
+          profile_card_effect: state.profile_card_effect,
           profile_effect: state.profile_effect,
           profile_background: state.profile_background,
           custom_background_url: state.custom_background_url,
@@ -150,7 +162,11 @@ export function ProfileCustomizationCard() {
       </div>
 
       {/* LIVE PREVIEW */}
-      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-background/40">
+      <ProfileCardChrome
+        color={state.profile_card_color}
+        effect={state.profile_card_effect}
+        className="rounded-2xl"
+      >
         <div className="relative h-40 w-full overflow-hidden">
           <ProfileBackground id={state.profile_background} customUrl={state.custom_background_url} />
           <ProfileEffect effect={state.profile_effect} accent={state.profile_accent} />
@@ -201,7 +217,7 @@ export function ProfileCustomizationCard() {
             )}
           </div>
         </div>
-      </div>
+      </ProfileCardChrome>
 
       {/* IDENTITY */}
       <div className="grid gap-3 sm:grid-cols-2">
@@ -356,7 +372,7 @@ export function ProfileCustomizationCard() {
       {/* AVATAR DECORATION */}
       <Section icon={<Sparkles className="h-4 w-4" />} title="Avatar decoration">
         <p className="text-[11px] text-muted-foreground -mt-1 mb-2">
-          Add a hat, halo, wings, or other overlay around your avatar.
+          Add premium animated overlays around your avatar. Animated and Pro items move on your public profile too.
         </p>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
           {PROFILE_DECORATIONS.map((d) => {
@@ -366,13 +382,18 @@ export function ProfileCustomizationCard() {
                 key={d.id}
                 type="button"
                 onClick={() => set("profile_decoration", d.id)}
-                className={`flex flex-col items-center justify-end gap-1 rounded-xl border px-2 pb-2 pt-5 transition ${
+                className={`relative flex flex-col items-center justify-end gap-1 rounded-xl border px-2 pb-2 pt-5 transition ${
                   active
                     ? "border-primary bg-primary/10 ring-1 ring-primary/40"
                     : "border-border/60 bg-background/40 hover:border-border"
                 }`}
                 title={d.label}
               >
+                {(d.premium || d.animated) && (
+                  <span className="absolute right-1.5 top-1.5 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-primary-glow">
+                    {d.animated ? "Anim" : "Pro"}
+                  </span>
+                )}
                 <div className="h-12 grid place-items-center">
                   <AvatarDecoration id={d.id} size={36}>
                     <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/40 to-primary/10 grid place-items-center text-[10px] text-muted-foreground">
@@ -388,7 +409,60 @@ export function ProfileCustomizationCard() {
       </Section>
 
       {/* ACCENT + ANIMATED EFFECT */}
-      <Section icon={<Wand2 className="h-4 w-4" />} title="Accent + animated effect">
+      <Section icon={<Palette className="h-4 w-4" />} title="Profile card color">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-xs text-muted-foreground mr-1">Card</span>
+          {CARD_COLORS.map((c) => {
+            const active = state.profile_card_color?.toLowerCase() === c.toLowerCase();
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => set("profile_card_color", c)}
+                className={`h-8 w-8 rounded-lg border border-white/10 ring-offset-2 ring-offset-background transition ${
+                  active ? "ring-2 ring-foreground" : "hover:scale-105"
+                }`}
+                style={{ background: `linear-gradient(135deg, ${c}, ${state.profile_accent})` }}
+                title={c}
+              />
+            );
+          })}
+          <input
+            type="text"
+            value={state.profile_card_color}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (/^#[0-9a-fA-F]{0,6}$/.test(v)) set("profile_card_color", v);
+            }}
+            onBlur={(e) => {
+              if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) set("profile_card_color", "#0f172a");
+            }}
+            className="ml-1 w-24 rounded-lg border border-border bg-background px-2 py-1 text-xs"
+            placeholder="#0f172a"
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+          {PROFILE_CARD_EFFECTS.map((e) => {
+            const active = state.profile_card_effect === e.id;
+            return (
+              <button
+                key={e.id}
+                type="button"
+                onClick={() => set("profile_card_effect", e.id)}
+                className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                  active
+                    ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
+                    : "border-border/60 bg-background/40 text-muted-foreground hover:border-border hover:text-foreground"
+                }`}
+              >
+                {e.label}
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      <Section icon={<Wand2 className="h-4 w-4" />} title="Accent + animated banner effect">
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className="text-xs text-muted-foreground mr-1">Accent</span>
           {ACCENTS.map((c) => {

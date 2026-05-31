@@ -3,10 +3,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
-const PROFILE_EFFECT_IDS = ["none", "sparkle", "aurora", "neon", "holographic", "confetti", "stars"] as const;
+const PROFILE_EFFECT_IDS = ["none", "sparkle", "aurora", "neon", "holographic", "confetti", "stars", "comet", "runes", "spotlight"] as const;
 const PROFILE_BACKGROUND_IDS = ["none", "custom", "studio", "neon-city", "obby", "forest", "space", "lava", "clouds", "void", "sunset", "ocean", "candy", "matrix"] as const;
 const PFP_EFFECT_IDS = ["none", "gold", "rainbow", "flame", "electric", "ice", "galaxy", "rose"] as const;
-const PROFILE_DECORATION_IDS = ["none", "top_hat", "halo", "crown", "devil_horns", "headphones", "flower_crown", "wings", "snowflake", "santa", "party", "ninja", "witch", "neon_ring", "pumpkin", "cyber_visor", "bunny_ears"] as const;
+const PROFILE_DECORATION_IDS = ["none", "top_hat", "halo", "crown", "devil_horns", "headphones", "flower_crown", "wings", "snowflake", "santa", "party", "ninja", "witch", "neon_ring", "pumpkin", "cyber_visor", "bunny_ears", "cosmic_crown", "plasma_halo", "royal_wings", "lightning_aura", "crystal_spikes", "orbit", "flame_aura", "star_shower", "glitch_frame", "heart_aura", "coin_crown", "builder_goggles"] as const;
+const PROFILE_CARD_EFFECT_IDS = ["none", "soft_glow", "aurora_edge", "premium_shine", "scanline", "starfield", "pixel_rain"] as const;
 const PROFILE_BADGE_IDS = ["founder", "early", "developer", "verified", "supporter", "booster", "legend", "creator", "translator", "bug_hunter", "staff", "moderator", "og", "nitro", "active", "explorer", "artist", "scripter"] as const;
 
 const Schema = z
@@ -19,6 +20,11 @@ const Schema = z
     banner_url: z.string().url().max(1024).optional().nullable(),
     avatar_url: z.string().url().max(1024).optional().nullable(),
     profile_accent: z.string().regex(HEX).optional().nullable(),
+    profile_card_color: z.string().regex(HEX).optional().nullable(),
+    profile_card_effect: z
+      .enum(PROFILE_CARD_EFFECT_IDS)
+      .optional()
+      .nullable(),
     profile_effect: z
       .enum(PROFILE_EFFECT_IDS)
       .optional()

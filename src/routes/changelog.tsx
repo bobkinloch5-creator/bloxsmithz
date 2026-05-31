@@ -50,6 +50,22 @@ const changelogItems = [
       "The Roblox UI Generator is faster, more reliable, and much better-looking. Generations now fall back to complete Roblox ScreenGui specs instead of empty output, the page has a cleaner builder workspace, generated templates now use more premium styling, Global Chat now explains rules and consequences, and image-based building replicas are more reliable.",
     updates: [
       {
+        category: "Account",
+        tagColor: tagStyles.ui,
+        icon: Palette,
+        title: "Animated Avatar Decorations",
+        detail:
+          "Profile customization now includes more premium animated decorations like cosmic crowns, plasma halos, royal wings, orbit effects, star showers, glitch frames, flame and lightning auras, crystal spikes, coin crowns, and builder goggles.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.ui,
+        icon: Sparkles,
+        title: "Profile Card Colors & Effects",
+        detail:
+          "Users can now choose a separate public profile card color and animated card effects including soft glow, aurora edge, premium shine, scanline, starfield, and pixel rain.",
+      },
+      {
         category: "Tools",
         tagColor: tagStyles.tools,
         icon: Library,

@@ -12,6 +12,7 @@ import { PfpRing } from "@/components/profile/PfpRing";
 import { presenceFromProfile } from "@/lib/presence";
 import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
 import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
+import { ProfileCardEffect, cardChromeStyle } from "@/components/profile/ProfileCardEffects";
 
 
 type Profile = {
@@ -26,6 +27,8 @@ type Profile = {
   banner_url: string | null;
   private_profile: boolean | null;
   profile_accent: string | null;
+  profile_card_color: string | null;
+  profile_card_effect: string | null;
   profile_effect: string | null;
   profile_background: string | null;
   pfp_effect: string | null;
@@ -76,7 +79,7 @@ export function UserProfilePopover({
       const [{ data: p }, { data: fr }] = await Promise.all([
         (supabase as any)
           .from("profiles")
-          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges,profile_decoration")
+          .select("id,display_name,chat_nickname,avatar_url,bio,roblox_user_id,roblox_username,roblox_avatar_url,banner_url,private_profile,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,pfp_effect,status_message,pronouns,location,presence_enabled,presence_status,last_seen_at,show_activity,current_activity,profile_badges,profile_decoration")
           .eq("id", userId)
           .maybeSingle(),
 
@@ -237,15 +240,19 @@ export function UserProfilePopover({
           : "bg-zinc-500";
 
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-surface-elevated/98 backdrop-blur-xl">
-      <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
+    <div
+      className="absolute inset-0 z-40 flex flex-col overflow-hidden border border-border/70 bg-surface-elevated/98 backdrop-blur-xl"
+      style={cardChromeStyle(profile?.profile_card_color)}
+    >
+      <ProfileCardEffect effect={profile?.profile_card_effect} color={profile?.profile_card_color} />
+      <header className="relative z-10 flex shrink-0 items-center justify-between border-b border-border px-3 py-2.5">
         <h2 className="text-sm font-bold">Profile</h2>
         <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground">
           <X className="h-4 w-4" />
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="relative z-10 min-h-0 flex-1 overflow-y-auto">
         {loading ? (
           <div className="grid h-full place-items-center text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
