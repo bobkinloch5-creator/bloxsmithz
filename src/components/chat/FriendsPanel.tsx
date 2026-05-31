@@ -887,7 +887,7 @@ function DmView({
             </button>
           </div>
         )}
-        <div className="flex items-end gap-1.5">
+        <div className="flex flex-wrap items-end gap-1.5 sm:flex-nowrap">
           <input
             ref={fileRef}
             type="file"
@@ -898,7 +898,7 @@ function DmView({
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-surface/80 text-muted-foreground hover:border-primary/60 hover:text-primary"
+            className="order-1 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-surface/80 text-muted-foreground hover:border-primary/60 hover:text-primary sm:order-none"
             title="Send image"
           >
             <ImagePlus className="h-4 w-4" />
@@ -915,16 +915,22 @@ function DmView({
             rows={1}
             maxLength={2000}
             placeholder={`Message ${otherName} with **bold**, *italic*, or an image…`}
-            className="max-h-24 min-h-[40px] flex-1 resize-none rounded-xl border border-primary/40 bg-background/75 px-3 py-2 text-sm outline-none focus:border-primary"
+            className="order-2 max-h-24 min-h-[40px] min-w-[calc(100%-3rem)] flex-1 resize-none rounded-xl border border-primary/40 bg-background/75 px-3 py-2 text-sm outline-none focus:border-primary sm:order-none sm:min-w-0"
           />
-          <EmojiPicker onPick={(emoji) => setDraft((v) => `${v}${emoji}`)} />
-          <EmotePicker
-            onPick={(token) => setDraft((v) => `${v}${v && !v.endsWith(" ") ? " " : ""}${token} `)}
-          />
+          <span className="order-1 sm:order-none">
+            <EmojiPicker onPick={(emoji) => setDraft((v) => `${v}${emoji}`)} />
+          </span>
+          <span className="order-1 sm:order-none">
+            <EmotePicker
+              onPick={(token) =>
+                setDraft((v) => `${v}${v && !v.endsWith(" ") ? " " : ""}${token} `)
+              }
+            />
+          </span>
           <button
             type="submit"
             disabled={sending || uploading || (!draft.trim() && !pendingImage)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-40"
+            className="order-2 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-40 sm:order-none"
           >
             {sending || uploading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -933,7 +939,7 @@ function DmView({
             )}
           </button>
         </div>
-        <div className="mt-1 flex flex-wrap gap-1 pl-12">
+        <div className="mt-1 flex flex-wrap gap-1 sm:pl-12">
           {QUICK_REACTIONS.map((emoji) => (
             <button
               key={emoji}

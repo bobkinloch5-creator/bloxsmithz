@@ -51,7 +51,7 @@ export function EmojiPicker({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-9 right-0 z-50 w-[260px] rounded-xl border border-border bg-surface-elevated p-2 shadow-xl">
+          <div className="absolute bottom-9 right-0 z-50 w-[calc(100vw-2rem)] max-w-[260px] rounded-xl border border-border bg-surface-elevated p-2 shadow-xl">
             <div className="mb-2 flex gap-1 overflow-x-auto pb-1">
               {EMOJI_GROUPS.map((g) => (
                 <button

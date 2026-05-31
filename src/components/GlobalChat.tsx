@@ -2615,7 +2615,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 You're muted until {muted.toLocaleString()}.
               </div>
             )}
-            <div className="flex items-end gap-1.5">
+            <div className="flex flex-wrap items-end gap-1.5 sm:flex-nowrap">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -2627,7 +2627,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Attach image"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground"
+                className="order-1 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-foreground sm:order-none"
                 disabled={!!muted}
               >
                 <ImageIcon className="h-4 w-4" />
@@ -2637,23 +2637,27 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 onClick={() => setShowRobloxShare(true)}
                 aria-label="Share a Roblox game"
                 title="Share a Roblox game"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-emerald-400"
+                className="order-1 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-emerald-400 sm:order-none"
                 disabled={!!muted || !canPostHere}
               >
                 <Gamepad2 className="h-4 w-4" />
               </button>
-              <EmojiPicker
-                onPick={(em) => {
-                  setDraft((d) => d + em);
-                  inputRef.current?.focus();
-                }}
-              />
-              <EmotePicker
-                onPick={(tok) => {
-                  setDraft((d) => d + (d && !d.endsWith(" ") ? " " : "") + tok + " ");
-                  inputRef.current?.focus();
-                }}
-              />
+              <span className="order-1 sm:order-none">
+                <EmojiPicker
+                  onPick={(em) => {
+                    setDraft((d) => d + em);
+                    inputRef.current?.focus();
+                  }}
+                />
+              </span>
+              <span className="order-1 sm:order-none">
+                <EmotePicker
+                  onPick={(tok) => {
+                    setDraft((d) => d + (d && !d.endsWith(" ") ? " " : "") + tok + " ");
+                    inputRef.current?.focus();
+                  }}
+                />
+              </span>
               <textarea
                 ref={inputRef}
                 value={draft}
@@ -2678,7 +2682,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 maxLength={500}
                 rows={2}
                 className={cn(
-                  "max-h-32 min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border",
+                  "order-2 max-h-32 min-h-[44px] min-w-[calc(100%-2.9rem)] flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 sm:order-none sm:min-w-0 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border",
                   fontSizeClass(prefs.font_size),
                   chatFontStyle(profile?.chat_font) && "",
                 )}
@@ -2688,7 +2692,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 type="submit"
                 disabled={sending || (!draft.trim() && !pendingFile) || !!muted || !canPostHere}
                 aria-label="Send"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
+                className="order-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40 sm:order-none"
                 style={accent ? { background: accent } : undefined}
               >
                 {sending ? (
