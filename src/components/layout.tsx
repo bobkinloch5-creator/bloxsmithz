@@ -28,6 +28,7 @@ import {
   Server,
   FileText,
   HelpCircle,
+  Bug,
 } from "lucide-react";
 import { PluginStatus } from "@/components/PluginStatus";
 import { McpStatus } from "@/components/McpStatus";
@@ -59,6 +60,7 @@ type NavItem = {
 const NAV_ITEMS: readonly NavItem[] = [
   { to: "/dashboard", label: "Dashboard", authOnly: true },
   { to: "/templates", label: "Templates" },
+  { to: "/script-doctor", label: "Script Doctor", authOnly: true },
   { to: "/clothing", label: "Clothing" },
   { to: "/image-generator", label: "Images" },
   { to: "/generate-3d", label: "3D Model Generator" },
@@ -84,6 +86,7 @@ const MOBILE_NAV_ITEMS: readonly NavItem[] = [
   { to: "/login", label: "Login", icon: User, guestOnly: true },
   { to: "/pricing", label: "Credits", icon: BadgeDollarSign },
   { to: "/templates", label: "Templates", icon: Sparkles },
+  { to: "/script-doctor", label: "Fix Scripts", icon: Bug, authOnly: true },
   { to: "/clothing", label: "Clothing", icon: Shirt },
   { to: "/image-generator", label: "Images", icon: ImageIcon },
   { to: "/generate-3d", label: "3D Model Generator", icon: Box },

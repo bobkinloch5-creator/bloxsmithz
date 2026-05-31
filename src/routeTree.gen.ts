@@ -16,6 +16,7 @@ import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ShowcaseRouteImport } from './routes/showcase'
+import { Route as ScriptDoctorRouteImport } from './routes/script-doctor'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PluginRouteImport } from './routes/plugin'
@@ -101,6 +102,11 @@ const SignupRoute = SignupRouteImport.update({
 const ShowcaseRoute = ShowcaseRouteImport.update({
   id: '/showcase',
   path: '/showcase',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScriptDoctorRoute = ScriptDoctorRouteImport.update({
+  id: '/script-doctor',
+  path: '/script-doctor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/plugin': typeof PluginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/script-doctor': typeof ScriptDoctorRoute
   '/showcase': typeof ShowcaseRouteWithChildren
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -448,6 +455,7 @@ export interface FileRoutesByTo {
   '/plugin': typeof PluginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/script-doctor': typeof ScriptDoctorRoute
   '/showcase': typeof ShowcaseRouteWithChildren
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -509,6 +517,7 @@ export interface FileRoutesById {
   '/plugin': typeof PluginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/script-doctor': typeof ScriptDoctorRoute
   '/showcase': typeof ShowcaseRouteWithChildren
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -571,6 +580,7 @@ export interface FileRouteTypes {
     | '/plugin'
     | '/pricing'
     | '/privacy'
+    | '/script-doctor'
     | '/showcase'
     | '/signup'
     | '/sitemap.xml'
@@ -631,6 +641,7 @@ export interface FileRouteTypes {
     | '/plugin'
     | '/pricing'
     | '/privacy'
+    | '/script-doctor'
     | '/showcase'
     | '/signup'
     | '/sitemap.xml'
@@ -691,6 +702,7 @@ export interface FileRouteTypes {
     | '/plugin'
     | '/pricing'
     | '/privacy'
+    | '/script-doctor'
     | '/showcase'
     | '/signup'
     | '/sitemap.xml'
@@ -752,6 +764,7 @@ export interface RootRouteChildren {
   PluginRoute: typeof PluginRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  ScriptDoctorRoute: typeof ScriptDoctorRoute
   ShowcaseRoute: typeof ShowcaseRouteWithChildren
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -835,6 +848,13 @@ declare module '@tanstack/react-router' {
       path: '/showcase'
       fullPath: '/showcase'
       preLoaderRoute: typeof ShowcaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/script-doctor': {
+      id: '/script-doctor'
+      path: '/script-doctor'
+      fullPath: '/script-doctor'
+      preLoaderRoute: typeof ScriptDoctorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -1235,6 +1255,7 @@ const rootRouteChildren: RootRouteChildren = {
   PluginRoute: PluginRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  ScriptDoctorRoute: ScriptDoctorRoute,
   ShowcaseRoute: ShowcaseRouteWithChildren,
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
