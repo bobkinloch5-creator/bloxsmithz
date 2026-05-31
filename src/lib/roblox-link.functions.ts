@@ -4,7 +4,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 function makeCode() {
-  // 12-char human-readable code, no ambiguous chars
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "BLOX-";
   for (let i = 0; i < 8; i++) {
@@ -54,7 +53,6 @@ async function fetchAvatarHeadshot(id: number): Promise<string | null> {
   }
 }
 
-/** Start (or refresh) a Roblox account link by generating a verification code. */
 export const startRobloxLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
@@ -67,7 +65,6 @@ export const startRobloxLink = createServerFn({ method: "POST" })
     const lookup = await fetchRobloxUserIdByName(data.username);
     if (!lookup) throw new Error("Roblox username not found");
 
-    // Ensure this Roblox account isn't already linked to another profile.
     const { data: existing } = await supabaseAdmin
       .from("profiles")
       .select("id")
@@ -79,14 +76,17 @@ export const startRobloxLink = createServerFn({ method: "POST" })
     const code = makeCode();
     const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        roblox_verification_code: code,
-        roblox_verification_expires_at: expires,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
+    const { error } = await (supabaseAdmin as any)
+      .from("private_user_data")
+      .upsert(
+        {
+          user_id: userId,
+          roblox_verification_code: code,
+          roblox_verification_expires_at: expires,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
     if (error) throw new Error(error.message);
 
     return {
@@ -99,8 +99,6 @@ export const startRobloxLink = createServerFn({ method: "POST" })
     };
   });
 
-/** Verify the code on a specific Roblox username's profile. */
-
 export const confirmRobloxLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
@@ -111,17 +109,17 @@ export const confirmRobloxLink = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
 
-    const { data: profile, error: pErr } = await supabaseAdmin
-      .from("profiles")
+    const { data: privateRow, error: pErr } = await (supabaseAdmin as any)
+      .from("private_user_data")
       .select("roblox_verification_code, roblox_verification_expires_at")
-      .eq("id", userId)
+      .eq("user_id", userId)
       .maybeSingle();
     if (pErr) throw new Error(pErr.message);
-    const code = profile?.roblox_verification_code;
+    const code = privateRow?.roblox_verification_code as string | undefined;
     if (!code) throw new Error("No pending verification. Start linking first.");
     if (
-      profile?.roblox_verification_expires_at &&
-      new Date(profile.roblox_verification_expires_at).getTime() < Date.now()
+      privateRow?.roblox_verification_expires_at &&
+      new Date(privateRow.roblox_verification_expires_at).getTime() < Date.now()
     ) {
       throw new Error("Verification code expired. Please start again.");
     }
@@ -138,7 +136,6 @@ export const confirmRobloxLink = createServerFn({ method: "POST" })
       );
     }
 
-    // Re-check uniqueness right before saving (race-safe-ish).
     const { data: dup } = await supabaseAdmin
       .from("profiles")
       .select("id")
@@ -157,12 +154,20 @@ export const confirmRobloxLink = createServerFn({ method: "POST" })
         roblox_display_name: lookup.displayName,
         roblox_avatar_url: avatar,
         roblox_verified_at: new Date().toISOString(),
-        roblox_verification_code: null,
-        roblox_verification_expires_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
     if (uErr) throw new Error(uErr.message);
+
+    // Clear the verification code from private storage
+    await (supabaseAdmin as any)
+      .from("private_user_data")
+      .update({
+        roblox_verification_code: null,
+        roblox_verification_expires_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
 
     return {
       ok: true as const,
@@ -186,12 +191,20 @@ export const unlinkRoblox = createServerFn({ method: "POST" })
         roblox_display_name: null,
         roblox_avatar_url: null,
         roblox_verified_at: null,
-        roblox_verification_code: null,
-        roblox_verification_expires_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
     if (error) throw new Error(error.message);
+
+    await (supabaseAdmin as any)
+      .from("private_user_data")
+      .update({
+        roblox_verification_code: null,
+        roblox_verification_expires_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
+
     return { ok: true as const };
   });
 
