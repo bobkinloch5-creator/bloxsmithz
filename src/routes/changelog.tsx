@@ -92,6 +92,14 @@ const changelogItems = [
         detail:
           "The server now accepts Comet's `COMETAPI_KEY` name, keeps `COMET_API_KEY` as a backwards-compatible alias, and routes Comet-compatible text and image requests through `https://api.cometapi.com/v1`.",
       },
+      {
+        category: "Chat",
+        tagColor: tagStyles.ui,
+        icon: MessageSquare,
+        title: "Global Chat Refresh Fix",
+        detail:
+          "Global Chat now reloads the newest saved messages first, so recent messages remain visible after refreshing instead of looking like they were deleted.",
+      },
     ],
   },
   {

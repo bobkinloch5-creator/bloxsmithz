@@ -763,7 +763,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id,is_announcement",
             )
             .is("deleted_at", null)
-            .order("created_at", { ascending: true })
+            .order("created_at", { ascending: false })
             .limit(200),
           supabase
             .from("global_chat_settings")
@@ -795,7 +795,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             .order("position"),
         ]);
       if (cancelled) return;
-      const rows = ((msgRes as any).data ?? []) as DbMessage[];
+      const rows = (((msgRes as any).data ?? []) as DbMessage[]).reverse();
       setMessages(rows);
       setSlow(((settingsRes.data as any)?.slow_mode_seconds as number) ?? 0);
       const until = (muteRes.data as any)?.muted_until
