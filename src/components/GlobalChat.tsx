@@ -1598,15 +1598,16 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       }
     }
     if (cmd === "online") {
+      const ids = activeChatUserIds;
       pushEphemeralBot(
-        `Online: ${onlineUsers.map((id) => authors.get(id)?.display_name ?? id.slice(0, 6)).join(", ") || "none"}.`,
+        `Online: ${ids.map((id) => authors.get(id)?.display_name ?? id.slice(0, 6)).join(", ") || "none"}.`,
       );
       return;
     }
     if (cmd === "staff") {
       pushEphemeralBot(
         `Staff online: ${
-          onlineUsers
+          activeChatUserIds
             .filter((id) =>
               authors
                 .get(id)
@@ -2017,11 +2018,34 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     return grouped;
   }, [reactions]);
   const accent = prefs.theme_accent;
-  const onlineSet = useMemo(() => new Set(onlineUsers), [onlineUsers]);
+  const recentChatSet = useMemo(() => {
+    const cutoff = Date.now() - 15 * 60_000;
+    const ids = new Set<string>();
+    for (const message of visibleMessages) {
+      if (message.ephemeralBot || message.user_id === "bloxbot") continue;
+      const created = new Date(message.created_at).getTime();
+      if (Number.isFinite(created) && created >= cutoff) ids.add(message.user_id);
+    }
+    return ids;
+  }, [visibleMessages]);
+  const activeChatUserIds = useMemo(() => {
+    const ids = new Set<string>(onlineUsers);
+    for (const [id, author] of authors) {
+      if (id === "bloxbot") continue;
+      const presence = presenceFromProfile({
+        presence_enabled: author.presence_enabled,
+        presence_status: author.presence_status,
+        last_seen_at: author.last_seen_at,
+      });
+      if (presence.label !== "Offline" || recentChatSet.has(id)) ids.add(id);
+    }
+    return Array.from(ids).filter((id) => id !== "bloxbot");
+  }, [authors, onlineUsers, recentChatSet]);
+  const activeChatSet = useMemo(() => new Set(activeChatUserIds), [activeChatUserIds]);
   const memberGroups = useMemo(() => {
     const rows = Array.from(authors.entries())
       .filter(([id]) => id !== "bloxbot")
-      .map(([id, author]) => ({ id, author, online: onlineSet.has(id) }))
+      .map(([id, author]) => ({ id, author, online: activeChatSet.has(id) }))
       .sort((a, b) => {
         if (a.online !== b.online) return a.online ? -1 : 1;
         return displayAuthorName(a.author, a.id).localeCompare(displayAuthorName(b.author, b.id));
@@ -2058,7 +2082,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     const rest = rows.filter((member) => !groupedIds.has(member.id));
     if (rest.length) groups.push({ label: "Online & Recent", members: rest });
     return groups;
-  }, [authors, onlineSet]);
+  }, [activeChatSet, authors]);
 
   // Mention suggestions
   const mentionSuggestions = useMemo(() => {
@@ -2199,7 +2223,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                     onClick={() => setShowUsers((v) => !v)}
                     className="inline-flex items-center gap-1 whitespace-nowrap hover:text-foreground"
                   >
-                    <Users className="h-3 w-3" /> {onlineUsers.length} online
+                    <Users className="h-3 w-3" /> {activeChatUserIds.length} online
                   </button>
                 </div>
               </div>
@@ -2335,7 +2359,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           {showUsers && (
             <MembersListPanel
               groups={memberGroups}
-              onlineCount={onlineUsers.length}
+              onlineCount={activeChatUserIds.length}
               onClose={() => setShowUsers(false)}
               onOpenProfile={(uid) => {
                 setProfileUid(uid);
