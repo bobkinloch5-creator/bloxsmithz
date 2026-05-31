@@ -971,6 +971,48 @@ export type Database = {
         }
         Relationships: []
       }
+      model_generations_3d: {
+        Row: {
+          created_at: string
+          credits_used: number
+          file_path: string | null
+          file_url: string | null
+          format: string | null
+          id: string
+          project_id: string | null
+          prompt: string
+          status: string
+          tripo_task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number
+          file_path?: string | null
+          file_url?: string | null
+          format?: string | null
+          id?: string
+          project_id?: string | null
+          prompt: string
+          status?: string
+          tripo_task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number
+          file_path?: string | null
+          file_url?: string | null
+          format?: string | null
+          id?: string
+          project_id?: string | null
+          prompt?: string
+          status?: string
+          tripo_task_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       oauth_access_tokens: {
         Row: {
           client_id: string
@@ -1257,6 +1299,27 @@ export type Database = {
         }
         Relationships: []
       }
+      private_user_data: {
+        Row: {
+          roblox_verification_code: string | null
+          roblox_verification_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          roblox_verification_code?: string | null
+          roblox_verification_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          roblox_verification_code?: string | null
+          roblox_verification_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1276,7 +1339,6 @@ export type Database = {
           custom_background_url: string | null
           discord_claimed: boolean
           display_name: string | null
-          email: string
           hide_email: boolean
           id: string
           last_seen_at: string | null
@@ -1299,8 +1361,6 @@ export type Database = {
           roblox_display_name: string | null
           roblox_user_id: number | null
           roblox_username: string | null
-          roblox_verification_code: string | null
-          roblox_verification_expires_at: string | null
           roblox_verified_at: string | null
           show_activity: boolean
           specialization: string | null
@@ -1326,7 +1386,6 @@ export type Database = {
           custom_background_url?: string | null
           discord_claimed?: boolean
           display_name?: string | null
-          email: string
           hide_email?: boolean
           id: string
           last_seen_at?: string | null
@@ -1349,8 +1408,6 @@ export type Database = {
           roblox_display_name?: string | null
           roblox_user_id?: number | null
           roblox_username?: string | null
-          roblox_verification_code?: string | null
-          roblox_verification_expires_at?: string | null
           roblox_verified_at?: string | null
           show_activity?: boolean
           specialization?: string | null
@@ -1376,7 +1433,6 @@ export type Database = {
           custom_background_url?: string | null
           discord_claimed?: boolean
           display_name?: string | null
-          email?: string
           hide_email?: boolean
           id?: string
           last_seen_at?: string | null
@@ -1399,8 +1455,6 @@ export type Database = {
           roblox_display_name?: string | null
           roblox_user_id?: number | null
           roblox_username?: string | null
-          roblox_verification_code?: string | null
-          roblox_verification_expires_at?: string | null
           roblox_verified_at?: string | null
           show_activity?: boolean
           specialization?: string | null
@@ -2592,7 +2646,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "owner" | "admin" | "moderator" | "user"
+      app_role: "owner" | "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2720,7 +2774,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "admin", "moderator", "user"],
+      app_role: ["owner", "admin", "user"],
     },
   },
 } as const

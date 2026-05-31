@@ -111,10 +111,10 @@ function Admin() {
   const loadUsers = async () => {
     const { data: profs } = await supabase
       .from("profiles")
-      .select("id,email,display_name,credits,banned,ban_reason")
+      .select("id,display_name,credits,banned,ban_reason")
       .order("created_at", { ascending: false })
       .limit(200);
-    const list = (profs ?? []) as Array<{
+    const list = ((profs ?? []) as unknown) as Array<{
       id: string;
       email: string;
       display_name: string | null;
@@ -122,18 +122,12 @@ function Admin() {
       banned: boolean;
       ban_reason: string | null;
     }>;
+    list.forEach((p) => { p.email = p.email ?? ""; });
     const ids = list.map((p) => p.id);
     if (ids.length === 0) {
       setRows([]);
       return;
     }
-    setEmails((prev) => {
-      const next = { ...prev };
-      list.forEach((p) => {
-        next[p.id] = p.email;
-      });
-      return next;
-    });
     const [{ data: roles }, { data: projs }, { data: gens }] = await Promise.all([
       supabase.from("user_roles").select("user_id,role").in("user_id", ids),
       supabase.from("projects").select("user_id").in("user_id", ids),
@@ -181,15 +175,7 @@ function Admin() {
       .limit(25);
     const list = (data ?? []) as Activity[];
     setActivity(list);
-    const ids = Array.from(new Set(list.map((r) => r.user_id))).filter((id) => !emails[id]);
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
-      const map: Record<string, string> = { ...emails };
-      (profs ?? []).forEach((p: { id: string; email: string }) => {
-        map[p.id] = p.email;
-      });
-      setEmails(map);
-    }
+    void list;
   };
 
   const toggleBan = async (r: Row) => {
@@ -243,7 +229,7 @@ function Admin() {
       return;
     const { error } = await supabase.rpc("admin_set_role", {
       _user_id: r.id,
-      _role: "moderator",
+      _role: "admin",
       _grant: !isModeratorRow,
     });
     if (error) return toast.error(error.message);
@@ -268,15 +254,7 @@ function Admin() {
       .order("created_at", { ascending: false });
     const list = (data ?? []) as PromoSub[];
     setPromoSubs(list);
-    const ids = Array.from(new Set(list.map((r) => r.user_id))).filter((id) => !emails[id]);
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
-      const map: Record<string, string> = { ...emails };
-      (profs ?? []).forEach((p: { id: string; email: string }) => {
-        map[p.id] = p.email;
-      });
-      setEmails(map);
-    }
+    void list;
   };
 
   const reviewPromo = async (s: PromoSub, approve: boolean) => {
@@ -323,15 +301,7 @@ function Admin() {
       .order("created_at", { ascending: false });
     const list = (data ?? []) as PR[];
     setRequests(list);
-    const ids = Array.from(new Set(list.map((r) => r.user_id)));
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
-      const map: Record<string, string> = {};
-      (profs ?? []).forEach((p: { id: string; email: string }) => {
-        map[p.id] = p.email;
-      });
-      setEmails(map);
-    }
+    void list;
   };
 
   useEffect(() => {
