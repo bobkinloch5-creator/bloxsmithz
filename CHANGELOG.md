@@ -2,6 +2,11 @@
 
 ## Latest Updates
 
+### Avatar Decoration Images
+
+- Replaced emoji-only avatar decoration artwork with local image assets for crowns, halos, wings, rings, auras, hats, goggles, visors, and seasonal decorations.
+- Kept animated premium motion effects while making the visible decoration previews and public profile overlays render from real image files.
+
 ### Profile Decoration & Card Effects
 
 - Added premium animated avatar decorations including cosmic crowns, plasma halos, royal wings, orbit effects, star showers, glitch frames, flame/lightning auras, crystal spikes, coin crowns, and builder goggles.

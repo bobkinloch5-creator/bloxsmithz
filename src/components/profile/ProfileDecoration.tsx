@@ -1,6 +1,6 @@
-// Discord-style avatar decorations: emoji/SVG overlays positioned around the
-// avatar (top hat, halo, crown, headphones, wings, etc.). Pure CSS, scales
-// with the avatar size.
+// Discord-style avatar decorations: local image overlays positioned around the
+// avatar (top hat, halo, crown, headphones, wings, etc.). Scales with the
+// avatar size and keeps lightweight CSS motion around image-backed artwork.
 import type { CSSProperties, ReactNode } from "react";
 
 export type DecorationId =
@@ -37,97 +37,94 @@ export type DecorationId =
 type DecoDef = {
   id: DecorationId;
   label: string;
-  /** preview emoji (used in picker tile) */
+  /** preview fallback used if an image fails */
   preview: string;
-  /** custom renderer that takes avatar size in px */
-  render?: (size: number) => ReactNode;
-  /** simple overlay: emoji on top */
-  topEmoji?: string;
-  /** scale relative to avatar */
-  topScale?: number;
-  /** translate as fraction of size */
-  topOffsetX?: number; // -0.5..0.5
-  topOffsetY?: number; // -0.5..0.5
-  /** rotation degrees */
-  topRotate?: number;
-  /** also draw an emoji at the bottom */
-  bottomEmoji?: string;
-  bottomScale?: number;
+  image?: string;
+  imageScale?: number;
+  imageOffsetX?: number; // -0.5..0.5
+  imageOffsetY?: number; // -0.5..0.5
+  imageRotate?: number;
   animated?: boolean;
   premium?: boolean;
 };
 
 export const PROFILE_DECORATIONS: DecoDef[] = [
   { id: "none",          label: "None",         preview: "—" },
-  { id: "cosmic_crown",  label: "Cosmic Crown", preview: "✦", premium: true, animated: true },
-  { id: "plasma_halo",   label: "Plasma Halo",  preview: "◎", premium: true, animated: true },
-  { id: "royal_wings",   label: "Royal Wings",  preview: "◇", premium: true, animated: true },
-  { id: "orbit",         label: "Orbit",        preview: "◌", premium: true, animated: true },
-  { id: "star_shower",   label: "Star Shower",  preview: "✦", premium: true, animated: true },
-  { id: "glitch_frame",  label: "Glitch Frame", preview: "▣", premium: true, animated: true },
-  { id: "flame_aura",    label: "Flame Aura",   preview: "▲", premium: true, animated: true },
-  { id: "lightning_aura", label: "Lightning",   preview: "ϟ", premium: true, animated: true },
-  { id: "crystal_spikes", label: "Crystal",     preview: "◆", premium: true },
-  { id: "heart_aura",    label: "Heart Aura",   preview: "♥", premium: true, animated: true },
-  { id: "coin_crown",    label: "Coin Crown",   preview: "$", premium: true, animated: true },
-  { id: "builder_goggles", label: "Builder",    preview: "▤", premium: true },
-  { id: "top_hat",       label: "Top hat",      preview: "🎩", topEmoji: "🎩", topScale: 0.85, topOffsetY: -0.55, topRotate: -8, animated: true },
-  { id: "halo",          label: "Halo",         preview: "◎", animated: true },
-  { id: "crown",         label: "Crown",        preview: "👑", topEmoji: "👑", topScale: 0.8,  topOffsetY: -0.5, animated: true },
-  { id: "devil_horns",   label: "Devil horns",  preview: "😈", topEmoji: "😈", topScale: 0.6,  topOffsetY: -0.55 },
-  { id: "headphones",    label: "Headphones",   preview: "🎧", topEmoji: "🎧", topScale: 1.05, topOffsetY: -0.05, animated: true },
-  { id: "flower_crown",  label: "Flower crown", preview: "🌸", topEmoji: "🌸🌼🌷", topScale: 0.55, topOffsetY: -0.5 },
-  { id: "wings",         label: "Angel wings",  preview: "◇", animated: true },
-  { id: "snowflake",     label: "Frost",        preview: "❄️", topEmoji: "❄️",  topScale: 0.55, topOffsetY: -0.55, topOffsetX: 0.4 },
-  { id: "santa",         label: "Santa",        preview: "🎅", topEmoji: "🎅", topScale: 0.7,  topOffsetY: -0.55 },
-  { id: "party",         label: "Party",        preview: "🥳", topEmoji: "🎉", topScale: 0.55, topOffsetY: -0.5, topOffsetX: -0.35, topRotate: -20 },
-  { id: "ninja",         label: "Ninja",        preview: "🥷", topEmoji: "🥷", topScale: 0.5,  topOffsetY: -0.55 },
-  { id: "witch",         label: "Witch hat",    preview: "🧙", topEmoji: "🧙‍♀️", topScale: 0.7,  topOffsetY: -0.55, topRotate: -10 },
-  { id: "neon_ring",     label: "Neon",         preview: "◎", animated: true },
-  { id: "pumpkin",       label: "Pumpkin",      preview: "🎃", topEmoji: "🎃", topScale: 0.55, topOffsetY: -0.5 },
-  { id: "cyber_visor",   label: "Cyber visor",  preview: "▰", topEmoji: "🕶️", topScale: 0.85, topOffsetY: -0.05, animated: true },
-  { id: "bunny_ears",    label: "Bunny ears",   preview: "🐰", topEmoji: "🐰", topScale: 0.55, topOffsetY: -0.6 },
+  { id: "cosmic_crown",  label: "Cosmic Crown", preview: "Crown", image: "/avatar-decorations/cosmic-crown.svg", imageScale: 1.12, imageOffsetY: -0.62, premium: true, animated: true },
+  { id: "plasma_halo",   label: "Plasma Halo",  preview: "Halo", image: "/avatar-decorations/plasma-halo.svg", imageScale: 1.28, imageOffsetY: -0.42, premium: true, animated: true },
+  { id: "royal_wings",   label: "Royal Wings",  preview: "Wings", image: "/avatar-decorations/royal-wing.svg", premium: true, animated: true },
+  { id: "orbit",         label: "Orbit",        preview: "Orbit", image: "/avatar-decorations/orbit.svg", premium: true, animated: true },
+  { id: "star_shower",   label: "Star Shower",  preview: "Stars", image: "/avatar-decorations/star-shower.svg", imageScale: 1.35, imageOffsetY: -0.28, premium: true, animated: true },
+  { id: "glitch_frame",  label: "Glitch Frame", preview: "Glitch", image: "/avatar-decorations/glitch-frame.svg", premium: true, animated: true },
+  { id: "flame_aura",    label: "Flame Aura",   preview: "Flame", image: "/avatar-decorations/flame-aura.svg", premium: true, animated: true },
+  { id: "lightning_aura", label: "Lightning",   preview: "Bolt", image: "/avatar-decorations/lightning.svg", premium: true, animated: true },
+  { id: "crystal_spikes", label: "Crystal",     preview: "Crystal", image: "/avatar-decorations/crystal-spikes.svg", imageScale: 1, imageOffsetY: -0.46, premium: true },
+  { id: "heart_aura",    label: "Heart Aura",   preview: "Hearts", image: "/avatar-decorations/heart-aura.svg", premium: true, animated: true },
+  { id: "coin_crown",    label: "Coin Crown",   preview: "Coins", image: "/avatar-decorations/coin-crown.svg", imageScale: 1.02, imageOffsetY: -0.52, premium: true, animated: true },
+  { id: "builder_goggles", label: "Builder",    preview: "Goggles", image: "/avatar-decorations/builder-goggles.svg", imageScale: 1, imageOffsetY: -0.05, premium: true },
+  { id: "top_hat",       label: "Top hat",      preview: "Hat", image: "/avatar-decorations/top-hat.svg", imageScale: 0.9, imageOffsetY: -0.58, imageRotate: -8, animated: true },
+  { id: "halo",          label: "Halo",         preview: "Halo", image: "/avatar-decorations/gold-halo.svg", imageScale: 1.15, imageOffsetY: -0.38, animated: true },
+  { id: "crown",         label: "Crown",        preview: "Crown", image: "/avatar-decorations/crown.svg", imageScale: 0.88, imageOffsetY: -0.53, animated: true },
+  { id: "devil_horns",   label: "Devil horns",  preview: "Horns", image: "/avatar-decorations/devil-horns.svg", imageScale: 1.02, imageOffsetY: -0.44 },
+  { id: "headphones",    label: "Headphones",   preview: "Audio", image: "/avatar-decorations/headphones.svg", imageScale: 1.16, imageOffsetY: -0.06, animated: true },
+  { id: "flower_crown",  label: "Flower crown", preview: "Flower", image: "/avatar-decorations/flower-crown.svg", imageScale: 1.08, imageOffsetY: -0.48 },
+  { id: "wings",         label: "Angel wings",  preview: "Wings", image: "/avatar-decorations/angel-wing.svg", animated: true },
+  { id: "snowflake",     label: "Frost",        preview: "Frost", image: "/avatar-decorations/snowflake.svg", imageScale: 0.62, imageOffsetY: -0.57, imageOffsetX: 0.38 },
+  { id: "santa",         label: "Santa",        preview: "Santa", image: "/avatar-decorations/santa-hat.svg", imageScale: 0.92, imageOffsetY: -0.56, imageRotate: -6 },
+  { id: "party",         label: "Party",        preview: "Party", image: "/avatar-decorations/party-popper.svg", imageScale: 0.72, imageOffsetY: -0.5, imageOffsetX: -0.34, imageRotate: -18 },
+  { id: "ninja",         label: "Ninja",        preview: "Ninja", image: "/avatar-decorations/ninja-mask.svg", imageScale: 0.98, imageOffsetY: -0.08 },
+  { id: "witch",         label: "Witch hat",    preview: "Witch", image: "/avatar-decorations/witch-hat.svg", imageScale: 0.98, imageOffsetY: -0.6, imageRotate: -10 },
+  { id: "neon_ring",     label: "Neon",         preview: "Neon", image: "/avatar-decorations/neon-ring.svg", animated: true },
+  { id: "pumpkin",       label: "Pumpkin",      preview: "Pumpkin", image: "/avatar-decorations/pumpkin.svg", imageScale: 0.64, imageOffsetY: -0.5 },
+  { id: "cyber_visor",   label: "Cyber visor",  preview: "Visor", image: "/avatar-decorations/cyber-visor.svg", imageScale: 1, imageOffsetY: -0.04, animated: true },
+  { id: "bunny_ears",    label: "Bunny ears",   preview: "Bunny", image: "/avatar-decorations/bunny-ears.svg", imageScale: 0.86, imageOffsetY: -0.66 },
 ];
 
 const DECO_MAP: Record<string, DecoDef> = Object.fromEntries(
   PROFILE_DECORATIONS.map((d) => [d.id, d]),
 );
 
-function Glyph({ char, size, rotate = 0 }: { char: string; size: number; rotate?: number }) {
-  return (
-    <span
-      aria-hidden
-      style={{
-        fontSize: size,
-        lineHeight: 1,
-        transform: `rotate(${rotate}deg)`,
-        filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
-        display: "inline-block",
-      }}
-    >
-      {char}
-    </span>
-  );
-}
+function DecorationImage({
+  def,
+  size,
+  className = "",
+  mirror = false,
+  style,
+}: {
+  def: DecoDef;
+  size: number;
+  className?: string;
+  mirror?: boolean;
+  style?: CSSProperties;
+}) {
+  if (!def.image) return null;
+  const scale = def.imageScale ?? 1;
+  const width = size * scale;
+  const rotate = def.imageRotate ?? 0;
+  const transform = [
+    "translate(-50%, -50%)",
+    `translate(${(def.imageOffsetX ?? 0) * size}px, ${(def.imageOffsetY ?? 0) * size}px)`,
+    `rotate(${rotate}deg)`,
+    mirror ? "scaleX(-1)" : "",
+  ].filter(Boolean).join(" ");
 
-function CrownShape({ size, color = "#facc15" }: { size: number; color?: string }) {
   return (
-    <svg width={size} height={size * 0.62} viewBox="0 0 120 74" aria-hidden>
-      <path
-        d="M10 58 22 22l26 24 12-36 12 36 26-24 12 36v8H10z"
-        fill={`url(#crown-${Math.round(size)})`}
-        stroke="rgba(255,255,255,.55)"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-      <defs>
-        <linearGradient id={`crown-${Math.round(size)}`} x1="0" x2="1">
-          <stop stopColor={color} />
-          <stop offset=".55" stopColor="#fff2a8" />
-          <stop offset="1" stopColor="#f97316" />
-        </linearGradient>
-      </defs>
-    </svg>
+    <img
+      src={def.image}
+      alt=""
+      aria-hidden
+      draggable={false}
+      className={`pointer-events-none absolute left-1/2 top-1/2 select-none object-contain ${className}`}
+      style={{
+        width,
+        height: width,
+        transform,
+        transformOrigin: "center",
+        filter: "drop-shadow(0 5px 10px rgba(0,0,0,.45))",
+        animation: def.animated ? "deco-float 3.6s ease-in-out infinite" : undefined,
+        ...style,
+      }}
+    />
   );
 }
 
@@ -149,16 +146,11 @@ export function AvatarDecoration({
   const def = DECO_MAP[id ?? "none"] ?? DECO_MAP.none;
   if (def.id === "none") return <div className={className}>{children}</div>;
 
-  // Specials with custom SVGs
+  // Specials with paired/full-frame image artwork and extra lightweight motion.
   const specials: Record<string, ReactNode> = {
     cosmic_crown: (
       <>
-        <div
-          className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
-          style={{ marginTop: -size * 0.47, animation: "deco-float 3.4s ease-in-out infinite" }}
-        >
-          <CrownShape size={size * 0.95} color="#a78bfa" />
-        </div>
+        <DecorationImage def={def} size={size} />
         {Array.from({ length: 6 }, (_, i) => (
           <span
             key={i}
@@ -176,45 +168,12 @@ export function AvatarDecoration({
       </>
     ),
     plasma_halo: (
-      <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2"
-        style={{ top: -size * 0.36 }}
-      >
-        <div
-          style={{
-            width: size * 1.18,
-            height: size * 0.38,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(closest-side, transparent 53%, #67e8f9 58%, #a78bfa 70%, transparent 78%)",
-            boxShadow: "0 0 18px #67e8f9, 0 0 34px #a78bfa, inset 0 0 12px #fff",
-            animation: "pe-holo 4.8s linear infinite, deco-pulse 2.6s ease-in-out infinite",
-          }}
-        />
-      </div>
+      <DecorationImage def={def} size={size} style={{ animation: "pe-holo 4.8s linear infinite, deco-pulse 2.6s ease-in-out infinite" }} />
     ),
     royal_wings: (
       <>
-        {[-1, 1].map((side) => (
-          <svg
-            key={side}
-            className="pointer-events-none absolute top-1/2"
-            style={{
-              [side === -1 ? "left" : "right"]: -size * 0.55,
-              width: size * 0.72,
-              height: size * 0.96,
-              transform: `translateY(-50%) scaleX(${side})`,
-              filter: "drop-shadow(0 0 10px rgba(167,139,250,.75))",
-              animation: "deco-float 4s ease-in-out infinite",
-            }}
-            viewBox="0 0 70 96"
-            aria-hidden
-          >
-            <path d="M60 8C30 18 12 40 8 88c22-8 40-25 52-80Z" fill="#dbeafe" opacity=".92" />
-            <path d="M58 22C35 32 22 49 14 86" stroke="#8b5cf6" strokeWidth="6" strokeLinecap="round" opacity=".7" />
-            <path d="M52 42C36 49 26 61 18 86" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" opacity=".65" />
-          </svg>
-        ))}
+        <DecorationImage def={{ ...def, imageScale: 0.9, imageOffsetX: -0.72 }} size={size} />
+        <DecorationImage def={{ ...def, imageScale: 0.9, imageOffsetX: 0.72 }} size={size} mirror />
       </>
     ),
     orbit: (
@@ -247,6 +206,7 @@ export function AvatarDecoration({
     ),
     star_shower: (
       <>
+        <DecorationImage def={def} size={size} />
         {Array.from({ length: 10 }, (_, i) => (
           <span
             key={i}
@@ -266,6 +226,7 @@ export function AvatarDecoration({
     ),
     glitch_frame: (
       <>
+        <DecorationImage def={def} size={size} />
         <div
           className="pointer-events-none absolute inset-[-6%] rounded-full"
           style={{
@@ -283,57 +244,20 @@ export function AvatarDecoration({
       </>
     ),
     flame_aura: (
-      <div
-        className="pointer-events-none absolute inset-[-12%] rounded-full"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 90%, rgba(249,115,22,.55), transparent 58%), radial-gradient(ellipse at 35% 18%, rgba(239,68,68,.28), transparent 45%), radial-gradient(ellipse at 70% 12%, rgba(250,204,21,.34), transparent 45%)",
-          filter: "blur(1px)",
-          animation: "pe-aurora 2.4s ease-in-out infinite alternate",
-        }}
-      />
+      <DecorationImage def={{ ...def, imageScale: 1.35, imageOffsetY: 0.08 }} size={size} style={{ animation: "pe-aurora 2.4s ease-in-out infinite alternate" }} />
     ),
     lightning_aura: (
       <>
-        {[-1, 1].map((side) => (
-          <svg
-            key={side}
-            className="pointer-events-none absolute top-[6%]"
-            style={{
-              [side === -1 ? "left" : "right"]: -size * 0.18,
-              width: size * 0.35,
-              height: size * 0.9,
-              filter: "drop-shadow(0 0 10px #38bdf8)",
-              animation: "deco-pulse 1.6s ease-in-out infinite",
-            }}
-            viewBox="0 0 32 90"
-            aria-hidden
-          >
-            <path d="M21 2 5 42h13L10 88l18-54H15z" fill="#67e8f9" />
-          </svg>
-        ))}
+        <DecorationImage def={{ ...def, imageScale: 0.62, imageOffsetX: -0.62, imageOffsetY: 0.02 }} size={size} />
+        <DecorationImage def={{ ...def, imageScale: 0.62, imageOffsetX: 0.62, imageOffsetY: 0.02 }} size={size} mirror />
       </>
     ),
     crystal_spikes: (
-      <div
-        className="pointer-events-none absolute left-1/2 top-0 flex -translate-x-1/2 gap-1"
-        style={{ marginTop: -size * 0.3, filter: "drop-shadow(0 0 10px #67e8f9)" }}
-      >
-        {[0.55, 0.75, 0.6].map((h, i) => (
-          <span
-            key={i}
-            style={{
-              width: size * 0.18,
-              height: size * h,
-              background: "linear-gradient(180deg,#e0f2fe,#38bdf8,#7c3aed)",
-              clipPath: "polygon(50% 0, 100% 75%, 50% 100%, 0 75%)",
-            }}
-          />
-        ))}
-      </div>
+      <DecorationImage def={def} size={size} />
     ),
     heart_aura: (
       <>
+        <DecorationImage def={def} size={size} />
         {Array.from({ length: 7 }, (_, i) => (
           <span
             key={i}
@@ -352,83 +276,22 @@ export function AvatarDecoration({
       </>
     ),
     coin_crown: (
-      <div
-        className="pointer-events-none absolute left-1/2 top-0 flex -translate-x-1/2 gap-1"
-        style={{ marginTop: -size * 0.42, animation: "deco-float 3s ease-in-out infinite" }}
-      >
-        {["$", "B", "$"].map((label, i) => (
-          <span
-            key={i}
-            className="grid place-items-center rounded-full font-black text-amber-950"
-            style={{
-              width: size * 0.26,
-              height: size * 0.26,
-              marginTop: i === 1 ? 0 : size * 0.08,
-              background: "linear-gradient(135deg,#fde68a,#f59e0b)",
-              boxShadow: "0 0 12px rgba(245,158,11,.75)",
-              fontSize: size * 0.13,
-            }}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
+      <DecorationImage def={def} size={size} />
     ),
     builder_goggles: (
-      <div
-        className="pointer-events-none absolute left-1/2 top-[24%] -translate-x-1/2"
-        style={{ filter: "drop-shadow(0 0 10px rgba(34,211,238,.55))" }}
-      >
-        <div
-          style={{
-            width: size * 0.85,
-            height: size * 0.22,
-            borderRadius: size * 0.12,
-            border: `${Math.max(2, size * 0.045)}px solid #1f2937`,
-            background: "linear-gradient(90deg,rgba(103,232,249,.75),rgba(167,139,250,.75))",
-            boxShadow: "inset 0 0 12px rgba(255,255,255,.45)",
-          }}
-        />
-      </div>
+      <DecorationImage def={def} size={size} />
     ),
     halo: (
-      <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2"
-        style={{ top: -size * 0.32 }}
-      >
-        <div
-          style={{
-            width: size * 1.05,
-            height: size * 0.35,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(closest-side, transparent 55%, #fde68a 60%, #f59e0b 70%, transparent 80%)",
-            boxShadow: "0 0 20px #fde68a, 0 0 40px #f59e0baa",
-          }}
-        />
-      </div>
+      <DecorationImage def={def} size={size} />
     ),
     wings: (
       <>
-        <span
-          className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-          style={{ left: -size * 0.55, fontSize: size * 0.85, transform: "translateY(-50%) scaleX(-1)", filter: "drop-shadow(0 0 6px rgba(255,255,255,0.6))" }}
-        >🪽</span>
-        <span
-          className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-          style={{ right: -size * 0.55, fontSize: size * 0.85, filter: "drop-shadow(0 0 6px rgba(255,255,255,0.6))" }}
-        >🪽</span>
+        <DecorationImage def={{ ...def, imageScale: 0.86, imageOffsetX: -0.68 }} size={size} />
+        <DecorationImage def={{ ...def, imageScale: 0.86, imageOffsetX: 0.68 }} size={size} mirror />
       </>
     ),
     neon_ring: (
-      <div
-        className="pointer-events-none absolute inset-0 rounded-full"
-        style={{
-          boxShadow:
-            "0 0 0 2px #22d3ee, 0 0 18px #22d3ee, 0 0 36px #a78bfa88, inset 0 0 12px #22d3ee55",
-          animation: "pe-holo 4s linear infinite",
-        }}
-      />
+      <DecorationImage def={{ ...def, imageScale: 1.18 }} size={size} style={{ animation: "pe-holo 4s linear infinite" }} />
     ),
   };
 
@@ -438,20 +301,7 @@ export function AvatarDecoration({
       style={{ width: size, height: size }}
     >
       {children}
-      {specials[def.id]}
-      {def.topEmoji && (
-        <span
-          className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
-          style={{
-            "--deco-rotate": `${def.topRotate ?? 0}deg`,
-            transform: `translate(${(def.topOffsetX ?? 0) * size}px, ${(def.topOffsetY ?? -0.5) * size}px) translateX(-50%) rotate(${def.topRotate ?? 0}deg)`,
-            transformOrigin: "center",
-            animation: def.animated ? "deco-float 3.6s ease-in-out infinite" : undefined,
-          } as CSSProperties}
-        >
-          <Glyph char={def.topEmoji} size={size * (def.topScale ?? 0.7)} />
-        </span>
-      )}
+      {specials[def.id] ?? <DecorationImage def={def} size={size} />}
     </div>
   );
 }

@@ -52,6 +52,14 @@ const changelogItems = [
       {
         category: "Account",
         tagColor: tagStyles.ui,
+        icon: ImageIcon,
+        title: "Real Decoration Images",
+        detail:
+          "Avatar decorations now use local image assets for crowns, halos, wings, auras, hats, visors, goggles, seasonal pieces, and premium animated effects instead of relying on emoji-only artwork.",
+      },
+      {
+        category: "Account",
+        tagColor: tagStyles.ui,
         icon: Palette,
         title: "Animated Avatar Decorations",
         detail:
