@@ -342,26 +342,30 @@ function UIGeneratorPage() {
       ];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      {/* Background ambient lighting effects */}
+      <div className="absolute top-0 right-1/4 w-[480px] h-[480px] bg-primary/10 rounded-full blur-[140px] pointer-events-none z-0" />
+      <div className="absolute bottom-1/3 left-1/4 w-[380px] h-[380px] bg-accent/5 rounded-full blur-[120px] pointer-events-none z-0" />
+
       <Header />
-      <main className="flex-1 mx-auto w-full max-w-[1680px] px-3 sm:px-5 py-4 space-y-4">
-        <header className="glass rounded-lg p-3 sm:p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-primary/30 bg-primary/12">
-                <Wand2 className="h-5 w-5 text-primary" />
+      <main className="flex-1 mx-auto w-full max-w-[1680px] px-3 sm:px-5 py-5 space-y-5 relative z-10">
+        <header className="glass rounded-2xl p-4 sm:p-5 border border-border/80 shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary/12 shadow-[0_0_15px_-3px_rgba(20,241,149,0.2)]">
+                <Wand2 className="h-5.5 w-5.5 text-primary" />
               </div>
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-bold leading-tight sm:text-2xl">UI Generator</h1>
-                  <span className="rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-xl font-black tracking-tight sm:text-2xl">UI Generator</h1>
+                  <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-primary-glow">
                     Builder
                   </span>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="truncate">{activeTitle}</span>
+                  <span className="font-semibold text-foreground/80 truncate">{activeTitle}</span>
                   <span className="hidden h-1 w-1 rounded-full bg-muted-foreground/45 sm:inline-block" />
-                  <span className="font-mono">{activeScreenGui}</span>
+                  <span className="font-mono text-[11px] bg-background/40 border border-border/60 px-2 py-0.5 rounded-md">{activeScreenGui}</span>
                 </div>
               </div>
             </div>
@@ -369,39 +373,41 @@ function UIGeneratorPage() {
               {generationStats.map((item) => (
                 <div
                   key={item.label}
-                  className="rounded-md border border-border/80 bg-background/35 px-2.5 py-1.5"
+                  className="rounded-xl border border-border/60 bg-surface/30 px-3 py-1.5 hover:border-primary/20 transition-all duration-300 shadow-sm"
                 >
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">
                     {item.label}
                   </div>
-                  <div className="max-w-[9rem] truncate text-sm font-semibold">{item.value}</div>
+                  <div className="max-w-[9rem] truncate text-sm font-bold text-foreground">{item.value}</div>
                 </div>
               ))}
               <button
                 onClick={() => setShowLib((s) => !s)}
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm font-medium hover:bg-surface-elevated"
+                className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-surface/80 px-4 text-sm font-bold hover:bg-surface-elevated active:scale-[0.98] hover:border-primary/30 transition-all duration-200 shadow-sm"
               >
-                <Library className="w-4 h-4" /> Library ({library.length})
+                <Library className="w-4 h-4 text-primary" /> Library ({library.length})
               </button>
             </div>
           </div>
         </header>
 
         {showLib && (
-          <section className="glass rounded-lg p-4 space-y-2">
-            <h2 className="text-sm font-semibold mb-2">Saved UIs</h2>
+          <section className="glass rounded-2xl p-5 space-y-3 border border-border/80 shadow-md">
+            <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Saved UIs
+            </h2>
             {library.length === 0 ? (
               <p className="text-xs text-muted-foreground">Your saved generations will appear here.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {library.map((it) => (
-                  <div key={it.id} className="rounded-lg border border-border bg-surface p-3 flex flex-col gap-1">
-                    <div className="text-sm font-medium line-clamp-1">{it.title}</div>
-                    <div className="text-[11px] text-muted-foreground">{it.category} · {it.style ?? "—"}</div>
-                    <div className="flex gap-2 mt-1">
-                      <button onClick={() => openSaved(it.id)} className="flex-1 text-xs rounded-md bg-secondary px-2 py-1 hover:bg-secondary/80">Open</button>
-                      <button onClick={() => removeSaved(it.id)} className="text-xs rounded-md border border-border px-2 py-1 hover:bg-surface-elevated" title="Delete">
-                        <Trash2 className="w-3 h-3" />
+                  <div key={it.id} className="rounded-xl border border-border/70 bg-surface/50 p-3.5 flex flex-col gap-1.5 hover:border-primary/20 hover:shadow-md transition-all duration-300">
+                    <div className="text-sm font-bold line-clamp-1">{it.title}</div>
+                    <div className="text-[11px] text-muted-foreground font-medium">{it.category} · <span className="capitalize">{it.style ?? "—"}</span></div>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => openSaved(it.id)} className="flex-1 text-xs font-bold rounded-lg bg-secondary/80 text-foreground px-2 py-1.5 hover:bg-secondary transition active:scale-[0.97]">Open</button>
+                      <button onClick={() => removeSaved(it.id)} className="text-xs font-bold rounded-lg border border-border px-2.5 py-1.5 hover:bg-surface-elevated text-muted-foreground hover:text-destructive active:scale-[0.97] transition" title="Delete">
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -411,28 +417,28 @@ function UIGeneratorPage() {
           </section>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[390px_1fr] gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[390px_1fr] gap-5 items-start">
           {/* Customizer */}
-          <aside className="space-y-3 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
-            <section className="glass rounded-lg p-3 space-y-3">
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
+            <section className="glass rounded-2xl p-4 space-y-3.5 border border-border/80 shadow-sm">
               <div className="flex items-center justify-between gap-2">
                 <SectionTitle icon={Layers3} label="Template" />
-                <span className="rounded-md border border-border bg-background/30 px-2 py-1 text-[10px] text-muted-foreground truncate max-w-[55%]" title={category}>{category}</span>
+                <span className="rounded-lg border border-border bg-background/30 px-2 py-1 text-[10px] font-bold text-muted-foreground truncate max-w-[55%]" title={category}>{category}</span>
               </div>
               <TemplateGrid active={category} onPick={setCategory} />
             </section>
 
-            <section className="glass rounded-lg p-3 space-y-3">
+            <section className="glass rounded-2xl p-4 space-y-3.5 border border-border/80 shadow-sm">
               <SectionTitle icon={Palette} label="Style & Prompt" />
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-3 gap-2">
                 {UI_STYLES.map((s) => (
                   <button
                     key={s}
                     onClick={() => setStyle(s)}
-                    className={`rounded-md border px-2.5 py-2 text-xs font-medium transition ${
+                    className={`rounded-xl border px-2.5 py-2.5 text-xs font-bold transition-all duration-300 ease-out active:scale-[0.97] hover:scale-[1.01] cursor-pointer ${
                       style === s
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border bg-background/35 hover:bg-surface hover:border-primary/40"
+                        ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground border-primary shadow-[0_0_12px_rgba(20,241,149,0.25)]"
+                        : "border-border/60 bg-background/25 hover:bg-surface hover:border-primary/30 text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {s}
@@ -448,19 +454,19 @@ function UIGeneratorPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Title text (optional)"
-                className="w-full rounded-lg bg-background/35 border border-border px-3 py-2 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl bg-background/25 border border-border/80 px-3.5 py-2.5 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition duration-200 text-foreground placeholder:text-muted-foreground/60"
               />
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
                 placeholder={`Describe extras for this ${category}… (optional)`}
-                className="w-full rounded-lg bg-background/35 border border-border px-3 py-2 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                className="w-full rounded-xl bg-background/25 border border-border/80 px-3.5 py-2.5 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none transition duration-200 text-foreground placeholder:text-muted-foreground/60"
               />
               <button
                 onClick={run}
                 disabled={busy}
-                className="btn-shine w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-[0_12px_28px_-18px_var(--primary)] hover:brightness-110 disabled:opacity-60 transition"
+                className="btn-shine w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary via-primary-glow to-accent py-3.5 text-sm font-bold text-primary-foreground shadow-lg hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 disabled:opacity-60 border-0 cursor-pointer"
               >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {busy ? "Generating…" : `Generate — ${UI_GEN_CREDIT_COST} credits`}
@@ -468,20 +474,20 @@ function UIGeneratorPage() {
             </section>
 
             {result && (
-              <section className="glass rounded-lg p-3 space-y-3">
+              <section className="glass rounded-2xl p-4 space-y-3.5 border border-border/80 shadow-sm">
                 <SectionTitle icon={Save} label="Save & Insert" />
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                   <button
                     onClick={saveCurrent}
                     disabled={saving || !!result.id}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background/35 px-3 py-2.5 text-sm font-medium hover:bg-surface disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/25 px-3 py-2.5 text-xs font-bold hover:bg-surface disabled:opacity-60 active:scale-[0.97] transition-all duration-200"
                   >
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {result.id ? "Saved to Library" : saving ? "Saving..." : "Save to Library"}
                   </button>
                   <button
                     onClick={() => setShowLib(true)}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background/35 px-3 py-2.5 text-sm font-medium hover:bg-surface"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/25 px-3 py-2.5 text-xs font-bold hover:bg-surface active:scale-[0.97] transition-all duration-200"
                   >
                     <Library className="h-4 w-4" />
                     Open Library
@@ -490,7 +496,7 @@ function UIGeneratorPage() {
                 <select
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  className="w-full rounded-lg bg-background/35 border border-border px-2 py-2 text-sm"
+                  className="w-full rounded-xl bg-background/25 border border-border/80 px-3 py-2.5 text-sm text-foreground focus:border-primary/60 focus:outline-none"
                 >
                   {projects.length === 0 && <option value="">No projects — create one first</option>}
                   {projects.map((p) => (
@@ -500,12 +506,12 @@ function UIGeneratorPage() {
                 <button
                   onClick={insert}
                   disabled={inserting || !projectId}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2.5 text-sm font-medium hover:bg-secondary/80 disabled:opacity-60"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-secondary to-secondary/80 px-4 py-3 text-sm font-bold text-foreground hover:brightness-110 active:scale-[0.97] transition-all duration-200 disabled:opacity-60 border border-border/60"
                 >
                   {inserting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   {inserting ? "Queueing…" : "Insert into Roblox Studio"}
                 </button>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[10.5px] leading-normal text-muted-foreground/80">
                   Queues {result.actions.length} Studio actions. Open Studio with the plugin connected and run Sync.
                 </p>
               </section>
@@ -513,28 +519,30 @@ function UIGeneratorPage() {
           </aside>
 
           {/* Preview */}
-          <section className="glass rounded-lg p-3 flex flex-col lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] min-h-[640px]">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+          <section className="glass rounded-2xl p-4 flex flex-col lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] min-h-[640px] border border-border/80 shadow-md">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="grid h-8 w-8 place-items-center rounded-md bg-primary/12 text-primary">
-                    <Monitor className="h-4 w-4" />
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-9.5 w-9.5 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-[0_0_12px_rgba(20,241,149,0.15)]">
+                    <Monitor className="h-4.5 w-4.5" />
                   </span>
                   <div className="min-w-0">
-                    <h2 className="truncate text-sm font-semibold">{activeTitle}</h2>
-                    <p className="truncate font-mono text-[10px] text-muted-foreground">
+                    <h2 className="truncate text-sm font-bold text-foreground">{activeTitle}</h2>
+                    <p className="truncate font-mono text-[10px] text-muted-foreground bg-background/30 border border-border/60 px-1.5 py-0.5 rounded-md mt-0.5 inline-block">
                       {activeScreenGui}
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="inline-flex rounded-lg bg-background/35 border border-border p-0.5">
+              <div className="inline-flex rounded-xl bg-background/20 border border-border/80 p-1 gap-1">
                 {VIEW_TABS.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     onClick={() => setTab(id)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition ${
-                      tab === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 ${
+                      tab === id
+                        ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-surface/50"
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -544,21 +552,25 @@ function UIGeneratorPage() {
               </div>
             </div>
 
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               {tab === "preview" && (
-                <div className="inline-flex rounded-lg bg-background/35 border border-border p-0.5">
+                <div className="inline-flex rounded-xl bg-background/20 border border-border/80 p-1 gap-1">
                   <button
                     onClick={() => setDevice("desktop")}
-                    className={`px-2.5 py-1 text-xs rounded-md inline-flex items-center gap-1 transition ${
-                      device === "desktop" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg inline-flex items-center gap-1 transition ${
+                      device === "desktop"
+                        ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-surface/50"
                     }`}
                   >
                     <Monitor className="w-3.5 h-3.5" /> Desktop
                   </button>
                   <button
                     onClick={() => setDevice("mobile")}
-                    className={`px-2.5 py-1 text-xs rounded-md inline-flex items-center gap-1 transition ${
-                      device === "mobile" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg inline-flex items-center gap-1 transition ${
+                      device === "mobile"
+                        ? "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-surface/50"
                     }`}
                   >
                     <Smartphone className="w-3.5 h-3.5" /> Mobile
@@ -569,23 +581,23 @@ function UIGeneratorPage() {
                 <button
                   onClick={generateImage}
                   disabled={imgBusy}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-surface-elevated disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/80 px-3.5 py-1.5 text-xs font-bold hover:bg-surface-elevated hover:border-primary/30 transition disabled:opacity-60 active:scale-[0.97]"
                 >
                   {imgBusy ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : imgSrc ? (
                     <RefreshCw className="h-3.5 w-3.5" />
                   ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
                   )}
                   {imgBusy ? "Rendering…" : imgSrc ? "Regenerate" : "Render image"}
                 </button>
               )}
-              <div className="ml-auto flex flex-wrap gap-1.5">
+              <div className="ml-auto flex flex-wrap gap-2">
                 {generationStats.map((item) => (
                   <span
                     key={item.label}
-                    className="rounded-md border border-border/70 bg-background/30 px-2 py-1 text-[10px] text-muted-foreground"
+                    className="rounded-lg border border-border/80 bg-background/20 px-2.5 py-1 text-[10px] font-bold text-muted-foreground"
                   >
                     {item.label}: <strong className="text-foreground">{item.value}</strong>
                   </span>
@@ -705,20 +717,22 @@ function SectionTitle({ icon: Icon, label }: { icon: any; label: string }) {
 
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1.5 rounded-lg bg-background/35 border border-border px-1.5 py-1.5 focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-6 w-6 rounded-md cursor-pointer border-0 bg-transparent"
-        />
+    <label className="flex flex-col gap-1 flex-1">
+      <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1.5 rounded-xl bg-background/25 border border-border/80 px-2 py-1.5 transition-all duration-300 focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20">
+        <div className="relative h-6.5 w-6.5 rounded-lg overflow-hidden border border-border/60 shrink-0">
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 h-10 w-10 -translate-x-2 -translate-y-2 cursor-pointer border-0 p-0"
+          />
+        </div>
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent text-xs outline-none"
+          className="w-full bg-transparent text-xs font-mono font-medium outline-none text-foreground uppercase"
         />
       </div>
     </label>
