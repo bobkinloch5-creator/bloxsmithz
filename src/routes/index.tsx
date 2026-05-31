@@ -371,7 +371,7 @@ const gameTypes = [
 
 const testimonials = [
   {
-    name: "Bob Kinloch",
+    name: "Dave Kinloch",
     role: "Lead Creator",
     body: "Using BloxSmith, I was able to build and launch my Roblox game in record time. The AI generates clean Luau code instantly.",
     rating: 5,

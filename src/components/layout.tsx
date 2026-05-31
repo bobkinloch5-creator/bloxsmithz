@@ -476,14 +476,14 @@ export function Footer() {
           <Link to="/legal" className="hover:text-foreground transition">Legal</Link>
         </nav>
         <p className="text-[11px] text-muted-foreground/80">
-          Created & maintained by{" "}
+          Made only by{" "}
           <a
             href="https://github.com/bobkinloch5-creator"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary-glow hover:underline font-semibold"
           >
-            Bob Kinloch
+            Dave Kinloch
           </a>
         </p>
       </div>
