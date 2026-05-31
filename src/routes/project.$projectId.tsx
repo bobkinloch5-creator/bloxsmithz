@@ -1105,7 +1105,7 @@ function ProjectEditor() {
 
   const runGenerate = async (
     userPrompt: string,
-    opts?: { skipUserBubble?: boolean; images?: string[] },
+    opts?: { skipUserBubble?: boolean; images?: string[]; forceThinking?: boolean },
   ) => {
     if (aiBusy) return;
     if (outOfCredits) {
@@ -1163,7 +1163,7 @@ function ProjectEditor() {
           prompt: userPrompt,
           mode: "generate",
           preview: true,
-          thinking,
+          thinking: opts?.forceThinking ?? thinking,
           ...(imgs.length && /^data:image\//.test(imgs[0]) ? { imageDataUrl: imgs[0] } : {}),
         },
       })) as {
@@ -1454,6 +1454,31 @@ function ProjectEditor() {
     if (chatMode) await runChatRequest(composedPrompt, imgs);
     else if (planMode) await runPlanRequest(composedPrompt);
     else await runGenerate(composedPrompt, { images: imgs });
+  };
+
+  const runPlaytestRequest = async () => {
+    if (aiBusy) return;
+    if (aiUsageBlocked) {
+      toast.error(`Daily AI timer used up. Try again at ${aiUsageResetLabel}.`);
+      return;
+    }
+    setThinking(true);
+    setWebSearch(true);
+    setPlanMode(false);
+    toggleChatMode(false);
+    await runGenerate(
+      `[AI PLAYTEST MODE]
+[WEB SEARCH ENABLED] Use web_search / fetch_url only when current Roblox API docs or safety guidance are needed.
+Act like a careful Roblox QA playtester for this project. Use the current project files and any live Studio/plugin snapshot available.
+
+Do not pretend you physically pressed Play if the plugin cannot run Play Solo. Instead, simulate the playtest from code and structure, inspect likely runtime blockers, and queue safe fixes when obvious.
+
+Check:
+- spawn flow, player join flow, UI opening/closing, mobile controls, remotes, server validation, DataStore/save flow, economy abuse, missing instances, broken paths, animation/tool setup, performance risks, and publish readiness.
+- Give a short playtest report with Pass / Needs Fix / Fix Queued sections.
+- If a blocker can be fixed safely, generate the exact files/actions needed and keep changes focused.`,
+      { forceThinking: true },
+    );
   };
 
   const buildFromPlan = async (msgId: string) => {
@@ -2085,6 +2110,14 @@ function ProjectEditor() {
                 >
                   <Bug className="h-3.5 w-3.5" />
                 </button>
+                <button
+                  onClick={runPlaytestRequest}
+                  disabled={aiBusy || aiUsageBlocked}
+                  title="AI Playtest — inspect the game like Roblox QA and queue safe fixes"
+                  className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary-glow hover:bg-primary/10 transition disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Gamepad2 className="h-3.5 w-3.5" />
+                </button>
                 {(() => {
                   const totalErr = Object.values(validationByMsg).reduce(
                     (n, v) => n + v.errors.length,
@@ -2225,7 +2258,7 @@ function ProjectEditor() {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-2 text-[11px]">
+            <div className="grid grid-cols-2 gap-2 text-[11px] xl:grid-cols-5">
               <button
                 onClick={() => setShowAuto(true)}
                 className="rounded-lg border border-border bg-background/35 px-2 py-2 text-left hover:bg-surface-elevated transition"
@@ -2263,6 +2296,19 @@ function ProjectEditor() {
                 </span>
                 <span className="mt-0.5 block truncate text-muted-foreground">
                   {chatMode ? "on" : `${CHAT_COST} cr`}
+                </span>
+              </button>
+              <button
+                onClick={runPlaytestRequest}
+                disabled={aiBusy || aiUsageBlocked}
+                className="rounded-lg border border-border bg-background/35 px-2 py-2 text-left hover:bg-surface-elevated transition disabled:cursor-not-allowed disabled:opacity-50"
+                title="Run an AI QA pass over the project and queue safe fixes"
+              >
+                <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                  <Gamepad2 className="h-3 w-3 text-primary" /> Playtest
+                </span>
+                <span className="mt-0.5 block truncate text-muted-foreground">
+                  deep QA
                 </span>
               </button>
               <button

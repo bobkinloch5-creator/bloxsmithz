@@ -10,6 +10,9 @@
 - Made Claude Opus 4.8 a very expensive protected model with a separate daily cap for normal users.
 - Disabled the project chat/build composer when the daily AI timer is used up so users cannot type messages that cannot be sent.
 - Marked web-search-capable models in the picker so users know which BloxSmith AI models can call web search, fetch URLs, Roblox docs, and toolbox tools.
+- Marked deeper Thinking-capable models in the picker so users know which models are better for architecture, debugging, QA, and multi-file Roblox builds.
+- Simplified the 3D Studio into a prompt-first flow with Advanced controls collapsed by default, plus an AI playtest-readiness option for Roblox import QA.
+- Added an AI Playtest shortcut in the project chat that runs a deep QA-style inspection over the current Roblox project and queues safe fixes when possible.
 - Added BloxSmith AI image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
 - Added a 24-hour AI usage timer and server-side request limit for normal users, with owner/admin/moderator bypass.
 - Added Supabase migration support for BloxSmith AI provider settings and the new AI rate-limit event table.

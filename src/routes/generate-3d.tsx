@@ -12,6 +12,7 @@ import {
   Download,
   Film,
   Gauge,
+  Gamepad2,
   ImagePlus,
   Info,
   Loader2,
@@ -394,6 +395,8 @@ function Generate3DPage() {
   const [animationIntensity, setAnimationIntensity] = useState(55);
   const [animationDuration, setAnimationDuration] = useState(2);
   const [animationLooped, setAnimationLooped] = useState(true);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [playtestChecks, setPlaytestChecks] = useState(true);
 
   const stageList =
     kind === "model"
@@ -471,6 +474,12 @@ function Generate3DPage() {
     new Date(nextAvailable).getTime() > now;
   const cost = status?.cost ?? (kind === "model" ? 25 : kind === "text" ? 10 : 12);
   const progressEta = Math.max(0, estimatedSeconds - elapsed);
+  const selectedSummary =
+    kind === "model"
+      ? `${modelType} / ${robloxStyle} / ${theme} / ${material}`
+      : kind === "text"
+        ? `${textFont} / ${textEffect} / ${textAnimation}`
+        : `${animationType} / ${animationStyle} / ${animationBodyFocus}`;
 
   const fmtDate = (iso: string | null) =>
     iso
@@ -548,10 +557,13 @@ function Generate3DPage() {
     setLimitMsg(null);
     startProgress();
     try {
+      const playtestHint = playtestChecks
+        ? "\n\nInclude Roblox playtest readiness: collision/import notes, expected Studio test steps, mobile checks, and any safety/performance constraints."
+        : "";
       const out = (await run({
         data: {
           generationKind: kind,
-          prompt: prompt.trim(),
+          prompt: `${prompt.trim()}${playtestHint}`.trim(),
           ...(projectId ? { projectId } : {}),
           inputMode,
           ...(imageDataUrl ? { imageDataUrl } : {}),
@@ -752,8 +764,17 @@ function Generate3DPage() {
             )}
 
             <div className="mt-5 space-y-4 border-t border-border/60 pt-4">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <Settings2 className="h-3.5 w-3.5" /> Controls
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Settings2 className="h-3.5 w-3.5" /> Controls
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen((v) => !v)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background/45 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-primary/45 hover:text-foreground"
+                >
+                  {advancedOpen ? "Hide advanced" : "Advanced"}
+                </button>
               </div>
 
               {projects.length > 0 && (
@@ -773,83 +794,113 @@ function Generate3DPage() {
                 </label>
               )}
 
-              {kind === "model" && (
-                <>
-                  <Group label="Model type"><VisualChips value={modelType} set={setModelType} items={modelTypes} images={modelTypeImages} /></Group>
-                  <Group label="Roblox style"><VisualChips value={robloxStyle} set={setRobloxStyle} items={styles} images={styleImages} compact /></Group>
-                </>
-              )}
-
-              {kind === "animation" && (
-                <>
-                  <Group label="Animation type"><VisualChips value={animationType} set={setAnimationType} items={animationTypes} images={animationTypeImages} compact /></Group>
-                  <Group label="Motion style"><VisualChips value={animationStyle} set={setAnimationStyle} items={animationStyles} images={animationStyleImages} compact /></Group>
-                  <Group label="Body focus"><VisualChips value={animationBodyFocus} set={setAnimationBodyFocus} items={bodyFocuses} images={bodyFocusImages} compact /></Group>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <TextInput label="Target" value={animationTarget} onChange={setAnimationTarget} />
-                    <NumberInput label="Duration" value={animationDuration} min={0.25} max={30} step={0.25} onChange={setAnimationDuration} />
-                  </div>
-                  <Group label="Easing"><VisualChips value={animationEasing} set={setAnimationEasing} items={animationEasings} images={animationEasingImages} compact /></Group>
-                  <label className="block text-xs font-medium">
-                    Intensity: {animationIntensity}%
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={5}
-                      value={animationIntensity}
-                      onChange={(e) => setAnimationIntensity(Number(e.target.value))}
-                      className="mt-1 w-full accent-emerald-500"
-                    />
-                  </label>
-                  <Toggle checked={animationLooped} onChange={setAnimationLooped} label="Looped animation" />
-                </>
-              )}
-
-              <Group label="Theme"><VisualChips value={theme} set={setTheme} items={themes} images={themeImages} compact /></Group>
-              <Group label="Material"><VisualChips value={material} set={setMaterial} items={materials} images={materialImages} compact /></Group>
-              <div className="grid grid-cols-2 gap-2">
-                <ColorInput label="Primary color" value={primaryColor} onChange={setPrimaryColor} />
-                <ColorInput label="Secondary color" value={secondaryColor} onChange={setSecondaryColor} />
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background/35 p-2 text-xs">
+                <span className="rounded-lg bg-surface/70 px-2 py-1 text-muted-foreground">
+                  Selected: <span className="font-semibold text-foreground">{selectedSummary}</span>
+                </span>
+                <span className="rounded-lg bg-surface/70 px-2 py-1 text-muted-foreground">
+                  {kind === "model" ? `${quality} / ${format}` : kind === "animation" ? `${animationDuration}s / ${animationLooped ? "looped" : "one-shot"}` : `${textSize} stud size`}
+                </span>
               </div>
 
-              {kind === "text" && (
-                <>
-                  <Group label="Font"><VisualChips value={textFont} set={setTextFont} items={["GothamBlack", "FredokaOne", "Bangers", "Cartoon", "Arcade", "SciFi"]} images={textFontImages} compact /></Group>
-                  <Group label="Effect"><VisualChips value={textEffect} set={setTextEffect} items={["neon", "outline", "gold", "ice", "shadow"]} images={textEffectImages} compact /></Group>
-                  <Group label="Animation"><VisualChips value={textAnimation} set={setTextAnimation} items={["float", "pulse", "spin", "bounce", "none"]} images={textAnimationImages} compact /></Group>
-                </>
-              )}
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/35 px-3 py-3 text-xs">
+                <input
+                  type="checkbox"
+                  checked={playtestChecks}
+                  onChange={(e) => setPlaytestChecks(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-emerald-500"
+                />
+                <Gamepad2 className="mt-0.5 h-4 w-4 text-primary" />
+                <span>
+                  <span className="block font-semibold text-foreground">AI playtest readiness</span>
+                  <span className="mt-0.5 block text-muted-foreground">
+                    Adds Roblox import QA, Studio test steps, mobile checks, collision notes, and
+                    performance constraints.
+                  </span>
+                </span>
+              </label>
 
-              {kind === "model" && (
+              {advancedOpen && (
                 <>
-                  <Group label="Quality"><VisualChips value={quality} set={(v) => setQuality(v as typeof quality)} items={["turbo", "standard", "detailed"]} images={qualityImages} compact /></Group>
-                  <Group label="Format"><VisualChips value={format} set={(v) => setFormat(v as typeof format)} items={["GLB", "OBJ", "FBX"]} images={formatImages} compact /></Group>
-                  <label className="block text-xs font-medium">
-                    Polygon budget: {faceLimit.toLocaleString()}
-                    <input
-                      type="range"
-                      min={1000}
-                      max={50000}
-                      step={1000}
-                      value={faceLimit}
-                      onChange={(e) => setFaceLimit(Number(e.target.value))}
-                      className="mt-1 w-full accent-emerald-500"
-                    />
-                  </label>
-                  <Group label="Texture look"><VisualChips value={textureLook} set={setTextureLook} items={textureLooks} images={textureLookImages} compact /></Group>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Toggle checked={texture} onChange={setTexture} label="Generate textures" />
-                    <Toggle
-                      checked={rigged}
-                      onChange={(v) => {
-                        setRigged(v);
-                        if (v && format === "OBJ") setFormat("FBX");
-                      }}
-                      label="Rigged FBX export"
-                    />
-                    <Toggle checked={animateInPlace} onChange={setAnimateInPlace} label="Animation-ready in place" />
+                  {kind === "model" && (
+                    <>
+                      <Group label="Model type"><VisualChips value={modelType} set={setModelType} items={modelTypes} images={modelTypeImages} /></Group>
+                      <Group label="Roblox style"><VisualChips value={robloxStyle} set={setRobloxStyle} items={styles} images={styleImages} compact /></Group>
+                    </>
+                  )}
+
+                  {kind === "animation" && (
+                    <>
+                      <Group label="Animation type"><VisualChips value={animationType} set={setAnimationType} items={animationTypes} images={animationTypeImages} compact /></Group>
+                      <Group label="Motion style"><VisualChips value={animationStyle} set={setAnimationStyle} items={animationStyles} images={animationStyleImages} compact /></Group>
+                      <Group label="Body focus"><VisualChips value={animationBodyFocus} set={setAnimationBodyFocus} items={bodyFocuses} images={bodyFocusImages} compact /></Group>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <TextInput label="Target" value={animationTarget} onChange={setAnimationTarget} />
+                        <NumberInput label="Duration" value={animationDuration} min={0.25} max={30} step={0.25} onChange={setAnimationDuration} />
+                      </div>
+                      <Group label="Easing"><VisualChips value={animationEasing} set={setAnimationEasing} items={animationEasings} images={animationEasingImages} compact /></Group>
+                      <label className="block text-xs font-medium">
+                        Intensity: {animationIntensity}%
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={5}
+                          value={animationIntensity}
+                          onChange={(e) => setAnimationIntensity(Number(e.target.value))}
+                          className="mt-1 w-full accent-emerald-500"
+                        />
+                      </label>
+                      <Toggle checked={animationLooped} onChange={setAnimationLooped} label="Looped animation" />
+                    </>
+                  )}
+
+                  <Group label="Theme"><VisualChips value={theme} set={setTheme} items={themes} images={themeImages} compact /></Group>
+                  <Group label="Material"><VisualChips value={material} set={setMaterial} items={materials} images={materialImages} compact /></Group>
+                  <div className="grid grid-cols-2 gap-2">
+                    <ColorInput label="Primary color" value={primaryColor} onChange={setPrimaryColor} />
+                    <ColorInput label="Secondary color" value={secondaryColor} onChange={setSecondaryColor} />
                   </div>
+
+                  {kind === "text" && (
+                    <>
+                      <Group label="Font"><VisualChips value={textFont} set={setTextFont} items={["GothamBlack", "FredokaOne", "Bangers", "Cartoon", "Arcade", "SciFi"]} images={textFontImages} compact /></Group>
+                      <Group label="Effect"><VisualChips value={textEffect} set={setTextEffect} items={["neon", "outline", "gold", "ice", "shadow"]} images={textEffectImages} compact /></Group>
+                      <Group label="Animation"><VisualChips value={textAnimation} set={setTextAnimation} items={["float", "pulse", "spin", "bounce", "none"]} images={textAnimationImages} compact /></Group>
+                    </>
+                  )}
+
+                  {kind === "model" && (
+                    <>
+                      <Group label="Quality"><VisualChips value={quality} set={(v) => setQuality(v as typeof quality)} items={["turbo", "standard", "detailed"]} images={qualityImages} compact /></Group>
+                      <Group label="Format"><VisualChips value={format} set={(v) => setFormat(v as typeof format)} items={["GLB", "OBJ", "FBX"]} images={formatImages} compact /></Group>
+                      <label className="block text-xs font-medium">
+                        Polygon budget: {faceLimit.toLocaleString()}
+                        <input
+                          type="range"
+                          min={1000}
+                          max={50000}
+                          step={1000}
+                          value={faceLimit}
+                          onChange={(e) => setFaceLimit(Number(e.target.value))}
+                          className="mt-1 w-full accent-emerald-500"
+                        />
+                      </label>
+                      <Group label="Texture look"><VisualChips value={textureLook} set={setTextureLook} items={textureLooks} images={textureLookImages} compact /></Group>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Toggle checked={texture} onChange={setTexture} label="Generate textures" />
+                        <Toggle
+                          checked={rigged}
+                          onChange={(v) => {
+                            setRigged(v);
+                            if (v && format === "OBJ") setFormat("FBX");
+                          }}
+                          label="Rigged FBX export"
+                        />
+                        <Toggle checked={animateInPlace} onChange={setAnimateInPlace} label="Animation-ready in place" />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
 

@@ -139,97 +139,113 @@ export const DEFAULT_MODEL_CREDIT_MULTIPLIER = 1;
 
 export const MODEL_TOOL_CAPABILITIES: Record<
   string,
-  { tools: boolean; webSearch: boolean; label: string }
+  { tools: boolean; webSearch: boolean; thinking: boolean; label: string }
 > = {
   "gpt-5.4-nano": {
     tools: true,
     webSearch: false,
+    thinking: false,
     label: "Basic tools",
   },
   "deepseek-v4-flash": {
     tools: true,
     webSearch: true,
+    thinking: false,
     label: "Web + Roblox docs",
   },
   "minimax-m2.7": {
     tools: true,
     webSearch: false,
+    thinking: false,
     label: "Long context",
   },
   "qwen3.6-plus": {
     tools: true,
     webSearch: true,
+    thinking: false,
     label: "Web + structured tools",
   },
   "gpt-5.4-mini": {
     tools: true,
     webSearch: true,
+    thinking: false,
     label: "Web + coding",
   },
   "qwen3.7-max": {
     tools: true,
     webSearch: true,
+    thinking: true,
     label: "Web + agent tools",
   },
   "gemini-3-flash": {
     tools: true,
     webSearch: true,
+    thinking: false,
     label: "Web + docs",
   },
   "gemini-3.5-flash": {
     tools: true,
     webSearch: true,
+    thinking: false,
     label: "Web + vision",
   },
   "gemini-3.1-pro": {
     tools: true,
     webSearch: true,
+    thinking: true,
     label: "Web + large context",
   },
   "grok-4.3": {
     tools: true,
     webSearch: true,
+    thinking: true,
     label: "Web + creative",
   },
   "deepseek-v4-pro": {
     tools: true,
     webSearch: true,
+    thinking: true,
     label: "Web + deep coding",
   },
   "claude-haiku-4-5": {
     tools: true,
     webSearch: false,
+    thinking: false,
     label: "Careful tools",
   },
   "claude-sonnet-4-6-thinking": {
     tools: true,
     webSearch: true,
+    thinking: true,
     label: "Web + reasoning",
   },
   "claude-opus-4-7-thinking": {
     tools: true,
     webSearch: true,
+    thinking: true,
     label: "Web + premium",
   },
   "claude-opus-4-8-thinking": {
     tools: true,
     webSearch: true,
+    thinking: true,
     label: "Web + elite",
   },
 };
 
 export function getModelToolCapabilities(modelName: string | null | undefined) {
-  if (!modelName) return { tools: true, webSearch: false, label: "Tools" };
+  if (!modelName) return { tools: true, webSearch: false, thinking: false, label: "Tools" };
   const direct = MODEL_TOOL_CAPABILITIES[modelName];
   if (direct) return direct;
   if (modelName.endsWith("-thinking")) {
     const base = modelName.slice(0, -"-thinking".length);
     const baseCaps = MODEL_TOOL_CAPABILITIES[base];
-    if (baseCaps) return baseCaps;
+    if (baseCaps) return { ...baseCaps, thinking: true };
   }
   return {
     tools: true,
     webSearch: /\b(gemini|grok|deepseek|qwen|sonnet|opus|gpt-5\.[45]-mini)\b/i.test(modelName),
+    thinking: /\b(thinking|sonnet|opus|pro|max|grok|deepseek-v4-pro|qwen3\.7)\b/i.test(modelName),
     label: "Tools",
   };
 }

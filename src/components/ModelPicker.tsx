@@ -99,6 +99,11 @@ export function ModelPicker({
             Web
           </span>
         )}
+        {currentCaps.thinking && (
+          <span className="rounded-full bg-violet-500/15 px-1.5 py-px text-[9px] font-semibold text-violet-500 dark:text-violet-300">
+            Think
+          </span>
+        )}
         {currentHealth?.disabled && (
           <span className="rounded-full bg-destructive/15 px-1.5 py-px text-[9px] font-semibold text-destructive">
             Down
@@ -201,6 +206,14 @@ export function ModelPicker({
                             Tools
                           </span>
                         ) : null}
+                        {caps.thinking && (
+                          <span
+                            className="rounded-full bg-violet-500/15 px-1.5 py-px text-[9px] font-semibold text-violet-500 dark:text-violet-300"
+                            title="This model is a good fit for deeper reasoning / Thinking mode."
+                          >
+                            Thinking
+                          </span>
+                        )}
                         <span
                           className={`rounded-full px-1.5 py-px text-[9px] font-semibold ${tone}`}
                           title={`Uses ${mult}× the base credit cost for each generation with this model`}
@@ -233,6 +246,10 @@ export function ModelPicker({
             <div className="text-muted-foreground/70">
               Web/tools models can call web_search, fetch_url, Roblox docs, and toolbox tools when
               the prompt needs current facts.
+            </div>
+            <div className="text-muted-foreground/70">
+              Thinking models are better for deep architecture, debugging, QA, and multi-file Roblox
+              builds.
             </div>
             <div className="text-muted-foreground/70">
               Base: chat 1 · plan 1 · fix 2 · build 3 · autopilot 10. Owners pay 0.
