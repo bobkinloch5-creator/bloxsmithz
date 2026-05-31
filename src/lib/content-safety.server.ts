@@ -20,6 +20,49 @@ const NSFW_TEXT_PATTERNS = [
   /\bshota\b/i,
 ];
 
+const NORMALIZED_BLOCKED_TERMS = [
+  "nsfw",
+  "nude",
+  "naked",
+  "sexual",
+  "erotic",
+  "porn",
+  "pornographic",
+  "fetish",
+  "stripper",
+  "stripping",
+  "lingerie",
+  "genitals",
+  "hentai",
+  "loli",
+  "shota",
+  "gore",
+  "beheading",
+  "dismemberment",
+  "selfharm",
+  "suicide",
+  "killyourself",
+];
+
+const LEET_MAP: Record<string, string> = {
+  "0": "o",
+  "1": "i",
+  "3": "e",
+  "4": "a",
+  "5": "s",
+  "7": "t",
+  "@": "a",
+  "$": "s",
+  "!": "i",
+};
+
+function normalizeSafetyText(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[013457@$!]/g, (char) => LEET_MAP[char] ?? char)
+    .replace(/[^a-z]+/g, "");
+}
+
 export function checkTextSafeFor3D(text: string): { safe: true } | { safe: false; reason: string } {
   const clean = text.trim();
   if (!clean) return { safe: true };
@@ -30,6 +73,13 @@ export function checkTextSafeFor3D(text: string): { safe: true } | { safe: false
         reason: "That request looks adult/NSFW. 3D generation is only for safe Roblox-ready assets.",
       };
     }
+  }
+  const normalized = normalizeSafetyText(clean);
+  if (NORMALIZED_BLOCKED_TERMS.some((term) => normalized.includes(term))) {
+    return {
+      safe: false,
+      reason: "That request looks unsafe or inappropriate. 3D generation is only for safe Roblox-ready assets.",
+    };
   }
   return { safe: true };
 }

@@ -71,31 +71,24 @@ const animationPrompts = [
   "A victory dance with two arm pumps and a playful spin",
 ];
 
-const modelTypeImages: Record<string, string> = {
-  pet: "/template-previews/pet-real.webp",
-  character: "/template-previews/roleplay-real.webp",
-  weapon: "/template-previews/fighting-real.webp",
-  prop: "/template-previews/simulator-real.webp",
-  building: "/template-previews/tycoon-real.webp",
-  vehicle: "/template-previews/racing-real.webp",
-  "simulator item": "/template-previews/simulator-real.webp",
-  "map piece": "/template-previews/obby-real.webp",
-  accessory: "/template-previews/roleplay-real.webp",
-  tool: "/template-previews/mining-real.webp",
-};
+const previewSlug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const optionImages = (group: string, items: string[]) =>
+  Object.fromEntries(items.map((item) => [item, `/generator-option-previews/${group}-${previewSlug(item)}.webp`]));
 
-const themeImages: Record<string, string> = {
-  neon: "/og-bloxsmith.jpg",
-  fantasy: "/template-previews/roleplay-real.webp",
-  "sci-fi": "/template-previews/simulator-real.webp",
-  city: "/template-previews/tycoon-real.webp",
-  horror: "/template-previews/horror-real.webp",
-  cute: "/template-previews/pet-real.webp",
-  medieval: "/template-previews/roleplay-real.webp",
-  pirate: "/template-previews/racing-real.webp",
-  space: "/template-previews/tower-defense-real.webp",
-  premium: "/template-previews/fighting-real.webp",
-};
+const modelTypeImages = optionImages("model", modelTypes);
+const themeImages = optionImages("theme", themes);
+const styleImages = optionImages("style", styles);
+const materialImages = optionImages("material", materials);
+const qualityImages = optionImages("quality", ["turbo", "standard", "detailed"]);
+const formatImages = optionImages("format", ["GLB", "OBJ", "FBX"]);
+const textureLookImages = optionImages("texture", textureLooks);
+const textFontImages = optionImages("textFont", ["GothamBlack", "FredokaOne", "Bangers", "Cartoon", "Arcade", "SciFi"]);
+const textEffectImages = optionImages("textEffect", ["neon", "outline", "gold", "ice", "shadow"]);
+const textAnimationImages = optionImages("textAnimation", ["float", "pulse", "spin", "bounce", "none"]);
+const animationTypeImages = optionImages("animation", animationTypes);
+const animationStyleImages = optionImages("motion", animationStyles);
+const animationEasingImages = optionImages("easing", animationEasings);
+const bodyFocusImages = optionImages("body", bodyFocuses);
 
 const copy = {
   model: {
@@ -544,7 +537,7 @@ function Generate3DPage() {
 
   const generate = async () => {
     if (!user) return toast.error("Please log in to generate.");
-    if (locked) return toast.error("Your weekly generation cooldown is still active.");
+    if (locked) return toast.error("Your weekly 3D Studio generation is already used.");
     if (kind === "model" && inputMode === "text" && prompt.trim().length < 3) return toast.error("Describe the model you want.");
     if (kind === "model" && inputMode === "image" && !imageDataUrl) return toast.error("Upload a reference image first.");
     if (kind === "text" && !textWords.trim()) return toast.error("Enter 3D text words.");
@@ -638,7 +631,7 @@ function Generate3DPage() {
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-surface/55 p-2">
-            <Stat label="Credits" value={status?.isOwner ? "Owner" : String(status?.credits ?? "...")} />
+            <Stat label="Credits" value={status?.isOwner ? "Staff" : String(status?.credits ?? "...")} />
             <Stat label="Cost" value={`${cost} cr`} />
             <Stat label="Cooldown" value={locked ? cooldownEta(nextAvailable) : "Ready"} />
           </div>
@@ -649,10 +642,10 @@ function Generate3DPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 font-semibold text-amber-200">
-                  <Clock className="h-4 w-4" /> Weekly generation cooldown active
+                  <Clock className="h-4 w-4" /> Weekly 3D Studio generation used
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Unlocks {fmtDate(nextAvailable)}. The button updates automatically.
+                  Normal users can pick one per week: text-to-3D, image-to-3D, 3D text, or animation. Unlocks {fmtDate(nextAvailable)}.
                 </p>
               </div>
               <div className="rounded-xl border border-amber-300/30 bg-background/50 px-4 py-2 text-center">
@@ -783,29 +776,20 @@ function Generate3DPage() {
               {kind === "model" && (
                 <>
                   <Group label="Model type"><VisualChips value={modelType} set={setModelType} items={modelTypes} images={modelTypeImages} /></Group>
-                  <Group label="Roblox style"><Chips value={robloxStyle} set={setRobloxStyle} items={styles} /></Group>
+                  <Group label="Roblox style"><VisualChips value={robloxStyle} set={setRobloxStyle} items={styles} images={styleImages} compact /></Group>
                 </>
               )}
 
               {kind === "animation" && (
                 <>
-                  <Group label="Animation type"><Chips value={animationType} set={setAnimationType} items={animationTypes} /></Group>
-                  <Group label="Motion style"><Chips value={animationStyle} set={setAnimationStyle} items={animationStyles} /></Group>
-                  <Group label="Body focus"><Chips value={animationBodyFocus} set={setAnimationBodyFocus} items={bodyFocuses} /></Group>
+                  <Group label="Animation type"><VisualChips value={animationType} set={setAnimationType} items={animationTypes} images={animationTypeImages} compact /></Group>
+                  <Group label="Motion style"><VisualChips value={animationStyle} set={setAnimationStyle} items={animationStyles} images={animationStyleImages} compact /></Group>
+                  <Group label="Body focus"><VisualChips value={animationBodyFocus} set={setAnimationBodyFocus} items={bodyFocuses} images={bodyFocusImages} compact /></Group>
                   <div className="grid gap-2 sm:grid-cols-3">
                     <TextInput label="Target" value={animationTarget} onChange={setAnimationTarget} />
                     <NumberInput label="Duration" value={animationDuration} min={0.25} max={30} step={0.25} onChange={setAnimationDuration} />
-                    <label className="text-xs font-medium">
-                      Easing
-                      <select
-                        value={animationEasing}
-                        onChange={(e) => setAnimationEasing(e.target.value)}
-                        className="mt-1 w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-xs"
-                      >
-                        {animationEasings.map((item) => <option key={item} value={item}>{item}</option>)}
-                      </select>
-                    </label>
                   </div>
+                  <Group label="Easing"><VisualChips value={animationEasing} set={setAnimationEasing} items={animationEasings} images={animationEasingImages} compact /></Group>
                   <label className="block text-xs font-medium">
                     Intensity: {animationIntensity}%
                     <input
@@ -823,7 +807,7 @@ function Generate3DPage() {
               )}
 
               <Group label="Theme"><VisualChips value={theme} set={setTheme} items={themes} images={themeImages} compact /></Group>
-              <Group label="Material"><Chips value={material} set={setMaterial} items={materials} /></Group>
+              <Group label="Material"><VisualChips value={material} set={setMaterial} items={materials} images={materialImages} compact /></Group>
               <div className="grid grid-cols-2 gap-2">
                 <ColorInput label="Primary color" value={primaryColor} onChange={setPrimaryColor} />
                 <ColorInput label="Secondary color" value={secondaryColor} onChange={setSecondaryColor} />
@@ -831,16 +815,16 @@ function Generate3DPage() {
 
               {kind === "text" && (
                 <>
-                  <Group label="Font"><Chips value={textFont} set={setTextFont} items={["GothamBlack", "FredokaOne", "Bangers", "Cartoon", "Arcade", "SciFi"]} /></Group>
-                  <Group label="Effect"><Chips value={textEffect} set={setTextEffect} items={["neon", "outline", "gold", "ice", "shadow"]} /></Group>
-                  <Group label="Animation"><Chips value={textAnimation} set={setTextAnimation} items={["float", "pulse", "spin", "bounce", "none"]} /></Group>
+                  <Group label="Font"><VisualChips value={textFont} set={setTextFont} items={["GothamBlack", "FredokaOne", "Bangers", "Cartoon", "Arcade", "SciFi"]} images={textFontImages} compact /></Group>
+                  <Group label="Effect"><VisualChips value={textEffect} set={setTextEffect} items={["neon", "outline", "gold", "ice", "shadow"]} images={textEffectImages} compact /></Group>
+                  <Group label="Animation"><VisualChips value={textAnimation} set={setTextAnimation} items={["float", "pulse", "spin", "bounce", "none"]} images={textAnimationImages} compact /></Group>
                 </>
               )}
 
               {kind === "model" && (
                 <>
-                  <Group label="Quality"><Chips value={quality} set={setQuality} items={["turbo", "standard", "detailed"]} /></Group>
-                  <Group label="Format"><Chips value={format} set={setFormat} items={["GLB", "OBJ", "FBX"]} /></Group>
+                  <Group label="Quality"><VisualChips value={quality} set={(v) => setQuality(v as typeof quality)} items={["turbo", "standard", "detailed"]} images={qualityImages} compact /></Group>
+                  <Group label="Format"><VisualChips value={format} set={(v) => setFormat(v as typeof format)} items={["GLB", "OBJ", "FBX"]} images={formatImages} compact /></Group>
                   <label className="block text-xs font-medium">
                     Polygon budget: {faceLimit.toLocaleString()}
                     <input
@@ -853,7 +837,7 @@ function Generate3DPage() {
                       className="mt-1 w-full accent-emerald-500"
                     />
                   </label>
-                  <Group label="Texture look"><Chips value={textureLook} set={setTextureLook} items={textureLooks} /></Group>
+                  <Group label="Texture look"><VisualChips value={textureLook} set={setTextureLook} items={textureLooks} images={textureLookImages} compact /></Group>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Toggle checked={texture} onChange={setTexture} label="Generate textures" />
                     <Toggle
@@ -872,8 +856,8 @@ function Generate3DPage() {
               <div className="flex gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-[11px] text-emerald-100">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
                 {kind === "animation"
-                  ? "Animation generation downloads a Roblox Lua ModuleScript with keyframes and a controller snippet after the file is created."
-                  : "Safety checks run before paid generation. Credits are charged only after a file is created."}
+                  ? "One weekly 3D Studio generation is shared across animations, text-to-3D, image-to-3D, and 3D text. Safety checks run before any file is created."
+                  : "One weekly 3D Studio generation is shared across text-to-3D, image-to-3D, 3D text, and animations. Credits are charged only after a safe file is created."}
               </div>
             </div>
 
@@ -888,7 +872,7 @@ function Generate3DPage() {
                 </>
               ) : locked ? (
                 <>
-                  <Clock className="h-4 w-4" /> Available in {cooldownEta(nextAvailable)}
+                  <Clock className="h-4 w-4" /> Weekly use resets in {cooldownEta(nextAvailable)}
                 </>
               ) : (
                 <>

@@ -284,7 +284,8 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
     const isOwner = await isGeneratorOwner(userId, supabase);
     const generationCost = costForKind(data.generationKind);
 
-    // 1. Weekly limit — count successful generations in the last 7 days.
+    // 1. Weekly limit — normal users get one successful 3D Studio run total
+    // across text-to-3D, image-to-3D, 3D text, and animations every 7 days.
     if (!isOwner) {
       const since = new Date(Date.now() - WEEKLY_WINDOW_MS).toISOString();
       const { data: recent, error: cntErr } = await (supabaseAdmin as any)
@@ -308,7 +309,7 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
         return {
           ok: false,
           error:
-            "You've used your 3D model generation for this week. Each account gets 1 per week.",
+            "You've used your weekly 3D Studio generation. Pick one per week: 3D model, image-to-3D, 3D text, or animation.",
           nextAvailable: next.toISOString(),
         };
       }
@@ -333,6 +334,7 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
 
     const settings = {
       generationKind: data.generationKind,
+      inputMode: data.inputMode,
       modelType: data.modelType,
       robloxStyle: data.robloxStyle,
       theme: data.theme,

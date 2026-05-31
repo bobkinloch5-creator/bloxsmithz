@@ -46,6 +46,39 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.8.7",
+    date: "May 31, 2026",
+    title: "Weekly 3D Studio Limits & Safer Visual Controls",
+    description:
+      "The 3D Studio now clearly enforces one weekly generation choice for normal users while giving staff unlimited testing access.",
+    updates: [
+      {
+        category: "3D",
+        tagColor: tagStyles.tools,
+        icon: Clock,
+        title: "One Weekly 3D Studio Generation",
+        detail:
+          "Normal users can use one successful generation every 7 days across text-to-3D, image-to-3D, 3D text, or animations. Owners, admins, and moderators can generate without that weekly lock.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Box,
+        title: "Unique Roblox Visual Options",
+        detail:
+          "Every model style, animation type, easing, motion style, body focus, material, quality, format, texture, and 3D text control now uses its own Roblox-style image tile instead of repeated text-only choices.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Stronger Generator Safety Checks",
+        detail:
+          "3D Studio prompt moderation now catches more unsafe terms and bypass spellings before any model, image-to-3D, text, or animation generation can run.",
+      },
+    ],
+  },
+  {
     version: "v3.8.6",
     date: "May 31, 2026",
     title: "Roblox Animation Previews & Discount Codes",

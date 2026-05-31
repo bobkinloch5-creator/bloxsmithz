@@ -3,7 +3,9 @@ import { recordAiUsageEvent } from "@/lib/usage-events.server";
 
 export async function isGeneratorOwner(userId: string, supabase: any) {
   const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  return (roles ?? []).some((row: { role: string }) => row.role === "owner" || row.role === "admin");
+  return (roles ?? []).some((row: { role: string }) =>
+    row.role === "owner" || row.role === "admin" || row.role === "moderator"
+  );
 }
 
 export async function ensureCreditsAvailable(opts: {
