@@ -63,7 +63,7 @@ import bloxbotAvatar from "@/assets/bloxbot-avatar.png";
 import { ProfileEffect } from "@/components/chat/ProfileEffect";
 import { PfpRing } from "@/components/profile/PfpRing";
 import { AvatarDecoration } from "@/components/profile/ProfileDecoration";
-import { ProfileBadgeRow } from "@/components/profile/ProfileBadges";
+import { PROFILE_BADGES, ProfileBadgeRow } from "@/components/profile/ProfileBadges";
 import { presenceFromProfile } from "@/lib/presence";
 import { profileHandle } from "@/lib/profile-username";
 import { usePersistentDraft } from "@/hooks/usePersistentDraft";
@@ -80,6 +80,7 @@ type DbMessage = {
   pinned_at: string | null;
   flagged: boolean | null;
   channel_id?: string | null;
+  is_announcement?: boolean | null;
 };
 
 type Author = {
@@ -619,7 +620,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           supabase
             .from("global_chat_messages")
             .select(
-              "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id",
+              "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id,is_announcement",
             )
             .is("deleted_at", null)
             .order("created_at", { ascending: true })
@@ -654,7 +655,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             .order("position"),
         ]);
       if (cancelled) return;
-      const rows = (msgRes.data ?? []) as DbMessage[];
+      const rows = ((msgRes as any).data ?? []) as DbMessage[];
       setMessages(rows);
       setSlow(((settingsRes.data as any)?.slow_mode_seconds as number) ?? 0);
       const until = (muteRes.data as any)?.muted_until
@@ -700,9 +701,21 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             );
             if (
               p.sound_enabled &&
+              profile?.presence_status !== "dnd" &&
               (p.notify_mode === "all" || (p.notify_mode === "mentions" && mentioned))
             ) {
               playPing();
+            }
+            if (row.is_announcement && p.notify_mode !== "off") {
+              toast.info("Official BloxSmith announcement", {
+                description: row.content.replace(/^📣\s*/u, "").slice(0, 160),
+                action: { label: "Open chat", onClick: () => setOpen(true) },
+                duration: 9000,
+              });
+              if (p.sound_enabled && profile?.presence_status !== "dnd") {
+                playPing();
+                setTimeout(() => playPing(), 140);
+              }
             }
             // Floating chat bubble popup
             if (p.show_bubbles && !row.deleted_at && row.content?.trim()) {
@@ -730,7 +743,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 description: row.content.slice(0, 140),
                 action: { label: "Open chat", onClick: () => setOpen(true) },
               });
-              if (p.sound_enabled) {
+              if (p.sound_enabled && profile?.presence_status !== "dnd") {
                 playPing();
                 setTimeout(() => playPing(), 180);
               }
@@ -745,7 +758,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 const a = authorsRef.current.get(row.user_id);
                 new Notification(a?.display_name ?? "New message", {
                   body: row.content.slice(0, 140),
-                  silent: !p.sound_enabled,
+                  silent: !p.sound_enabled || profile?.presence_status === "dnd",
                 });
               }
             }
@@ -811,7 +824,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             .maybeSingle();
           name = (p?.chat_nickname?.trim() || p?.display_name || "Someone") as string;
         }
-        if (prefsRef.current.sound_enabled) playJoin();
+        if (prefsRef.current.sound_enabled && profile?.presence_status !== "dnd") playJoin();
         setMessages((prev) =>
           capChatMessages([
             ...prev,
@@ -836,7 +849,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         if (key === user.id) return;
         const a = authorsRef.current.get(key);
         const name = a?.display_name ?? "Someone";
-        if (prefsRef.current.sound_enabled) playLeave();
+        if (prefsRef.current.sound_enabled && profile?.presence_status !== "dnd") playLeave();
         setMessages((prev) =>
           capChatMessages([
             ...prev,
@@ -875,7 +888,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       supabase.removeChannel(channel);
       presenceChanRef.current = null;
     };
-  }, [user?.id, loadAuthors, mergeAuthorProfile]);
+  }, [user?.id, profile?.presence_status, loadAuthors, mergeAuthorProfile]);
 
   // Realtime: achievement unlocks → pop into global chat for everyone
   useEffect(() => {
@@ -1006,7 +1019,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 },
               },
             });
-            if (prefsRef.current.sound_enabled) playPing();
+            if (prefsRef.current.sound_enabled && profile?.presence_status !== "dnd") playPing();
           }
         },
       )
@@ -1014,7 +1027,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [user?.id, loadAuthors]);
+  }, [user?.id, profile?.presence_status, loadAuthors]);
 
   // Prune stale typing entries
   useEffect(() => {
@@ -1097,7 +1110,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   function checkBlocked(text: string): string | null {
     if (!blockedWords.length) return null;
     const lower = text.toLowerCase();
-    for (const w of blockedWords) if (w && lower.includes(w)) return w;
+    const normalized = normalizeModeratedText(text);
+    for (const w of blockedWords) {
+      if (!w) continue;
+      const nw = normalizeModeratedText(w);
+      if (lower.includes(w) || (nw.length >= 3 && normalized.includes(nw))) return w;
+    }
     return null;
   }
 
@@ -1217,7 +1235,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       });
       if (error) {
         const m = String(error.message || "Failed to send");
-        if (m.includes("slow_mode")) toast.error(`Slow mode — wait ${slow}s`);
+        if (m.includes("blocked_word"))
+          toast.error("Message blocked by automod. Keep chat safe, clean, and Roblox-friendly.");
+        else if (m.includes("slow_mode")) toast.error(`Slow mode — wait ${slow}s`);
         else if (m.includes("muted")) toast.error("You're muted");
         else if (m.includes("duplicate")) toast.error("That looks like a duplicate");
         else if (m.includes("too_long")) toast.error("Message is too long");
@@ -1298,9 +1318,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           "/me <action>, /shrug, /clear-mine",
           ...(canModerate ? ["Moderation: /warn, /timeout"] : []),
           ...(isAdmin
-            ? ["Admin: /announce, /badge, /ban, /unban, /feature, /changelog, /slow, /clear"]
+            ? ["Admin: /announce, /badge, /giveaway create, /giveaway finish, /ban, /unban, /feature, /changelog, /slow, /clear"]
             : []),
-          ...(isOwner ? ["Owner: /givecredits, /takecredits, /role"] : []),
+          ...(isOwner ? ["Owner: /event, /givecredits, /takecredits, /role"] : []),
+          "Fun: /giveaway <id> joins a giveaway. Credit minigame rewards are rate-limited server-side.",
         ].join("\n"),
       );
       return;
@@ -1339,7 +1360,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     }
     if (cmd === "badges") {
       pushEphemeralBot(
-        `Badges: ${(authors.get(user!.id)?.badges ?? []).join(", ") || "none yet"}.`,
+        [
+          `Your chat badges: ${(authors.get(user!.id)?.badges ?? []).join(", ") || "none yet"}.`,
+          "",
+          badgeHelpText(),
+        ].join("\n"),
       );
       return;
     }
@@ -1456,6 +1481,58 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       if (error) toast.error(error.message);
       return;
     }
+    if (cmd === "event") {
+      if (!ownerOnly()) return;
+      const [amountRaw, minutesRaw, ...titleParts] = args.split(/\s+/);
+      const amount = parseInt(amountRaw, 10) || 5;
+      const minutes = parseInt(minutesRaw, 10) || 15;
+      const title = titleParts.join(" ") || "BloxSmith Admin Event";
+      const { error } = await (supabase as any).rpc("owner_start_credit_event", {
+        _title: title,
+        _amount: amount,
+        _minutes: minutes,
+      });
+      if (error) toast.error(error.message);
+      else toast.success("Admin event started");
+      return;
+    }
+    if (cmd === "giveaway") {
+      if (args.toLowerCase().startsWith("create ")) {
+        if (!staffOnly()) return;
+        const [, creditsRaw, minutesRaw, ...titleParts] = args.split(/\s+/);
+        const prize = parseInt(creditsRaw, 10) || 25;
+        const minutes = parseInt(minutesRaw, 10) || 10;
+        const title = titleParts.join(" ") || "BloxSmith Giveaway";
+        const { error } = await (supabase as any).rpc("admin_create_chat_giveaway", {
+          _title: title,
+          _prize_credits: prize,
+          _minutes: minutes,
+          _winner_count: 1,
+        });
+        if (error) toast.error(error.message);
+        else toast.success("Giveaway created");
+        return;
+      }
+      if (args.toLowerCase().startsWith("finish ")) {
+        if (!staffOnly()) return;
+        const id = args.split(/\s+/)[1] ?? "";
+        const { error } = await (supabase as any).rpc("admin_finish_chat_giveaway", {
+          _giveaway_id: id,
+        });
+        if (error) toast.error(error.message);
+        else toast.success("Giveaway finished");
+        return;
+      }
+      const id = args.trim();
+      if (!/^[0-9a-f-]{36}$/i.test(id)) {
+        pushEphemeralBot("Giveaway help:\nAdmin: /giveaway create 25 10 Build Night\nJoin: /giveaway giveaway-id");
+        return;
+      }
+      const { error } = await (supabase as any).rpc("join_chat_giveaway", { _giveaway_id: id });
+      if (error) toast.error(error.message);
+      else pushEphemeralBot("You're entered. Good luck!");
+      return;
+    }
     if (
       ["givecredits", "takecredits", "badge", "role", "warn", "timeout", "ban", "unban"].includes(
         cmd,
@@ -1482,11 +1559,18 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         return;
       }
       if (cmd === "badge") {
+        if (!first) {
+          pushEphemeralBot(`Badge command help:\n/badge @user badge_id\n\n${badgeHelpText()}`);
+          return;
+        }
         const { error } = await (supabase as any).rpc("admin_grant_badge", {
           _user_id: target.id,
           _badge: first,
         });
-        if (error) toast.error(error.message);
+        if (error) {
+          toast.error(error.message);
+          pushEphemeralBot(`I couldn't grant that badge.\n\n${badgeHelpText()}`);
+        }
         else toast.success("Badge granted");
         return;
       }
@@ -2194,6 +2278,11 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                       <span className="text-[10px] text-muted-foreground">
                         {formatTime(m.created_at)}
                       </span>
+                      {m.is_announcement && (
+                        <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-200">
+                          Official Announcement
+                        </span>
+                      )}
                       {m.pinned_at && <Pin className="h-2.5 w-2.5 text-primary" />}
                       {isBot && (
                         <span className="text-[10px] text-muted-foreground">
@@ -2679,6 +2768,28 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
 
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeModeratedText(s: string) {
+  return s
+    .toLowerCase()
+    .replace(/[@]/g, "a")
+    .replace(/[!1|]/g, "i")
+    .replace(/[3]/g, "e")
+    .replace(/[0]/g, "o")
+    .replace(/[5$]/g, "s")
+    .replace(/[7]/g, "t")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function badgeHelpText() {
+  return [
+    "Available profile badges:",
+    ...PROFILE_BADGES.map((badge) => `• ${badge.id} — ${badge.label}: ${badge.description}`),
+    "",
+    "How to earn them: finish onboarding, build projects, generate assets, use the UI/image/clothing/3D tools, join Discord, invite friends, or receive staff/community badges when eligible.",
+    "Admin usage: /badge @user badge_id",
+  ].join("\n");
 }
 
 function ChatRulesPanel({ onClose }: { onClose: () => void }) {

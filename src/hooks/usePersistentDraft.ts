@@ -4,9 +4,10 @@ type Options<T> = {
   key: string | null | undefined;
   initial: T;
   isEmpty?: (value: T) => boolean;
+  warnOnUnload?: boolean;
 };
 
-export function usePersistentDraft<T>({ key, initial, isEmpty }: Options<T>) {
+export function usePersistentDraft<T>({ key, initial, isEmpty, warnOnUnload = true }: Options<T>) {
   const [value, setValue] = useState<T>(initial);
   const restoredRef = useRef(false);
   const empty = useCallback(
@@ -33,14 +34,14 @@ export function usePersistentDraft<T>({ key, initial, isEmpty }: Options<T>) {
   }, [empty, key, value]);
 
   useEffect(() => {
-    if (!key || empty(value)) return;
+    if (!warnOnUnload || !key || empty(value)) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [empty, key, value]);
+  }, [empty, key, value, warnOnUnload]);
 
   function clearDraft() {
     if (key && typeof localStorage !== "undefined") localStorage.removeItem(key);

@@ -105,7 +105,7 @@ function ReportsTab({ onDeleteMessage }: { onDeleteMessage: (id: string) => Prom
               {r.status}
             </span>
             <span className="text-[10px] text-muted-foreground">
-              {new Date(r.created_at).toLocaleString()}
+              {formatPanelTime(r.created_at)}
             </span>
           </div>
           <p className="mt-1 break-words">{r.reason || <em>no reason</em>}</p>
@@ -141,6 +141,8 @@ function WordsTab() {
   const [items, setItems] = useState<{ id: string; word: string; severity: string }[]>([]);
   const [draft, setDraft] = useState("");
   const [severity, setSeverity] = useState("block");
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editWord, setEditWord] = useState("");
   async function load() {
     const { data } = await (supabase as any)
       .from("global_chat_blocked_words")
@@ -152,11 +154,15 @@ function WordsTab() {
     load();
   }, []);
   async function add() {
-    const w = draft.trim().toLowerCase();
-    if (!w) return;
-    const { error } = await (supabase as any)
-      .from("global_chat_blocked_words")
-      .insert({ word: w, severity });
+    const words = draft
+      .split(/[\n,]+/)
+      .map((w) => w.trim().toLowerCase())
+      .filter(Boolean);
+    if (!words.length) return;
+    const { error } = await (supabase as any).rpc("admin_chat_add_blocked_words", {
+      _words: words,
+      _severity: severity,
+    });
     if (error) toast.error(error.message);
     else {
       setDraft("");
@@ -171,15 +177,30 @@ function WordsTab() {
     if (error) toast.error(error.message);
     else load();
   }
+  async function saveEdit(id: string) {
+    const word = editWord.trim().toLowerCase();
+    if (!word) return;
+    const { error } = await (supabase as any)
+      .from("global_chat_blocked_words")
+      .update({ word })
+      .eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      setEditing(null);
+      setEditWord("");
+      load();
+    }
+  }
   return (
     <div className="space-y-2 text-xs">
       <div className="flex gap-1.5">
-        <input
+        <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="word or phrase"
-          className="flex-1 rounded border border-border bg-background/60 px-2 py-1"
+          placeholder="word, phrase, or many entries separated by commas/new lines"
+          rows={2}
+          className="min-h-10 flex-1 resize-none rounded border border-border bg-background/60 px-2 py-1"
         />
         <select
           value={severity}
@@ -201,19 +222,39 @@ function WordsTab() {
         {items.map((i) => (
           <li
             key={i.id}
-            className="flex items-center justify-between rounded border border-border bg-background/40 px-2 py-1"
+            className="flex items-center justify-between gap-2 rounded border border-border bg-background/40 px-2 py-1"
           >
-            <span>
-              <span className="font-mono">{i.word}</span>{" "}
-              <span className="text-[10px] text-muted-foreground">· {i.severity}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => remove(i.id)}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+            {editing === i.id ? (
+              <input
+                value={editWord}
+                onChange={(e) => setEditWord(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveEdit(i.id)}
+                className="min-w-0 flex-1 rounded border border-border bg-background/70 px-2 py-1 font-mono"
+              />
+            ) : (
+              <span className="min-w-0 flex-1 truncate">
+                <span className="font-mono">{i.word}</span>{" "}
+                <span className="text-[10px] text-muted-foreground">· {i.severity}</span>
+              </span>
+            )}
+            <div className="flex shrink-0 items-center gap-1">
+              {editing === i.id ? (
+                <button type="button" onClick={() => saveEdit(i.id)} className="rounded border border-primary/40 px-2 py-0.5 text-primary">
+                  Save
+                </button>
+              ) : (
+                <button type="button" onClick={() => { setEditing(i.id); setEditWord(i.word); }} className="rounded border border-border px-2 py-0.5 text-muted-foreground hover:text-foreground">
+                  Edit
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => remove(i.id)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
           </li>
         ))}
         {!items.length && <p className="text-muted-foreground">No words yet.</p>}
@@ -241,7 +282,7 @@ function AuditTab() {
         <li key={a.id} className="rounded border border-border bg-background/40 px-2 py-1">
           <div className="flex justify-between">
             <span className="font-semibold">{a.action}</span>
-            <span className="text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
+            <span className="text-muted-foreground">{formatPanelTime(a.created_at)}</span>
           </div>
           <div className="text-muted-foreground">
             actor {a.actor_id.slice(0, 8)}
@@ -252,4 +293,14 @@ function AuditTab() {
       ))}
     </ul>
   );
+}
+
+function formatPanelTime(value: string) {
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
