@@ -146,6 +146,7 @@ function Admin() {
     setRows(
       list.map((p) => ({
         ...p,
+        email: emails[p.id] ?? "",
         roles: roleMap[p.id] ?? ["user"],
         projects: pCount[p.id] ?? 0,
         generations: gCount[p.id] ?? 0,
@@ -153,11 +154,15 @@ function Admin() {
     );
     try {
       const modData = await loadModeration();
-      const map: Record<string, boolean> = {};
-      (modData.users ?? []).forEach((u: { id: string; email_confirmed: boolean }) => {
-        map[u.id] = u.email_confirmed;
+      const confirmedMap: Record<string, boolean> = {};
+      const emailMap: Record<string, string> = { ...emails };
+      (modData.users ?? []).forEach((u: { id: string; email: string; email_confirmed: boolean }) => {
+        confirmedMap[u.id] = u.email_confirmed;
+        if (u.email) emailMap[u.id] = u.email;
       });
-      setEmailConfirmed(map);
+      setEmailConfirmed(confirmedMap);
+      setEmails(emailMap);
+      setRows((prev) => prev.map((r) => ({ ...r, email: emailMap[r.id] ?? r.email })));
       setModeratorActions((modData.moderatorActions ?? []) as ModeratorAction[]);
     } catch {
       setEmailConfirmed({});
