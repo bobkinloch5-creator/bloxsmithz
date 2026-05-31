@@ -306,15 +306,8 @@ function Admin() {
       .order("created_at", { ascending: false });
     const list = (data ?? []) as PR[];
     setRequests(list);
-    const ids = Array.from(new Set(list.map((r) => r.user_id)));
-    if (ids.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,email").in("id", ids);
-      const map: Record<string, string> = {};
-      (profs ?? []).forEach((p: { id: string; email: string }) => {
-        map[p.id] = p.email;
-      });
-      setEmails(map);
-    }
+    void list;
+    void ids;
   };
 
   useEffect(() => {
