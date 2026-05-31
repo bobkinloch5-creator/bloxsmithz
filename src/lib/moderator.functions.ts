@@ -46,7 +46,7 @@ export const loadModeratorDashboard = createServerFn({ method: "GET" })
       await Promise.all([
         supabaseAdmin
           .from("profiles")
-          .select("id,email,display_name,credits,banned,ban_reason,created_at")
+          .select("id,display_name,credits,banned,ban_reason,created_at")
           .order("created_at", { ascending: false })
           .limit(200),
         supabaseAdmin.from("user_roles").select("user_id,role"),
@@ -64,9 +64,11 @@ export const loadModeratorDashboard = createServerFn({ method: "GET" })
 
     const authUsers = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
     const confirmed = new Map<string, boolean>();
+    const emailMap = new Map<string, string>();
     if (!authUsers.error) {
       for (const authUser of authUsers.data.users) {
         confirmed.set(authUser.id, Boolean(authUser.email_confirmed_at));
+        if (authUser.email) emailMap.set(authUser.id, authUser.email);
       }
     }
 
@@ -77,7 +79,6 @@ export const loadModeratorDashboard = createServerFn({ method: "GET" })
 
     const users = ((profiles ?? []) as Array<{
       id: string;
-      email: string;
       display_name: string | null;
       credits: number;
       banned: boolean;
@@ -85,6 +86,7 @@ export const loadModeratorDashboard = createServerFn({ method: "GET" })
       created_at: string;
     }>).map((profile) => ({
       ...profile,
+      email: emailMap.get(profile.id) ?? "",
       roles: rolesByUser.get(profile.id) ?? ["user"],
       email_confirmed: confirmed.get(profile.id) ?? false,
     }));
