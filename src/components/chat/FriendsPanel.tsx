@@ -918,10 +918,11 @@ function DmView({
             className="order-2 max-h-24 min-h-[40px] min-w-[calc(100%-3rem)] flex-1 resize-none rounded-xl border border-primary/40 bg-background/75 px-3 py-2 text-sm outline-none focus:border-primary sm:order-none sm:min-w-0"
           />
           <span className="order-1 sm:order-none">
-            <EmojiPicker onPick={(emoji) => setDraft((v) => `${v}${emoji}`)} />
+            <EmojiPicker align="start" onPick={(emoji) => setDraft((v) => `${v}${emoji}`)} />
           </span>
           <span className="order-1 sm:order-none">
             <EmotePicker
+              align="start"
               onPick={(token) =>
                 setDraft((v) => `${v}${v && !v.endsWith(" ") ? " " : ""}${token} `)
               }

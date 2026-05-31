@@ -27,9 +27,11 @@ const EMOJI_GROUPS = [
 export function EmojiPicker({
   onPick,
   label = "Emoji",
+  align = "end",
 }: {
   onPick: (emoji: string) => void;
   label?: string;
+  align?: "start" | "end";
 }) {
   const [open, setOpen] = useState(false);
   const [group, setGroup] = useState(EMOJI_GROUPS[0].name);
@@ -51,7 +53,11 @@ export function EmojiPicker({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-9 right-0 z-50 w-[calc(100vw-2rem)] max-w-[260px] rounded-xl border border-border bg-surface-elevated p-2 shadow-xl">
+          <div
+            className={`absolute bottom-9 z-50 w-[calc(100vw-2rem)] max-w-[260px] rounded-xl border border-border bg-surface-elevated p-2 shadow-xl ${
+              align === "start" ? "left-0" : "right-0"
+            }`}
+          >
             <div className="mb-2 flex gap-1 overflow-x-auto pb-1">
               {EMOJI_GROUPS.map((g) => (
                 <button

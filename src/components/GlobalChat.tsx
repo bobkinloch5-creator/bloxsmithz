@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   Clock,
   Ban,
+  Bug,
 } from "lucide-react";
 import { translateChatMessage } from "@/lib/chat-translate.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -2332,7 +2333,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                       ? LifeBuoy
                       : c.icon === "shield"
                         ? Shield
-                        : Hash;
+                        : c.icon === "bug"
+                          ? Bug
+                          : Hash;
                 const active = (activeChannel?.slug ?? "general") === c.slug;
                 return (
                   <button
@@ -2702,6 +2705,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               </button>
               <span className="order-1 sm:order-none">
                 <EmojiPicker
+                  align="start"
                   onPick={(em) => {
                     setDraft((d) => d + em);
                     inputRef.current?.focus();
@@ -2710,6 +2714,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               </span>
               <span className="order-1 sm:order-none">
                 <EmotePicker
+                  align="start"
                   onPick={(tok) => {
                     setDraft((d) => d + (d && !d.endsWith(" ") ? " " : "") + tok + " ");
                     inputRef.current?.focus();

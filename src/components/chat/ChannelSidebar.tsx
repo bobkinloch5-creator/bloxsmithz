@@ -1,4 +1,4 @@
-import { Hash, Megaphone, LifeBuoy, Shield, Users, MessageCircle } from "lucide-react";
+import { Bug, Hash, Megaphone, LifeBuoy, Shield, Users, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type Channel = {
@@ -15,6 +15,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   megaphone: Megaphone,
   "life-buoy": LifeBuoy,
   shield: Shield,
+  bug: Bug,
 };
 
 export function ChannelSidebar({
@@ -42,7 +43,9 @@ export function ChannelSidebar({
         title="Channels"
         className={cn(
           "grid h-10 w-10 place-items-center rounded-xl transition",
-          view === "channels" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface hover:text-foreground",
+          view === "channels"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-surface hover:text-foreground",
         )}
       >
         <Hash className="h-4 w-4" />
@@ -53,7 +56,9 @@ export function ChannelSidebar({
         title="Friends & DMs"
         className={cn(
           "relative grid h-10 w-10 place-items-center rounded-xl transition",
-          view === "friends" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface hover:text-foreground",
+          view === "friends"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-surface hover:text-foreground",
         )}
       >
         <Users className="h-4 w-4" />

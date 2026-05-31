@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { EMOTE_CATEGORIES, EMOTES, MASCOT_SRC, type EmoteCategory } from "@/lib/emotes";
 
-export function EmotePicker({ onPick }: { onPick: (token: string) => void }) {
+export function EmotePicker({
+  onPick,
+  align = "end",
+}: {
+  onPick: (token: string) => void;
+  align?: "start" | "end";
+}) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<EmoteCategory>("BloxBot");
   const [query, setQuery] = useState("");
@@ -30,7 +36,11 @@ export function EmotePicker({ onPick }: { onPick: (token: string) => void }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-9 right-0 z-50 w-[320px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-surface-elevated p-2 shadow-xl">
+          <div
+            className={`absolute bottom-9 z-50 w-[320px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-surface-elevated p-2 shadow-xl ${
+              align === "start" ? "left-0" : "right-0"
+            }`}
+          >
             <div className="mb-2 flex items-center gap-2 px-1">
               <img src={MASCOT_SRC} alt="" className="h-6 w-6 rounded-full object-contain" />
               <div>
