@@ -3,7 +3,15 @@ import { Header, Footer } from "@/components/layout";
 import { GlobalChat } from "@/components/GlobalChat";
 import { useAuth } from "@/lib/auth-context";
 import { MASCOT_SRC } from "@/lib/emotes";
-import { Gift, MessagesSquare, Users, Sparkles } from "lucide-react";
+import {
+  Gift,
+  Image as ImageIcon,
+  MessagesSquare,
+  Palette,
+  Sparkles,
+  Users,
+  Video,
+} from "lucide-react";
 
 export const Route = createFileRoute("/browse")({
   component: BrowsePage,
@@ -86,6 +94,39 @@ function BrowsePage() {
               </Link>
             </div>
           </div>
+        </section>
+
+        <section className="mb-5 grid gap-3 sm:grid-cols-3">
+          <Link
+            to="/video-generator"
+            className="rounded-2xl border border-border bg-surface/70 p-4 transition hover:border-primary/45 hover:bg-surface"
+          >
+            <Video className="mb-2 h-5 w-5 text-primary" />
+            <h2 className="text-sm font-bold">Video & music</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Make Roblox promo videos, music loops, captions, and NPC voice kits.
+            </p>
+          </Link>
+          <Link
+            to="/texture-generator"
+            className="rounded-2xl border border-border bg-surface/70 p-4 transition hover:border-primary/45 hover:bg-surface"
+          >
+            <Palette className="mb-2 h-5 w-5 text-primary" />
+            <h2 className="text-sm font-bold">Texture generator</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Create seamless materials, decals, terrain tiles, and UI patterns with Nano.
+            </p>
+          </Link>
+          <Link
+            to="/image-generator"
+            className="rounded-2xl border border-border bg-surface/70 p-4 transition hover:border-primary/45 hover:bg-surface"
+          >
+            <ImageIcon className="mb-2 h-5 w-5 text-primary" />
+            <h2 className="text-sm font-bold">Images</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Generate thumbnails, icons, gamepass art, decals, and reference images.
+            </p>
+          </Link>
         </section>
 
         {user ? (

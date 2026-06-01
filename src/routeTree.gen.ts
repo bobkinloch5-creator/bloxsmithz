@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VideoGeneratorRouteImport } from './routes/video-generator'
 import { Route as UiGeneratorRouteImport } from './routes/ui-generator'
 import { Route as ToolboxRouteImport } from './routes/toolbox'
+import { Route as TextureGeneratorRouteImport } from './routes/texture-generator'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -82,6 +83,11 @@ const UiGeneratorRoute = UiGeneratorRouteImport.update({
 const ToolboxRoute = ToolboxRouteImport.update({
   id: '/toolbox',
   path: '/toolbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TextureGeneratorRoute = TextureGeneratorRouteImport.update({
+  id: '/texture-generator',
+  path: '/texture-generator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -399,6 +405,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
+  '/texture-generator': typeof TextureGeneratorRoute
   '/toolbox': typeof ToolboxRoute
   '/ui-generator': typeof UiGeneratorRoute
   '/video-generator': typeof VideoGeneratorRoute
@@ -460,6 +467,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
+  '/texture-generator': typeof TextureGeneratorRoute
   '/toolbox': typeof ToolboxRoute
   '/ui-generator': typeof UiGeneratorRoute
   '/video-generator': typeof VideoGeneratorRoute
@@ -522,6 +530,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/templates': typeof TemplatesRoute
   '/terms': typeof TermsRoute
+  '/texture-generator': typeof TextureGeneratorRoute
   '/toolbox': typeof ToolboxRoute
   '/ui-generator': typeof UiGeneratorRoute
   '/video-generator': typeof VideoGeneratorRoute
@@ -585,6 +594,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/templates'
     | '/terms'
+    | '/texture-generator'
     | '/toolbox'
     | '/ui-generator'
     | '/video-generator'
@@ -646,6 +656,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/templates'
     | '/terms'
+    | '/texture-generator'
     | '/toolbox'
     | '/ui-generator'
     | '/video-generator'
@@ -707,6 +718,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/templates'
     | '/terms'
+    | '/texture-generator'
     | '/toolbox'
     | '/ui-generator'
     | '/video-generator'
@@ -769,6 +781,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TemplatesRoute: typeof TemplatesRoute
   TermsRoute: typeof TermsRoute
+  TextureGeneratorRoute: typeof TextureGeneratorRoute
   ToolboxRoute: typeof ToolboxRoute
   UiGeneratorRoute: typeof UiGeneratorRoute
   VideoGeneratorRoute: typeof VideoGeneratorRoute
@@ -820,6 +833,13 @@ declare module '@tanstack/react-router' {
       path: '/toolbox'
       fullPath: '/toolbox'
       preLoaderRoute: typeof ToolboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/texture-generator': {
+      id: '/texture-generator'
+      path: '/texture-generator'
+      fullPath: '/texture-generator'
+      preLoaderRoute: typeof TextureGeneratorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -1260,6 +1280,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TemplatesRoute: TemplatesRoute,
   TermsRoute: TermsRoute,
+  TextureGeneratorRoute: TextureGeneratorRoute,
   ToolboxRoute: ToolboxRoute,
   UiGeneratorRoute: UiGeneratorRoute,
   VideoGeneratorRoute: VideoGeneratorRoute,

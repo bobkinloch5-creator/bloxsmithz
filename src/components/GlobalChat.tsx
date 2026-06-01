@@ -456,6 +456,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       content: string;
     }[]
   >([]);
+  const [talkingNotice, setTalkingNotice] = useState<{
+    id: string;
+    name: string;
+    channel: string;
+    content: string;
+  } | null>(null);
   const [translations, setTranslations] = useState<
     Map<string, { text: string; detected: string } | "loading">
   >(new Map());
@@ -512,6 +518,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const presenceChanRef = useRef<any>(null);
   const lastTypingSentRef = useRef(0);
+  const talkingNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedMessageChannelsRef = useRef<Set<string>>(new Set());
   // Refs to keep realtime handler stable (avoid re-subscribing on every state change)
   const authorsRef = useRef(authors);
   const openRef = useRef(open);
@@ -525,6 +533,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   useEffect(() => {
     prefsRef.current = prefs;
   }, [prefs]);
+  useEffect(
+    () => () => {
+      if (talkingNoticeTimerRef.current) clearTimeout(talkingNoticeTimerRef.current);
+    },
+    [],
+  );
 
   const mergeAuthorProfile = useCallback((p: any) => {
     if (!p?.id) return;
@@ -649,21 +663,84 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     if (profile && user?.id) mergeAuthorProfile({ ...(profile as any), id: user.id });
   }, [profile, user?.id, mergeAuthorProfile]);
 
+  const fetchLatestMessages = useCallback(async (channelId = "general") => {
+    let query = supabase
+      .from("global_chat_messages")
+      .select(
+        "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id",
+      )
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    query =
+      channelId === "general"
+        ? query.or("channel_id.is.null,channel_id.eq.general")
+        : query.eq("channel_id", channelId);
+
+    const { data, error } = await query.limit(200);
+
+    if (error) throw error;
+    return ((data ?? []) as DbMessage[]).reverse();
+  }, []);
+
+  const fetchSavedMessage = useCallback(async (id: string) => {
+    if (!id) return null;
+    const { data, error } = await supabase
+      .from("global_chat_messages")
+      .select(
+        "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id",
+      )
+      .eq("id", id)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data as DbMessage | null) ?? null;
+  }, []);
+
+  const mergeMessages = useCallback((incoming: DbMessage[]) => {
+    if (!incoming.length) return;
+    setMessages((prev) => {
+      const byId = new Map(prev.map((message) => [message.id, message]));
+      for (const message of incoming) {
+        byId.set(message.id, { ...byId.get(message.id), ...message });
+      }
+      return Array.from(byId.values()).sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+    });
+  }, []);
+
+  const confirmSavedMessage = useCallback(
+    async (messageId: unknown) => {
+      if (typeof messageId !== "string" || !messageId) return;
+      try {
+        const saved = await fetchSavedMessage(messageId);
+        if (!saved) return;
+        mergeMessages([saved]);
+        await loadAuthors([saved.user_id]);
+        setChatError(null);
+      } catch (error) {
+        setChatError(
+          error instanceof Error ? error.message : "Message saved, but could not reload it yet.",
+        );
+      }
+    },
+    [fetchSavedMessage, loadAuthors, mergeMessages],
+  );
+
   // Initial fetch
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
+      setChatLoading(true);
+      setChatError(null);
       const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes, chanRes] =
         await Promise.all([
-          supabase
-            .from("global_chat_messages")
-            .select(
-              "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id",
-            )
-            .is("deleted_at", null)
-            .order("created_at", { ascending: true })
-            .limit(200),
+          fetchLatestMessages("general")
+            .then((data) => ({ data, error: null }))
+            .catch((error) => ({ data: [] as DbMessage[], error })),
           supabase
             .from("global_chat_settings")
             .select("slow_mode_seconds")
@@ -694,8 +771,16 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             .order("position"),
         ]);
       if (cancelled) return;
+      if (msgRes.error) {
+        setChatError(
+          msgRes.error instanceof Error
+            ? msgRes.error.message
+            : "Could not load saved chat messages.",
+        );
+      }
       const rows = (msgRes.data ?? []) as DbMessage[];
       setMessages(rows);
+      loadedMessageChannelsRef.current.add("general");
       setSlow(((settingsRes.data as any)?.slow_mode_seconds as number) ?? 0);
       const until = (muteRes.data as any)?.muted_until
         ? new Date((muteRes.data as any).muted_until)
@@ -707,13 +792,41 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       setLocalMuted(
         new Set(((localMuteRes.data ?? []) as any[]).map((r) => String(r.muted_user_id))),
       );
-      setChannels(((chanRes as any)?.data ?? []) as Channel[]);
+      const loadedChannels = (((chanRes as any)?.data ?? []) as Channel[]).filter(Boolean);
+      setChannels(loadedChannels.length ? loadedChannels : DEFAULT_CHANNELS);
       await loadAuthors(Array.from(new Set(rows.map((r) => r.user_id))));
+      setChatLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [user?.id, loadAuthors]);
+  }, [user?.id, fetchLatestMessages, loadAuthors]);
+
+  useEffect(() => {
+    if (!user || loadedMessageChannelsRef.current.has(currentChannel)) return;
+    let cancelled = false;
+    (async () => {
+      setChatLoading(true);
+      setChatError(null);
+      try {
+        const rows = await fetchLatestMessages(currentChannel);
+        if (cancelled) return;
+        mergeMessages(rows);
+        loadedMessageChannelsRef.current.add(currentChannel);
+        await loadAuthors(Array.from(new Set(rows.map((r) => r.user_id))));
+      } catch (error) {
+        if (cancelled) return;
+        setChatError(
+          error instanceof Error ? error.message : "Could not load saved chat messages.",
+        );
+      } finally {
+        if (!cancelled) setChatLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentChannel, fetchLatestMessages, loadAuthors, mergeMessages, user]);
 
   // Realtime: messages + reactions + settings + presence + typing
   useEffect(() => {
@@ -736,6 +849,15 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
               row.content,
               authorsRef.current.get(user.id)?.display_name,
             );
+            const a = authorsRef.current.get(row.user_id);
+            setTalkingNotice({
+              id: row.id,
+              name: a?.chat_nickname ?? a?.display_name ?? "Someone",
+              channel: row.channel_id ?? "general",
+              content: row.content.slice(0, 120),
+            });
+            if (talkingNoticeTimerRef.current) clearTimeout(talkingNoticeTimerRef.current);
+            talkingNoticeTimerRef.current = setTimeout(() => setTalkingNotice(null), 4500);
             if (
               p.sound_enabled &&
               (p.notify_mode === "all" || (p.notify_mode === "mentions" && mentioned))
@@ -744,7 +866,6 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             }
             // Floating chat bubble popup
             if (p.show_bubbles && !row.deleted_at && row.content?.trim()) {
-              const a = authorsRef.current.get(row.user_id);
               const bubbleId = `${row.id}-${Date.now()}`;
               setChatBubbles((prev) => [
                 ...prev.slice(-3),
@@ -1232,7 +1353,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         attachment_type = "image";
       }
 
-      const { error } = await sendGlobalChatMessage({
+      const { data: savedId, error } = await sendGlobalChatMessage({
         content: trimmed,
         replyToId: replyTo?.id ?? null,
         attachmentUrl: attachment_url,
@@ -1254,6 +1375,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         setReplyTo(null);
         setPendingFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
+        await confirmSavedMessage(savedId);
       }
     } finally {
       setSending(false);
@@ -1588,8 +1710,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   }
 
   async function sendRaw(content: string) {
-    const { error } = await sendGlobalChatMessage({ content, channelId: currentChannel });
+    const { data: savedId, error } = await sendGlobalChatMessage({
+      content,
+      channelId: currentChannel,
+    });
     if (error) toast.error(error.message);
+    else await confirmSavedMessage(savedId);
   }
 
   async function shareRobloxGame() {
@@ -1611,7 +1737,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     }
     setSending(true);
     try {
-      const { error } = await sendGlobalChatMessage({
+      const { data: savedId, error } = await sendGlobalChatMessage({
         content: caption, // caption text only; link goes in attachment_url
         replyToId: null,
         attachmentUrl: parsed.toString(),
@@ -1625,6 +1751,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         setShowRobloxShare(false);
         setRobloxUrl("");
         setRobloxCaption("");
+        await confirmSavedMessage(savedId);
       }
     } finally {
       setSending(false);
@@ -1647,7 +1774,10 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         `Looking for: ${need}`,
         details ? `Details: ${details}` : "Details: DM me if you want to team up.",
       ].join("\n");
-      const { error } = await sendGlobalChatMessage({ content, channelId: currentChannel });
+      const { data: savedId, error } = await sendGlobalChatMessage({
+        content,
+        channelId: currentChannel,
+      });
       if (error) {
         toast.error(error.message);
       } else {
@@ -1656,6 +1786,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         setCollabProject("");
         setCollabNeed("Builder");
         setCollabDetails("");
+        await confirmSavedMessage(savedId);
       }
     } finally {
       setSending(false);
@@ -1897,7 +2028,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             "flex flex-col overflow-hidden border-border bg-surface-elevated/98 shadow-2xl backdrop-blur-xl",
             inline
               ? "relative h-[min(720px,calc(100dvh-14rem))] min-h-[420px] w-full rounded-2xl border"
-              : "fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[9999] h-[min(82dvh,720px)] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom))] rounded-2xl border md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]",
+              : "fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-[9999] h-[min(88dvh,720px)] max-h-[calc(100dvh-1rem-env(safe-area-inset-bottom))] max-w-[calc(100vw-1rem)] rounded-2xl border sm:inset-x-3 sm:bottom-[calc(0.75rem+env(safe-area-inset-bottom))] md:inset-x-auto md:left-5 md:right-auto md:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]",
           )}
           style={{
             ...(chatBackgroundStyle(prefs) ?? {}),
@@ -1952,7 +2083,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <button
                 type="button"
                 onClick={() => {
@@ -2119,6 +2250,85 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 );
               })}
             </div>
+          )}
+
+          {(chatLoading || chatError) && (
+            <div
+              className={cn(
+                "flex shrink-0 items-center gap-2 border-b px-3 py-2 text-xs",
+                chatError
+                  ? "border-amber-500/25 bg-amber-500/10 text-amber-200"
+                  : "border-border bg-background/35 text-muted-foreground",
+              )}
+            >
+              {chatLoading ? (
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+              ) : (
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              )}
+              <span className="min-w-0 flex-1">
+                {chatLoading ? "Loading saved chat messages..." : chatError}
+              </span>
+              {chatError && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setChatLoading(true);
+                    setChatError(null);
+                    try {
+                      const channel = activeChannel?.slug ?? currentChannel ?? "general";
+                      const rows = await fetchLatestMessages(channel);
+                      mergeMessages(rows);
+                      loadedMessageChannelsRef.current.add(channel);
+                      await loadAuthors(Array.from(new Set(rows.map((row) => row.user_id))));
+                    } catch (error) {
+                      setChatError(
+                        error instanceof Error
+                          ? error.message
+                          : "Could not load saved chat messages.",
+                      );
+                    } finally {
+                      setChatLoading(false);
+                    }
+                  }}
+                  className="shrink-0 rounded-full border border-amber-400/35 bg-background/35 px-2 py-0.5 text-[10px] font-semibold hover:bg-amber-500/10"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
+
+          {talkingNotice && (
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentChannel(talkingNotice.channel);
+                requestAnimationFrame(() => {
+                  const el = scrollRef.current;
+                  if (el) el.scrollTop = el.scrollHeight;
+                });
+              }}
+              className="flex shrink-0 items-center gap-2 border-b border-primary/20 bg-primary/10 px-3 py-2 text-left text-xs transition hover:bg-primary/15"
+            >
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/15 text-primary">
+                <MessagesSquare className="h-3.5 w-3.5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="font-bold text-foreground">{talkingNotice.name}</span>{" "}
+                <span className="text-muted-foreground">
+                  is talking in #{talkingNotice.channel}
+                </span>
+                {talkingNotice.content && (
+                  <span className="ml-1 inline text-muted-foreground/90">
+                    · {talkingNotice.content}
+                  </span>
+                )}
+              </span>
+              <span className="hidden shrink-0 rounded-full border border-primary/25 bg-background/40 px-2 py-0.5 text-[10px] font-semibold text-primary sm:inline">
+                Jump
+              </span>
+            </button>
           )}
 
           <div
@@ -2311,7 +2521,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                         <img
                           src={m.attachment_url}
                           alt="attachment"
-                          className="max-h-60 rounded-lg border border-border object-cover"
+                          className="max-h-60 max-w-full rounded-lg border border-border object-cover"
                         />
                       </a>
                     )}
@@ -2435,7 +2645,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 You're muted until {muted.toLocaleString()}.
               </div>
             )}
-            <div className="flex items-end gap-1.5">
+            <div className="flex flex-wrap items-end gap-1.5 sm:flex-nowrap">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -2508,7 +2718,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 maxLength={500}
                 rows={2}
                 className={cn(
-                  "max-h-32 min-h-[44px] min-w-0 flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border",
+                  "order-first max-h-32 min-h-[44px] w-full flex-none resize-none overflow-y-auto rounded-lg border border-border bg-background/60 px-2.5 py-2 leading-relaxed focus:border-primary/50 focus:outline-none disabled:opacity-50 sm:order-none sm:min-w-0 sm:flex-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-thumb]:bg-border",
                   fontSizeClass(prefs.font_size),
                   chatFontStyle(profile?.chat_font) && "",
                 )}
@@ -2528,8 +2738,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 )}
               </button>
             </div>
-            <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
+              <span className="min-w-0">
                 You as <RoleBadges roles={myRoles} size="sm" showLabel /> · {draft.length}/500
               </span>
               {slow > 0 && !canModerate && <span>Slow mode {slow}s</span>}
@@ -2978,7 +3188,7 @@ function MsgActions({
   }, [more, pickReact]);
   return (
     <div
-      className="relative ml-auto flex items-center opacity-0 transition group-hover:opacity-100"
+      className="relative ml-auto flex items-center opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100"
       onClick={(e) => e.stopPropagation()}
     >
       <button

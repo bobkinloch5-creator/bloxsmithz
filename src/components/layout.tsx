@@ -21,6 +21,7 @@ import {
   Shirt,
   Image as ImageIcon,
   Video,
+  Palette,
   Layout as LayoutIcon,
   Star,
   Users,
@@ -63,6 +64,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/templates", label: "Templates" },
   { to: "/clothing", label: "Clothing" },
   { to: "/image-generator", label: "Images" },
+  { to: "/texture-generator", label: "Textures" },
   { to: "/video-generator", label: "Videos" },
   { to: "/generate-3d", label: "3D Model Generator" },
   { to: "/ui-generator", label: "UI Generator" },
@@ -91,6 +93,7 @@ const MOBILE_NAV_ITEMS: readonly NavItem[] = [
   { to: "/templates", label: "Templates", icon: Sparkles },
   { to: "/clothing", label: "Clothing", icon: Shirt },
   { to: "/image-generator", label: "Images", icon: ImageIcon },
+  { to: "/texture-generator", label: "Textures", icon: Palette },
   { to: "/video-generator", label: "Videos", icon: Video },
   { to: "/generate-3d", label: "3D Model Generator", icon: Box },
   { to: "/ui-generator", label: "UI Generator", icon: LayoutIcon },
@@ -216,6 +219,20 @@ export function Header() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/video-generator"
+                    className="rounded-lg border border-border/60 bg-background/50 p-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-surface"
+                  >
+                    <Video className="mb-1 h-4 w-4 text-primary" />
+                    Video & Music
+                  </Link>
+                  <Link
+                    to="/texture-generator"
+                    className="rounded-lg border border-border/60 bg-background/50 p-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-surface"
+                  >
+                    <Palette className="mb-1 h-4 w-4 text-primary" />
+                    Texture Generator
+                  </Link>
                   <Link
                     to="/generate-3d"
                     className="rounded-lg border border-border/60 bg-background/50 p-2 text-xs font-semibold transition hover:border-primary/40 hover:bg-surface"
