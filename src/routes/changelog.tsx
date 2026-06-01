@@ -60,7 +60,7 @@ const changelogItems = [
         icon: Film,
         title: "AI Video Generator",
         detail:
-          "Generate cinematic Roblox game trailers and cutscenes from a text prompt using the CometAPI Seedance backend, with 720p/1080p quality and clips from 4 to 15 seconds.",
+          "Generate cinematic Roblox game trailers and cutscenes from a text prompt using the CometAPI Sora backend, with 720p/1080p quality and clips from 4 to 15 seconds.",
       },
       {
         category: "Tools",
@@ -84,7 +84,7 @@ const changelogItems = [
         icon: Clock,
         title: "Once-A-Week, Premium Pricing",
         detail:
-          "Video generation is limited to 1 per user per week (clearly labelled with a countdown to the next unlock) and costs 150 credits, keeping the premium Seedance backend sustainable. Owners and staff bypass both limits.",
+          "Video generation is limited to 1 per user per week (clearly labelled with a countdown to the next unlock) and costs 150 credits, keeping the premium Sora backend sustainable. Owners and staff bypass both limits.",
       },
       {
         category: "UI",

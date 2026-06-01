@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Header, Footer } from "@/components/layout";
 import { useAuth } from "@/lib/auth-context";
@@ -101,9 +100,9 @@ const PRESETS: Array<{ label: string; emoji: string; prompt: string }> = [
 
 function VideoGeneratorPage() {
   const { user } = useAuth();
-  const start = useServerFn(startVideoGeneration);
-  const check = useServerFn(checkVideoGeneration);
-  const getLimit = useServerFn(getVideoRateLimit);
+  const start = startVideoGeneration;
+  const check = checkVideoGeneration;
+  const getLimit = getVideoRateLimit;
 
   const [prompt, setPrompt] = useState("");
   const [durationS, setDurationS] = useState<4 | 6 | 8 | 10 | 12 | 15>(6);
@@ -227,7 +226,7 @@ function VideoGeneratorPage() {
     ? formatCountdown(new Date(limit!.nextAvailableAt!).getTime() - now)
     : null;
 
-  // Progress + ETA while rendering. Seedance typically finishes in ~90–180s,
+  // Progress + ETA while rendering. Sora/Comet video typically takes several minutes,
   // so we estimate against a 150s baseline and cap visual progress at 95%
   // until the real video URL lands (so it never shows 100% prematurely).
   const ETA_TOTAL_MS = 150_000;

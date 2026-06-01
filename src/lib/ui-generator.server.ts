@@ -171,8 +171,8 @@ export type UICategory = (typeof UI_CATEGORIES)[number];
 export const UI_STYLES = ["Modern", "Neon", "Minimal", "Cartoon", "Glass", "Anime"] as const;
 export type UIStyle = (typeof UI_STYLES)[number];
 
-const UI_AI_TIMEOUT_MS = 7_500;
-const UI_AI_OUTPUT_TOKENS = 4_500;
+const UI_AI_TIMEOUT_MS = 12_000;
+const UI_AI_OUTPUT_TOKENS = 6_500;
 
 const STYLE_HINTS: Record<UIStyle, string> = {
   Modern:
@@ -203,6 +203,11 @@ LAYOUT RULES
 - Root Frame should fill the screen or center a modal. Use Scale (not Offset) so it scales on all devices.
 - Use anchorPoint {x:0.5, y:0.5} + position {xScale:0.5, yScale:0.5} for centered modals.
 - Make the UI look premium: layered panels, clear hierarchy, vivid accent borders, gradients, decorative badges, status rows, and strong Roblox game readability.
+- Never ship an empty/simple one-card GUI. Every result needs at least: themed background, headline/title, subtitle/status text, 3-6 primary actions, at least one secondary panel/card/list, close/back affordance when appropriate, and a LocalScript that wires clicks + hover/press feedback.
+- Main menus must feel like a real Roblox game's first screen: title/logo area, Play as the dominant CTA, Settings/Shop/Credits/Servers or Updates, a news/updates card, a player/profile or reward card, footer/version text, animated entry, hover grow, press squish, and Play should hide the menu.
+- For vague prompts like "make a menu", infer a complete, polished main menu shell instead of asking follow-up questions.
+- For HUDs, include currency/resource counters, objective/quest text, compact buttons, notification/toast area, and mobile-safe spacing.
+- For shops/inventories/rewards, include item cards with labels, price/rarity/status badges, primary CTA, selected-state behavior in LocalScript, and server RemoteEvents when rewards or purchases matter.
 - Vary the composition to fit the request. Do not reuse the same panel every time. Choose from full-screen title screens, side navigation dashboards, bottom action bars, card grids, radial/action menus, modal dialogs, HUD overlays, quest dialogue, map voting, crafting, battle pass, skill tree, and notification/toast systems.
 - Backgrounds must fit the prompt theme: space, city, fantasy, obby, tycoon, horror, cute, simulator, premium, forest, ocean, lava, icy, cyber, and Roblox lobby styles should each look distinct through layered 2D Frames/ImageLabels, gradients, skyline/silhouette strips, clouds/stars, glass panels, or themed icon cards.
 - For Main Menu, title screen, loading screen, or any request mentioning a background: build a full-screen 2D background INSIDE the ScreenGui. Use an ImageLabel or Frame named BackgroundImage/BackgroundLayer with size {1,0,1,0}, position {0,0,0,0}, zIndex 1, ScaleType Crop if image, plus a dark overlay if needed. Put title/buttons above it at zIndex 3+. Never represent UI backgrounds with Workspace parts, 3D models, terrain, or giant blocks.
@@ -220,6 +225,13 @@ LUAU RULES
 - For coins/gems/codes/spin/daily rewards: server validates and updates leaderstats. Client only requests.
 - Keep scripts concise: under 150 lines each. Use clear comments.
 - Use task.wait / task.spawn (not wait/spawn).
+
+QUALITY BAR
+- The UI should look like it belongs in a top Roblox game: no default grey panels, no tiny text, no cramped controls, no unstyled buttons, no floating unlabeled boxes.
+- Use depth: background layer, overlay layer, panel/card layer, text/action layer. Keep ZIndex ordered.
+- Use names that make scripts reliable: PlayButton, SettingsButton, ShopButton, CloseButton, MainPanel, ButtonStack, NewsCard, RewardCard, HudBar, ContentGrid.
+- Prefer complete working behavior over decorative-only UI. If the UI has buttons, the LocalScript must wire them.
+- Add a small UI click Sound in the LocalScript (SoundId rbxassetid://6895079853, Volume 0.35) and play it on button clicks unless the user explicitly asks for silent UI.
 
 DO NOT include markdown, prose, or explanations — JSON only.`;
 
@@ -552,6 +564,134 @@ function createFallbackUISpec(opts: {
         zIndex: 4,
       }),
     );
+    const menuInfoCards: UIElement[] = [
+      {
+        type: "Frame",
+        id: "UpdateCard",
+        name: "UpdateCard",
+        size: { xScale: 1, xOffset: 0, yScale: 0, yOffset: 86 },
+        backgroundColor: { r: 12, g: 18, b: 32 },
+        backgroundTransparency: 0.08,
+        cornerRadius: 18,
+        strokeColor: primary,
+        strokeThickness: 1.5,
+        zIndex: 4,
+        children: [
+          {
+            type: "TextLabel",
+            id: "UpdateTitle",
+            name: "UpdateTitle",
+            text: "NEW UPDATE",
+            textColor: primary,
+            textSize: 14,
+            font: "GothamBlack",
+            position: { xScale: 0.07, xOffset: 0, yScale: 0.16, yOffset: 0 },
+            size: { xScale: 0.86, xOffset: 0, yScale: 0, yOffset: 22 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 5,
+          },
+          {
+            type: "TextLabel",
+            id: "UpdateText",
+            name: "UpdateText",
+            text: "Fresh worlds, rewards, and limited boosts are live.",
+            textColor: { r: 226, g: 232, b: 240 },
+            textSize: 15,
+            font: "GothamBold",
+            position: { xScale: 0.07, xOffset: 0, yScale: 0.47, yOffset: 0 },
+            size: { xScale: 0.86, xOffset: 0, yScale: 0, yOffset: 26 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 5,
+          },
+        ],
+      },
+      {
+        type: "Frame",
+        id: "RewardCard",
+        name: "RewardCard",
+        size: { xScale: 1, xOffset: 0, yScale: 0, yOffset: 86 },
+        backgroundColor: mixColor(accent, bg, 0.52),
+        backgroundTransparency: 0.02,
+        cornerRadius: 18,
+        strokeColor: accent,
+        strokeThickness: 1.5,
+        zIndex: 4,
+        children: [
+          {
+            type: "TextLabel",
+            id: "RewardTitle",
+            name: "RewardTitle",
+            text: "DAILY REWARD",
+            textColor: { r: 255, g: 255, b: 255 },
+            textSize: 14,
+            font: "GothamBlack",
+            position: { xScale: 0.07, xOffset: 0, yScale: 0.16, yOffset: 0 },
+            size: { xScale: 0.86, xOffset: 0, yScale: 0, yOffset: 22 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 5,
+          },
+          {
+            type: "TextLabel",
+            id: "RewardText",
+            name: "RewardText",
+            text: "+500 coins waiting",
+            textColor: { r: 241, g: 245, b: 249 },
+            textSize: 18,
+            font: "GothamBlack",
+            position: { xScale: 0.07, xOffset: 0, yScale: 0.47, yOffset: 0 },
+            size: { xScale: 0.86, xOffset: 0, yScale: 0, yOffset: 28 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 5,
+          },
+        ],
+      },
+      {
+        type: "Frame",
+        id: "ServerCard",
+        name: "ServerCard",
+        size: { xScale: 1, xOffset: 0, yScale: 0, yOffset: 86 },
+        backgroundColor: { r: 8, g: 13, b: 24 },
+        backgroundTransparency: 0.1,
+        cornerRadius: 18,
+        strokeColor: { r: 148, g: 163, b: 184 },
+        strokeThickness: 1,
+        zIndex: 4,
+        children: [
+          {
+            type: "TextLabel",
+            id: "ServerTitle",
+            name: "ServerTitle",
+            text: "SERVER STATUS",
+            textColor: { r: 148, g: 163, b: 184 },
+            textSize: 13,
+            font: "GothamBlack",
+            position: { xScale: 0.07, xOffset: 0, yScale: 0.16, yOffset: 0 },
+            size: { xScale: 0.86, xOffset: 0, yScale: 0, yOffset: 22 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 5,
+          },
+          {
+            type: "TextLabel",
+            id: "ServerText",
+            name: "ServerText",
+            text: "Fast matchmaking enabled",
+            textColor: { r: 226, g: 232, b: 240 },
+            textSize: 16,
+            font: "GothamBold",
+            position: { xScale: 0.07, xOffset: 0, yScale: 0.47, yOffset: 0 },
+            size: { xScale: 0.86, xOffset: 0, yScale: 0, yOffset: 26 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 5,
+          },
+        ],
+      },
+    ];
 
     const spec: UISpec = {
       title,
@@ -584,6 +724,20 @@ function createFallbackUISpec(opts: {
           },
           {
             type: "TextLabel",
+            id: "EyebrowLabel",
+            name: "EyebrowLabel",
+            text: "FEATURED EXPERIENCE",
+            textColor: primary,
+            textSize: 14,
+            font: "GothamBlack",
+            position: { xScale: 0.06, xOffset: 0, yScale: 0.085, yOffset: 0 },
+            size: { xScale: 0.42, xOffset: 0, yScale: 0, yOffset: 24 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 4,
+          },
+          {
+            type: "TextLabel",
             id: "SubtitleLabel",
             name: "SubtitleLabel",
             text: opts.prompt.slice(0, 74) || "Jump into your Roblox adventure",
@@ -595,6 +749,49 @@ function createFallbackUISpec(opts: {
             backgroundTransparency: 1,
             textAlign: "Left",
             zIndex: 4,
+          },
+          {
+            type: "Frame",
+            id: "PlayerCard",
+            name: "PlayerCard",
+            position: { xScale: 0.06, xOffset: 0, yScale: 0.295, yOffset: 0 },
+            size: { xScale: 0, xOffset: 360, yScale: 0, yOffset: 54 },
+            backgroundColor: { r: 5, g: 8, b: 18 },
+            backgroundTransparency: 0.32,
+            cornerRadius: 18,
+            strokeColor: { r: 255, g: 255, b: 255 },
+            strokeThickness: 1,
+            zIndex: 3,
+            children: [
+              {
+                type: "TextLabel",
+                id: "PlayerNameLabel",
+                name: "PlayerNameLabel",
+                text: "Welcome back, player",
+                textColor: { r: 255, g: 255, b: 255 },
+                textSize: 16,
+                font: "GothamBold",
+                position: { xScale: 0.06, xOffset: 0, yScale: 0.18, yOffset: 0 },
+                size: { xScale: 0.88, xOffset: 0, yScale: 0, yOffset: 24 },
+                backgroundTransparency: 1,
+                textAlign: "Left",
+                zIndex: 4,
+              },
+              {
+                type: "TextLabel",
+                id: "PlayerStatusLabel",
+                name: "PlayerStatusLabel",
+                text: "Level 1 - Ready to play",
+                textColor: { r: 203, g: 213, b: 225 },
+                textSize: 13,
+                font: "Gotham",
+                position: { xScale: 0.06, xOffset: 0, yScale: 0.58, yOffset: 0 },
+                size: { xScale: 0.88, xOffset: 0, yScale: 0, yOffset: 18 },
+                backgroundTransparency: 1,
+                textAlign: "Left",
+                zIndex: 4,
+              },
+            ],
           },
           {
             type: "Frame",
@@ -612,12 +809,56 @@ function createFallbackUISpec(opts: {
             zIndex: 3,
             children: menuButtons,
           },
+          {
+            type: "Frame",
+            id: "RightInfoPanel",
+            name: "RightInfoPanel",
+            position: { xScale: 0.67, xOffset: 0, yScale: 0.18, yOffset: 0 },
+            size: { xScale: 0, xOffset: 330, yScale: 0, yOffset: 332 },
+            backgroundColor: { r: 5, g: 8, b: 18 },
+            backgroundTransparency: 0.26,
+            cornerRadius: 24,
+            strokeColor: accent,
+            strokeThickness: 1.5,
+            layout: "List",
+            layoutPadding: 12,
+            zIndex: 3,
+            children: menuInfoCards,
+          },
+          {
+            type: "TextLabel",
+            id: "VersionLabel",
+            name: "VersionLabel",
+            text: "v1.0 - BloxSmith generated menu",
+            textColor: { r: 148, g: 163, b: 184 },
+            textSize: 13,
+            font: "GothamBold",
+            position: { xScale: 0.06, xOffset: 0, yScale: 0.91, yOffset: 0 },
+            size: { xScale: 0.52, xOffset: 0, yScale: 0, yOffset: 28 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 4,
+          },
         ],
       },
       remoteEvents: [],
       localScript: `local TweenService = game:GetService("TweenService")
 local gui = script.Parent
 local stack = gui:FindFirstChild("ButtonStack", true)
+local rightPanel = gui:FindFirstChild("RightInfoPanel", true)
+local playerName = gui:FindFirstChild("PlayerNameLabel", true)
+local player = game:GetService("Players").LocalPlayer
+local clickSound = gui:FindFirstChild("UIClickSound")
+if not clickSound then
+\tclickSound = Instance.new("Sound")
+\tclickSound.Name = "UIClickSound"
+\tclickSound.SoundId = "rbxassetid://6895079853"
+\tclickSound.Volume = 0.35
+\tclickSound.Parent = gui
+end
+if playerName and playerName:IsA("TextLabel") and player then
+\tplayerName.Text = "Welcome back, " .. player.DisplayName
+end
 local function wireButton(button)
 \tif not button:IsA("TextButton") then return end
 \tlocal normalSize = button.Size
@@ -627,7 +868,14 @@ local function wireButton(button)
 \tbutton.MouseLeave:Connect(function()
 \t\tTweenService:Create(button, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = normalSize }):Play()
 \tend)
+\tbutton.MouseButton1Down:Connect(function()
+\t\tTweenService:Create(button, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = normalSize + UDim2.fromOffset(-6, -3) }):Play()
+\tend)
+\tbutton.MouseButton1Up:Connect(function()
+\t\tTweenService:Create(button, TweenInfo.new(0.11, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = normalSize + UDim2.fromOffset(10, 4) }):Play()
+\tend)
 \tbutton.MouseButton1Click:Connect(function()
+\t\tif clickSound then clickSound:Play() end
 \t\tprint("[BloxSmith MainMenu] clicked", button.Name)
 \t\tif button.Name == "PlayButton" then gui.Enabled = false end
 \tend)
@@ -636,6 +884,10 @@ for _, item in ipairs(gui:GetDescendants()) do wireButton(item) end
 if stack then
 \tstack.Position = stack.Position + UDim2.fromOffset(-30, 0)
 \tTweenService:Create(stack, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.06, 0.38) }):Play()
+end
+if rightPanel then
+\trightPanel.Position = rightPanel.Position + UDim2.fromOffset(30, 0)
+\tTweenService:Create(rightPanel, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.67, 0.18) }):Play()
 end`,
     };
 
@@ -848,9 +1100,14 @@ end`,
     type: "TextButton",
     id: `ActionButton${idx + 1}`,
     name: `ActionButton${idx + 1}`,
-    text: label,
+    text:
+      idx === 0
+        ? `${label}\nFeatured`
+        : opts.category.includes("Shop")
+          ? `${label}\n${[199, 399, 799, 1299][idx] ?? 499} coins`
+          : `${label}\nReady`,
     textColor: { r: 255, g: 255, b: 255 },
-    textSize: 17,
+    textSize: 16,
     font: "GothamBold",
     backgroundColor: idx === 0 ? primary : { r: 20, g: 28, b: 44 },
     strokeColor: idx === 0 ? accent : { r: 96, g: 116, b: 148 },
@@ -920,6 +1177,18 @@ end`,
               : { from: bg, to: { r: 18, g: 24, b: 38 }, rotation: 135 },
           zIndex: 3,
           children: [
+            {
+              type: "Frame",
+              id: "SideRail",
+              name: "SideRail",
+              position: { xScale: 0.025, xOffset: 0, yScale: 0.08, yOffset: 0 },
+              size: { xScale: 0, xOffset: 10, yScale: 0.84, yOffset: 0 },
+              backgroundColor: primary,
+              cornerRadius: 8,
+              gradient:
+                opts.style === "Minimal" ? undefined : { from: primary, to: accent, rotation: 90 },
+              zIndex: 4,
+            },
             {
               type: "Frame",
               id: "HeaderGlow",
@@ -1003,6 +1272,69 @@ end`,
               children: cardChildren,
             },
             {
+              type: "Frame",
+              id: "StatsStrip",
+              name: "StatsStrip",
+              position: { xScale: 0.06, xOffset: 0, yScale: 0.72, yOffset: 0 },
+              size: { xScale: 0.88, xOffset: 0, yScale: 0, yOffset: 54 },
+              backgroundColor: { r: 2, g: 6, b: 23 },
+              backgroundTransparency: 0.22,
+              cornerRadius: 16,
+              strokeColor: { r: 71, g: 85, b: 105 },
+              strokeThickness: 1,
+              layout: "List",
+              layoutDirection: "Horizontal",
+              layoutPadding: 12,
+              zIndex: 4,
+              children: [
+                {
+                  type: "TextLabel",
+                  id: "StatOne",
+                  name: "StatOne",
+                  text: opts.category.includes("Shop") ? "Coins: 2,450" : "Status: Ready",
+                  textColor: { r: 226, g: 232, b: 240 },
+                  textSize: 14,
+                  font: "GothamBold",
+                  size: { xScale: 0.32, xOffset: 0, yScale: 1, yOffset: 0 },
+                  backgroundColor: { r: 15, g: 23, b: 42 },
+                  backgroundTransparency: 0.18,
+                  cornerRadius: 12,
+                  textAlign: "Center",
+                  zIndex: 5,
+                },
+                {
+                  type: "TextLabel",
+                  id: "StatTwo",
+                  name: "StatTwo",
+                  text: opts.category === "HUD" ? "Quest: Find 3 crystals" : "Bonus: +20%",
+                  textColor: { r: 226, g: 232, b: 240 },
+                  textSize: 14,
+                  font: "GothamBold",
+                  size: { xScale: 0.32, xOffset: 0, yScale: 1, yOffset: 0 },
+                  backgroundColor: { r: 15, g: 23, b: 42 },
+                  backgroundTransparency: 0.18,
+                  cornerRadius: 12,
+                  textAlign: "Center",
+                  zIndex: 5,
+                },
+                {
+                  type: "TextLabel",
+                  id: "StatThree",
+                  name: "StatThree",
+                  text: "Mobile ready",
+                  textColor: { r: 226, g: 232, b: 240 },
+                  textSize: 14,
+                  font: "GothamBold",
+                  size: { xScale: 0.32, xOffset: 0, yScale: 1, yOffset: 0 },
+                  backgroundColor: { r: 15, g: 23, b: 42 },
+                  backgroundTransparency: 0.18,
+                  cornerRadius: 12,
+                  textAlign: "Center",
+                  zIndex: 5,
+                },
+              ],
+            },
+            {
               type: "TextButton",
               id: "PrimaryCTA",
               name: "PrimaryCTA",
@@ -1038,7 +1370,79 @@ end`,
       ],
     },
     remoteEvents: needsRemote ? [`${screenGuiName}Request`] : [],
-    localScript: `local gui = script.Parent\nlocal panel = gui:FindFirstChild("RootFrame", true)\nlocal close = gui:FindFirstChild("CloseButton", true)\nif close and close:IsA("TextButton") then\n\tclose.MouseButton1Click:Connect(function()\n\t\tgui.Enabled = false\n\tend)\nend\nfor _, btn in ipairs(gui:GetDescendants()) do\n\tif btn:IsA("TextButton") and btn.Name ~= "CloseButton" then\n\t\tbtn.MouseButton1Click:Connect(function()\n\t\t\tprint("BloxSmith UI button clicked:", btn.Name)\n\t\tend)\n\tend\nend`,
+    localScript: `local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local gui = script.Parent
+local panel = gui:FindFirstChild("MainPanel", true) or gui:FindFirstChild("RootFrame", true)
+local remote = ReplicatedStorage:FindFirstChild("${screenGuiName}Request")
+local selectedButton = nil
+local clickSound = gui:FindFirstChild("UIClickSound")
+if not clickSound then
+\tclickSound = Instance.new("Sound")
+\tclickSound.Name = "UIClickSound"
+\tclickSound.SoundId = "rbxassetid://6895079853"
+\tclickSound.Volume = 0.35
+\tclickSound.Parent = gui
+end
+
+local function tween(object, time, props)
+\tTweenService:Create(object, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
+end
+
+local function findStroke(button)
+\treturn button:FindFirstChildOfClass("UIStroke")
+end
+
+local function wireButton(button)
+\tif not button:IsA("TextButton") then return end
+\tlocal normalSize = button.Size
+\tlocal stroke = findStroke(button)
+\tbutton.MouseEnter:Connect(function()
+\t\ttween(button, 0.14, { Size = normalSize + UDim2.fromOffset(8, 3) })
+\t\tif stroke then tween(stroke, 0.14, { Thickness = math.max(stroke.Thickness, 2.5) }) end
+\tend)
+\tbutton.MouseLeave:Connect(function()
+\t\ttween(button, 0.14, { Size = normalSize })
+\t\tif stroke and selectedButton ~= button then tween(stroke, 0.14, { Thickness = 1.5 }) end
+\tend)
+\tbutton.MouseButton1Down:Connect(function()
+\t\ttween(button, 0.08, { Size = normalSize + UDim2.fromOffset(-5, -2) })
+\tend)
+\tbutton.MouseButton1Up:Connect(function()
+\t\ttween(button, 0.1, { Size = normalSize + UDim2.fromOffset(8, 3) })
+\tend)
+\tbutton.MouseButton1Click:Connect(function()
+\t\tif clickSound then clickSound:Play() end
+\t\tif button.Name == "CloseButton" then
+\t\t\tgui.Enabled = false
+\t\t\treturn
+\t\tend
+\t\tselectedButton = button
+\t\tfor _, other in ipairs(gui:GetDescendants()) do
+\t\t\tif other:IsA("TextButton") and other ~= button then
+\t\t\t\tlocal otherStroke = findStroke(other)
+\t\t\t\tif otherStroke then otherStroke.Thickness = 1.5 end
+\t\t\tend
+\t\tend
+\t\tif stroke then tween(stroke, 0.12, { Thickness = 3 }) end
+\t\tif remote then remote:FireServer(button.Name) end
+\t\tprint("BloxSmith UI button clicked:", button.Name)
+\tend)
+end
+
+for _, btn in ipairs(gui:GetDescendants()) do
+\twireButton(btn)
+end
+if panel and panel:IsA("GuiObject") then
+\tlocal finalPosition = panel.Position
+\tlocal finalTransparency = panel.BackgroundTransparency
+\tpanel.Position = finalPosition + UDim2.fromOffset(0, 24)
+\tpanel.BackgroundTransparency = math.min(finalTransparency + 0.18, 0.9)
+\tTweenService:Create(panel, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+\t\tPosition = finalPosition,
+\t\tBackgroundTransparency = finalTransparency
+\t}):Play()
+end`,
     serverScript: needsRemote
       ? `local ReplicatedStorage = game:GetService("ReplicatedStorage")\nlocal remote = ReplicatedStorage:FindFirstChild("${screenGuiName}Request") or Instance.new("RemoteEvent")\nremote.Name = "${screenGuiName}Request"\nremote.Parent = ReplicatedStorage\nremote.OnServerEvent:Connect(function(player, action)\n\tprint("BloxSmith UI request", player.Name, action)\n\t-- TODO: validate purchases/rewards on the server before granting anything.\nend)`
       : undefined,
@@ -1100,6 +1504,9 @@ ${opts.prompt}
 
 Produce a polished, fully populated UISpec for this Roblox UI. Include working LocalScript and (where it makes sense) a ServerScript with RemoteEvents for purchase/reward validation. Keep the hierarchy concise and complete.
 Make this layout feel specific to the request. Use a different composition/background treatment than a generic centered card whenever the prompt asks for a menu, HUD, dialogue, shop, lobby, or themed background.
+Do not create a bare mockup. Add the pieces a player expects: header/title, readable subtitle or objective, 3-6 real actions, secondary cards/rows, status/currency/reward details, close/back controls where useful, hover/press tweens, selected-state feedback, and mobile-safe sizes.
+If this is a main menu/title screen, make Play the hero CTA and include Settings, Shop, Credits/Servers, updates/news, player/reward/status card, footer/version text, and an entry animation.
+If this is a shop, inventory, settings panel, HUD, rewards, quest, or admin GUI, include category-specific rows/cards and script behavior instead of generic placeholder buttons.
 ${wantsMainMenuBackground(opts) ? "Main menu background requirement: create the background as ScreenGui children only. Use BackgroundLayer/BackgroundImage plus overlay behind the buttons; do not create or imply Workspace parts, 3D blocks, terrain, or camera-selected objects." : ""}`;
 
   let lastErr: any = null;

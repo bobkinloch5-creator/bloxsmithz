@@ -10,29 +10,16 @@ import {
 } from "./generator-credits.server";
 
 // ---------------------------------------------------------------------------
-// CometAPI Seedance video generation. Async task model: POST to create a task,
-// poll GET until the video URL is ready. Endpoint + model verified against
-// CometAPI's published docs (volc/v3 contents/generations/tasks).
+// CometAPI Sora video generation. Async task model: POST /v1/videos,
+// poll GET /v1/videos/{id}, then download GET /v1/videos/{id}/content.
 // The model slug + paths are isolated here in case CometAPI shifts them.
 // ---------------------------------------------------------------------------
-const DEFAULT_COMET_VIDEO_TASKS_URL = "https://api.cometapi.com/volc/v3/contents/generations/tasks";
-
-// Seedance model slugs differ between CometAPI's catalog page and their API
-// docs, and not every slug is enabled on every account. We try a list in
-// order and use the first one CometAPI accepts. COMET_VIDEO_MODEL (if set)
-// is tried first. 1.0 Pro is the most widely-available on base plans, so it
-// leads; the 2.0 variants follow for accounts that have them.
-const DEFAULT_SEEDANCE_MODEL = "bytedance-seedance-1-0-pro";
-const SEEDANCE_MODEL_FALLBACKS = [
-  "bytedance-seedance-1-0-pro",
-  "doubao-seedance-2-pro",
-  "doubao-seedance-2-0",
-  "bytedance-seedance-1-0-lite-t2v-250428",
-];
+const DEFAULT_COMET_VIDEO_TASKS_URL = "https://api.cometapi.com/v1/videos";
+const DEFAULT_COMET_VIDEO_MODEL = "sora-2-pro";
 const REFERENCE_IMAGE_BUCKET = "generated-images";
 
 // Video is gated TWO ways: a hard 1-per-week cap AND a heavy credit cost.
-// Seedance bills ~$0.05–0.06/sec, and a long clip is expensive, so this is
+// Sora/Comet video bills per generated second, and a long clip is expensive, so this is
 // priced as a premium one-off rather than a casual generator.
 const VIDEO_CREDIT_COST = 150;
 
@@ -41,7 +28,7 @@ const VIDEO_CREDIT_COST = 150;
 const RATE_LIMIT_DAYS = 7;
 const RATE_LIMIT_COUNT = 1;
 
-// Seedance supports 4–15 second clips.
+// Keep the UI options constrained to short clips; Comet/OpenAI Sora defaults to short async jobs.
 const DurationEnum = z.union([
   z.literal(4),
   z.literal(6),
@@ -101,7 +88,6 @@ type VideoGenerationsQuery = {
   insert(row: VideoGenerationInsert): Promise<QueryResult<unknown>>;
 };
 type AuthedContext = { supabase: unknown; userId: string };
-type ContentPart = { type: "text"; text: string } | { type: "image"; url: string };
 
 class VideoRateLimitError extends Error {
   rateLimited = true;
@@ -144,10 +130,12 @@ function videoGenerationsTable() {
   ).from("video_generations");
 }
 
-function authHeaders() {
+function authHeaders(contentType = true): Record<string, string> {
   const key = getCometApiKey();
   if (!key) throw new Error("Video generation isn't configured (COMETAPI_KEY missing).");
-  return { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
+  const headers: Record<string, string> = { Authorization: `Bearer ${key}` };
+  if (contentType) headers["Content-Type"] = "application/json";
+  return headers;
 }
 
 function absoluteCometUrl(value: string) {
@@ -163,17 +151,18 @@ function getCometVideoTasksUrl(taskId?: string) {
   const explicit = process.env.COMET_VIDEO_TASKS_URL || process.env.COMET_SEEDANCE_TASKS_URL;
   const base = explicit
     ? absoluteCometUrl(explicit)
-    : `${new URL(absoluteCometUrl(getCometBaseUrl())).origin}/volc/v3/contents/generations/tasks`;
+    : `${new URL(absoluteCometUrl(getCometBaseUrl())).origin}/v1/videos`;
   return taskId ? `${base}/${encodeURIComponent(taskId)}` : base;
 }
 
-function getSeedanceModelCandidates(): string[] {
-  const envModel = process.env.COMET_VIDEO_MODEL || process.env.COMET_SEEDANCE_MODEL;
-  const ordered = [envModel, ...SEEDANCE_MODEL_FALLBACKS].filter(
-    (m): m is string => typeof m === "string" && m.trim().length > 0,
+function getCometVideoModel() {
+  return (
+    process.env.COMET_VIDEO_MODEL || process.env.COMET_SEEDANCE_MODEL || DEFAULT_COMET_VIDEO_MODEL
   );
-  // De-dupe while preserving order.
-  return [...new Set(ordered)];
+}
+
+function getCometVideoContentUrl(taskId: string) {
+  return `${getCometVideoTasksUrl(taskId)}/content`;
 }
 
 async function readJsonResponse(res: Response): Promise<JsonRecord> {
@@ -264,7 +253,57 @@ function parseStatus(json: JsonRecord, fallbackId: string): VideoJob {
   return { taskId, status: "processing" };
 }
 
-async function fetchTask(taskId: string): Promise<VideoJob> {
+function soraSize(resolution: z.infer<typeof ResolutionEnum>) {
+  return resolution === "1080p" ? "1080x1920" : "720x1280";
+}
+
+function createSoraVideoForm(data: z.infer<typeof StartSchema>) {
+  const form = new FormData();
+  form.append("prompt", data.prompt);
+  form.append("model", getCometVideoModel());
+  form.append("seconds", String(data.durationS));
+  form.append("size", soraSize(data.resolution));
+
+  if (data.referenceImageDataUrl) {
+    const { mime, ext, bytes } = parseReferenceImageDataUrl(data.referenceImageDataUrl);
+    const blob = new Blob([bytes], { type: mime });
+    form.append("image", blob, `reference.${ext}`);
+  }
+
+  return form;
+}
+
+async function uploadGeneratedVideo(taskId: string, bytes: Buffer, userId: string) {
+  const path = `${userId}/generated-video-${Date.now()}-${taskId}.mp4`;
+  const { error } = await supabaseAdmin.storage.from(REFERENCE_IMAGE_BUCKET).upload(path, bytes, {
+    contentType: "video/mp4",
+    upsert: false,
+  });
+  if (error) throw new Error(`Video upload failed: ${error.message}`);
+
+  const { data } = supabaseAdmin.storage.from(REFERENCE_IMAGE_BUCKET).getPublicUrl(path);
+  if (!data.publicUrl) throw new Error("Video upload did not return a public URL.");
+  return data.publicUrl;
+}
+
+async function downloadGeneratedVideo(taskId: string, userId: string) {
+  const res = await fetch(getCometVideoContentUrl(taskId), {
+    method: "GET",
+    headers: authHeaders(false),
+  });
+  if (!res.ok) {
+    const json = await readJsonResponse(res);
+    throw new Error(
+      nestedString(json, ["error", "message"]) ??
+        firstString(json.message) ??
+        `Video download failed (${res.status}).`,
+    );
+  }
+  const bytes = Buffer.from(await res.arrayBuffer());
+  return uploadGeneratedVideo(taskId, bytes, userId);
+}
+
+async function fetchTask(taskId: string, userId: string): Promise<VideoJob> {
   const url = getCometVideoTasksUrl(taskId);
   const res = await fetch(url, {
     method: "GET",
@@ -278,7 +317,19 @@ async function fetchTask(taskId: string): Promise<VideoJob> {
       error: nestedString(json, ["error", "message"]) ?? `Status check failed (${res.status}).`,
     };
   }
-  return parseStatus(json, taskId);
+  const status = parseStatus(json, taskId);
+  if (status.status === "completed" && !status.videoUrl) {
+    try {
+      return { ...status, videoUrl: await downloadGeneratedVideo(status.taskId, userId) };
+    } catch (err) {
+      return {
+        ...status,
+        status: "failed",
+        error: err instanceof Error ? err.message : "Video completed but could not be downloaded.",
+      };
+    }
+  }
+  return status;
 }
 
 // Checks the rolling weekly window. Owners/admins/mods bypass.
@@ -366,59 +417,23 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
     // Gate 2: credits (heavy). Checked up front, charged after a successful submit.
     await ensureCreditsAvailable({ userId, amount: VIDEO_CREDIT_COST, isOwner });
 
-    // Build the content array — text always, plus an image if provided.
-    const content: ContentPart[] = [{ type: "text", text: data.prompt }];
-    if (data.referenceImageDataUrl) {
-      const referenceImageUrl = await uploadReferenceImage(data.referenceImageDataUrl, userId);
-      content.push({ type: "image", url: referenceImageUrl });
-    }
-
-    // Submit the task. CometAPI's Seedance slug varies by account/plan and
-    // between their catalog vs API docs, so we try a list of candidates and
-    // use the first one accepted. "Invalid URL" / "model not found" style
-    // rejections move on to the next candidate.
+    // Submit the task.
     const url = getCometVideoTasksUrl();
-    const candidates = getSeedanceModelCandidates();
-    let json: JsonRecord = {};
-    let res: Response | null = null;
-    let lastProviderMessage = "";
-
-    for (const model of candidates) {
-      res = await fetch(url, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          model,
-          content,
-          output: { resolution: data.resolution, duration_s: data.durationS },
-        }),
-      });
-      json = await readJsonResponse(res);
-      if (res.ok) break;
-
-      lastProviderMessage =
+    const res = await fetch(url, {
+      method: "POST",
+      headers: authHeaders(false),
+      body: createSoraVideoForm(data),
+    });
+    const json = await readJsonResponse(res);
+    if (!res.ok) {
+      const providerMessage =
         nestedString(json, ["error", "message"]) ??
         firstString(json.message) ??
         `Couldn't start video generation (${res.status}).`;
-
-      // If the failure looks like a bad/unavailable model, try the next slug.
-      // Any other error (auth, quota, bad request on content) — stop and report.
-      const looksLikeModelIssue =
-        /invalid url|model.*(not found|unavailable|no available channel)|no available channel|not found/i.test(
-          lastProviderMessage,
-        );
-      if (!looksLikeModelIssue) break;
-    }
-
-    if (!res || !res.ok) {
-      const allModelsFailed =
-        /invalid url|model.*(not found|unavailable)|no available channel|not found/i.test(
-          lastProviderMessage,
-        );
       throw new Error(
-        allModelsFailed
-          ? `Video generation isn't available on this CometAPI account yet. None of the Seedance models could be reached (${candidates.join(", ")}). This is a CometAPI plan/balance issue — enable a Seedance video model on your CometAPI account, or set COMET_VIDEO_MODEL to one your plan includes. Last error: ${lastProviderMessage}`
-          : lastProviderMessage,
+        /invalid url/i.test(String(providerMessage))
+          ? `${providerMessage}. Check COMET_VIDEO_TASKS_URL is ${DEFAULT_COMET_VIDEO_TASKS_URL} and COMET_VIDEO_MODEL is ${DEFAULT_COMET_VIDEO_MODEL}.`
+          : providerMessage,
       );
     }
 
@@ -462,8 +477,9 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
 export const checkVideoGeneration = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => PollSchema.parse(input))
-  .handler(async ({ data }): Promise<VideoJob> => {
-    return fetchTask(data.taskId);
+  .handler(async ({ data, context }): Promise<VideoJob> => {
+    const { userId } = context as AuthedContext;
+    return fetchTask(data.taskId, userId);
   });
 
 export const VIDEO_CREDIT_COST_EXPORT = VIDEO_CREDIT_COST;

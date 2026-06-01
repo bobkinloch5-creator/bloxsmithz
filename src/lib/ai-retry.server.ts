@@ -31,35 +31,84 @@ const FINALIZE_INSTRUCTION = `
 You have already gathered everything you need. Do NOT call any more tools.
 Output the COMPLETE build as a single valid JSON object RIGHT NOW:
 { "message": string, "files": [...], "actions": [...] }
-The "actions" array MUST contain the real build (create / script / insert_toolbox_asset / terrainFill / lighting / spawn …). Use any assetIds you found from your tool calls. An empty "actions" array is a FAILED response unless the user only asked a question. No markdown, no code fences, no commentary.`;
+The "actions" array MUST contain the real build (create / script / insert_toolbox_asset / terrainFill / lighting / spawn ...). Use any assetIds you found from your tool calls.
+For code/UI/gameplay requests, the "files" array MUST include complete Script, LocalScript, or ModuleScript source where needed.
+An empty "files" array AND empty "actions" array is a FAILED response unless the user only asked a pure question. No markdown, no code fences, no commentary.`;
+
+type BuildJsonShape = {
+  hasContract: boolean;
+  fileCount: number;
+  actionCount: number;
+};
+
+function parseBuildJsonShape(text: string | null | undefined): BuildJsonShape | null {
+  if (!text) return null;
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || start >= end) return null;
+  const slice = text.slice(start, end + 1);
+  if (!/"actions"|"files"|"message"/.test(slice)) return null;
+
+  const parse = (value: string) => JSON.parse(value.replace(/,\s*([}\]])/g, "$1"));
+  try {
+    const obj = parse(slice);
+    if (!obj || typeof obj !== "object") return null;
+    const fileCount = Array.isArray(obj.files) ? obj.files.length : 0;
+    const actionCount = Array.isArray(obj.actions) ? obj.actions.length : 0;
+    return {
+      hasContract: "actions" in obj || "files" in obj,
+      fileCount,
+      actionCount,
+    };
+  } catch {
+    return null;
+  }
+}
 
 // Does the model's returned text actually contain a build JSON object with at
 // least a message/files/actions shape? We are deliberately lenient: we only
 // need to know "is there a parseable {…} that looks like our contract".
 export function hasUsableBuildJson(text: string | null | undefined): boolean {
-  if (!text) return false;
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1 || start >= end) return false;
-  const slice = text.slice(start, end + 1);
-  // Cheap structural signal first — avoids a full parse on huge Luau blobs.
-  if (!/"actions"|"files"|"message"/.test(slice)) return false;
-  try {
-    const obj = JSON.parse(slice);
-    return !!obj && typeof obj === "object" && ("actions" in obj || "files" in obj);
-  } catch {
-    // Try the trailing-comma repair the parser uses downstream.
-    try {
-      const repaired = slice.replace(/,\s*([}\]])/g, "$1");
-      const obj = JSON.parse(repaired);
-      return !!obj && typeof obj === "object" && ("actions" in obj || "files" in obj);
-    } catch {
-      // Truncated JSON (hit the token cap) still counts as "the model tried" —
-      // the downstream repair step will handle it. We only force a finalize
-      // when there is NO json-ish content at all.
-      return false;
-    }
+  return !!parseBuildJsonShape(text)?.hasContract;
+}
+
+function hasSubstantiveBuildPayload(text: string | null | undefined): boolean {
+  const shape = parseBuildJsonShape(text);
+  return !!shape?.hasContract && shape.fileCount + shape.actionCount > 0;
+}
+
+function flattenTextContent(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value
+      .map((part) =>
+        part && typeof part === "object" && "text" in part
+          ? String((part as { text?: unknown }).text ?? "")
+          : "",
+      )
+      .join("\n");
   }
+  return "";
+}
+
+function shouldRequireBuildPayload(opts: any): boolean {
+  const promptText =
+    typeof opts?.prompt === "string"
+      ? opts.prompt
+      : Array.isArray(opts?.messages)
+        ? opts.messages.map((m: any) => flattenTextContent(m?.content)).join("\n")
+        : "";
+  if (!promptText) return false;
+  const lower = promptText.toLowerCase();
+  const looksLikePureQuestion =
+    /\b(how|what|why|when|where|explain|tell me about)\b/.test(lower) &&
+    !/\b(make|add|create|build|generate|spawn|insert|fix|update|change|polish|improve|better|gui|ui|menu|shop|map|script|tool|sound|music|game)\b/.test(
+      lower,
+    );
+  if (looksLikePureQuestion) return false;
+  return /\b(make|add|create|build|generate|spawn|insert|fix|update|change|polish|improve|better|premium|gui|ui|menu|shop|inventory|hud|map|world|game|script|tool|weapon|npc|enemy|sound|music|asset|toolbox|terrain|lighting|vfx|animation)\b/.test(
+    lower,
+  );
 }
 
 export type AIToolEvent = {
@@ -131,10 +180,12 @@ export async function generateTextWithToolFallback(
     // We force ONE toolless follow-up that turns the gathered context into the
     // build object. (Grass/shop/etc. never hit this — they use instant
     // templates and skip the model entirely.)
-    if (hasTools && !hasUsableBuildJson(res?.text)) {
+    const needsBuildPayload = shouldRequireBuildPayload(opts);
+    const emptyBuildPayload = needsBuildPayload && !hasSubstantiveBuildPayload(res?.text);
+    if (hasTools && (!hasUsableBuildJson(res?.text) || emptyBuildPayload)) {
       const toolEvents = extractToolActivity(res as any);
       console.warn(
-        `[ai] ${label}: tool run produced no build JSON (text len=${(res?.text ?? "").length}, toolCalls=${toolEvents.length}). Forcing finalize step.`,
+        `[ai] ${label}: tool run produced ${emptyBuildPayload ? "empty build JSON" : "no build JSON"} (text len=${(res?.text ?? "").length}, toolCalls=${toolEvents.length}). Forcing finalize step.`,
       );
       const { tools: _ft, stopWhen: _fs, ...rest } = opts;
 
@@ -192,7 +243,10 @@ export async function generateTextWithToolFallback(
           system: (opts.system ?? "") + FINALIZE_INSTRUCTION,
           ...finalizeFields,
         });
-        if (hasUsableBuildJson(finalized?.text)) {
+        if (
+          hasUsableBuildJson(finalized?.text) &&
+          (!needsBuildPayload || hasSubstantiveBuildPayload(finalized?.text))
+        ) {
           console.log(`[ai] ${label}: finalize step recovered a build JSON.`);
           // Preserve the original tool activity for the UI.
           return { ...finalized, steps: [...(res?.steps ?? []), ...(finalized?.steps ?? [])] };
