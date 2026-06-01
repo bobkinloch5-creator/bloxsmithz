@@ -1339,6 +1339,7 @@ export type Database = {
           custom_background_url: string | null
           discord_claimed: boolean
           display_name: string | null
+          email: string | null
           hide_email: boolean
           id: string
           last_seen_at: string | null
@@ -1352,10 +1353,10 @@ export type Database = {
           presence_status: string
           private_profile: boolean
           profile_accent: string | null
-          profile_card_color: string
-          profile_card_effect: string
           profile_background: string | null
           profile_badges: string[]
+          profile_card_color: string
+          profile_card_effect: string
           profile_decoration: string
           profile_effect: string | null
           profile_layout: string
@@ -1393,6 +1394,7 @@ export type Database = {
           custom_background_url?: string | null
           discord_claimed?: boolean
           display_name?: string | null
+          email?: string | null
           hide_email?: boolean
           id: string
           last_seen_at?: string | null
@@ -1406,10 +1408,10 @@ export type Database = {
           presence_status?: string
           private_profile?: boolean
           profile_accent?: string | null
-          profile_card_color?: string
-          profile_card_effect?: string
           profile_background?: string | null
           profile_badges?: string[]
+          profile_card_color?: string
+          profile_card_effect?: string
           profile_decoration?: string
           profile_effect?: string | null
           profile_layout?: string
@@ -1447,6 +1449,7 @@ export type Database = {
           custom_background_url?: string | null
           discord_claimed?: boolean
           display_name?: string | null
+          email?: string | null
           hide_email?: boolean
           id?: string
           last_seen_at?: string | null
@@ -1460,10 +1463,10 @@ export type Database = {
           presence_status?: string
           private_profile?: boolean
           profile_accent?: string | null
-          profile_card_color?: string
-          profile_card_effect?: string
           profile_background?: string | null
           profile_badges?: string[]
+          profile_card_color?: string
+          profile_card_effect?: string
           profile_decoration?: string
           profile_effect?: string | null
           profile_layout?: string
