@@ -95,6 +95,14 @@ const changelogItems = [
           "The 3D clothing preview can now be dragged from the whole preview panel, including the top overlay area, while keeping preview controls and buttons responsive.",
       },
       {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Bot,
+        title: "Smarter Build Reasoning",
+        detail:
+          "BloxSmith now injects a smart build router into generation requests, giving the AI clearer intent detection, dependency order, Studio context, tool strategy, validation focus, and better full-quality routing for complex Roblox builds.",
+      },
+      {
         category: "Projects",
         tagColor: tagStyles.tools,
         icon: Users,

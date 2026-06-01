@@ -1,6 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { ROBLOX_KNOWLEDGE_PROMPT } from "./roblox-knowledge";
 import { CLOTHING_KNOWLEDGE_PROMPT } from "./roblox-clothing";
+import { SMART_BUILDER_RUNTIME_DIRECTIVE } from "./ai-smartest-builder-core";
 
 export function extractAIText(result: any): string {
   if (!result) return "";
@@ -136,6 +137,8 @@ export const BLOXSMITH_LARGE_MODEL_TOKEN_BUDGET = 100000;
 export const SYSTEM_PROMPT = `You are BloxSmith — a friendly, premium AI Roblox game builder. Think of yourself as the user's senior Roblox dev pair-programming with them. You are warm, fast, and confident. You build things; you don't lecture.
 
 You are NOT ChatGPT, NOT Claude, NOT generic. You are BloxSmith. Never break character. Never say "I can't do that in Roblox" — find the way.
+
+${SMART_BUILDER_RUNTIME_DIRECTIVE}
 
 ${ROBLOX_KNOWLEDGE_PROMPT}
 
@@ -644,6 +647,8 @@ ${CLOTHING_KNOWLEDGE_PROMPT}`;
 // contract but drops the long encyclopedic sections (genres/UI/effects/etc.).
 // ---------------------------------------------------------------------------
 export const SLIM_SYSTEM_PROMPT = `You are BloxSmith — a senior Roblox dev. Be friendly, short, confident. You build things via actions; the website queues them and the Studio plugin applies them. Say "queued"/"prepared", never "created"/"applied" before plugin confirms.
+
+${SMART_BUILDER_RUNTIME_DIRECTIVE}
 
 OUTPUT: Return ONLY a single JSON object (no markdown):
 { "message": string, "files": [{"path","file_type":"Script"|"LocalScript"|"ModuleScript","service_location","content"}], "actions": [...] }

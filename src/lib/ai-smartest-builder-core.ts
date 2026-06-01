@@ -211,6 +211,136 @@ export const MOBILE_BUILDER_REQUIREMENTS = [
   "Dedicated Generate Image button",
 ] as const;
 
+export const SMART_BUILDER_RUNTIME_DIRECTIVE = `
+## BloxSmith intelligence layer
+Before every answer, silently behave like a senior Roblox engineer, product designer, security reviewer, and playtester at once.
+- Convert vague or misspelled requests into a concrete Roblox build plan without asking repetitive clarification questions.
+- Think in connected systems: dependencies first, visible edit-mode objects second, scripts/remotes/modules/UI third, tests last.
+- Reuse existing project systems when the context shows them; create uniquely named additions when unsure.
+- Prefer high-quality Roblox outcomes over tiny demos: full-screen UI backgrounds for menus, real server authority for gameplay, mobile-safe UI, polish/VFX/audio where relevant.
+- Self-repair before output: if a script references a RemoteEvent, ModuleScript, GUI, tool, folder, or asset that is missing, create it or guard it in the same batch.
+- Explain briefly where things go and how to test them, but keep the structured JSON valid and action-focused.
+`;
+
+type SmartIntent =
+  | "BUILD"
+  | "EDIT"
+  | "FIX"
+  | "POLISH"
+  | "ASSET"
+  | "IMAGE"
+  | "QUESTION"
+  | "META";
+
+const INTENT_RULES: Array<{ intent: SmartIntent; pattern: RegExp }> = [
+  { intent: "FIX", pattern: /\b(fix|broken|error|bug|not working|doesn'?t work|failed|missing|issue|debug|why)\b/i },
+  { intent: "POLISH", pattern: /\b(polish|better|improve|premium|clean|smooth|less laggy|optimi[sz]e|effects?|vfx|particles?|animate|animation)\b/i },
+  { intent: "ASSET", pattern: /\b(toolbox|asset|model id|free model|decal|sound|music|skybox|mesh|catalog)\b/i },
+  { intent: "IMAGE", pattern: /\b(image|thumbnail|icon|logo|decal|badge|gamepass|banner|poster|picture|background art)\b/i },
+  { intent: "EDIT", pattern: /\b(change|update|move|rename|resize|recolor|replace|swap|remove|delete)\b/i },
+  { intent: "BUILD", pattern: /\b(make|add|create|build|generate|spawn|insert|give me|i want|need|ui|gui|system|game|map|shop|menu|hud|tool)\b/i },
+  { intent: "META", pattern: /\b(cancel|stop|undo|revert|clear chat)\b/i },
+  { intent: "QUESTION", pattern: /\b(how|what|why|when|where|explain)\b/i },
+];
+
+const SYSTEM_DEPENDENCIES: Array<{ name: string; pattern: RegExp; deps: string[] }> = [
+  {
+    name: "Simulator",
+    pattern: /\b(simulator|pet sim|clicker|rebirth|zone|egg|hatch|backpack|sell)\b/i,
+    deps: ["Currency/leaderstats", "DataService", "Inventory", "Shop", "Zones", "Mobile HUD"],
+  },
+  {
+    name: "Tycoon",
+    pattern: /\b(tycoon|dropper|conveyor|collector|owner door|purchase pad)\b/i,
+    deps: ["Cash/leaderstats", "Plot ownership", "Purchase validation", "Templates", "Collector", "Save data"],
+  },
+  {
+    name: "Obby",
+    pattern: /\b(obby|checkpoint|stage|killbrick|jump pad|moving platform)\b/i,
+    deps: ["Checkpoints", "Stage save", "Spawn locations", "Hazards", "Finish reward", "Mobile HUD"],
+  },
+  {
+    name: "Combat",
+    pattern: /\b(combat|weapon|sword|gun|boss|enemy|npc|damage|ability|skill|pvp)\b/i,
+    deps: ["Server hit validation", "Cooldowns", "Tools/animations", "VFX/SFX", "Health/rewards", "Anti-exploit checks"],
+  },
+  {
+    name: "UI",
+    pattern: /\b(ui|gui|menu|hud|shop screen|settings|inventory|loading|splash|main menu|button|panel)\b/i,
+    deps: ["StarterGui ScreenGui", "Responsive frames", "TweenService polish", "Input handlers", "Server remotes if gameplay changes"],
+  },
+  {
+    name: "Economy",
+    pattern: /\b(coins?|cash|gems?|credits?|shop|buy|sell|reward|daily|code|promo|gamepass|developer product)\b/i,
+    deps: ["Server authority", "Leaderstats", "DataService", "Purchase validation", "Receipts/rewards", "Confirmation UI"],
+  },
+  {
+    name: "World",
+    pattern: /\b(map|world|city|lobby|island|forest|school|horror|arena|base|background)\b/i,
+    deps: ["Workspace/Map folders", "SpawnLocation", "Lighting/PostFX", "Props/assets", "Collision/passability", "Performance budget"],
+  },
+  {
+    name: "Animation/VFX",
+    pattern: /\b(animation|animate|emote|walk|run|idle|particle|vfx|trail|beam|aura|explosion|spark|effect)\b/i,
+    deps: ["Animator-safe animation loading", "Reusable ReplicatedStorage/VFX helpers", "Debris cleanup", "Reasonable particle counts", "Preview/test step"],
+  },
+];
+
+export function inferSmartIntent(prompt: string): SmartIntent {
+  for (const rule of INTENT_RULES) {
+    if (rule.pattern.test(prompt)) return rule.intent;
+  }
+  return "BUILD";
+}
+
+export function isSmartFullPromptRequest(prompt: string, aiMode?: string | null): boolean {
+  const combined = `${prompt}\n${aiMode ?? ""}`;
+  return (
+    /\b(game|full|complete|entire|system|tycoon|simulator|obby|combat|inventory|shop|menu|hud|ui|gui|loading|splash|settings|quest|npc|enemy|boss|pet|map|world|city|lobby|datastore|save|gamepass|developer product|animation|vfx|particle|cutscene|playtest|debug|fix|premium|polish|mobile)\b/i.test(
+      combined,
+    ) || combined.length > 220
+  );
+}
+
+export function buildSmartContextBlock(
+  prompt: string,
+  options?: {
+    aiMode?: string | null;
+    studioConnected?: boolean;
+    hasVisionImages?: boolean;
+    fileCount?: number;
+    liveInstanceCount?: number | null;
+  },
+) {
+  const intent = inferSmartIntent(prompt);
+  const matched = SYSTEM_DEPENDENCIES.filter((x) => x.pattern.test(prompt));
+  const systems = matched.length ? matched.map((x) => x.name) : ["General Roblox build"];
+  const dependencies = matched.flatMap((x) => x.deps);
+  const uniqueDeps = [...new Set(dependencies)].slice(0, 12);
+  const fullQuality = isSmartFullPromptRequest(prompt, options?.aiMode);
+  const shouldUseTools =
+    intent !== "QUESTION" &&
+    /\b(asset|toolbox|model|sound|music|decal|skybox|map|world|city|lobby|npc|weapon|vehicle|pet|thumbnail|image|docs?|api|current|roblox)\b/i.test(
+      prompt,
+    );
+
+  return [
+    "=== SMART BUILD ROUTER ===",
+    `Detected intent: ${intent}`,
+    `Quality mode: ${fullQuality ? "deep connected Roblox build" : "fast focused Roblox edit"}`,
+    `Likely systems: ${systems.join(", ")}`,
+    uniqueDeps.length ? `Dependency order to respect: ${uniqueDeps.join(" -> ")}` : "",
+    `Studio context: ${options?.studioConnected ? "plugin connected" : "plugin not connected or unknown"}; live instances: ${options?.liveInstanceCount ?? "unknown"}; saved files: ${options?.fileCount ?? 0}`,
+    options?.hasVisionImages ? "Vision input: user attached image(s); inspect them for UI/layout/error clues before building." : "",
+    shouldUseTools
+      ? "Tool strategy: use Roblox docs/toolbox/image tools when useful; verify assets are free/safe; do not invent asset IDs."
+      : "Tool strategy: no external lookup needed unless the model is unsure about a Roblox API.",
+    "Self-check focus: correct service placement, no unsafe deletes, server-authoritative gameplay, mobile-safe UI, visible edit-mode objects, matching remotes/modules, concise test steps.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function buildSmartBuilderPrompt(options?: { projectName?: string; mode?: string }) {
   const project = options?.projectName ? `\nCurrent project: ${options.projectName}` : "";
   const mode = options?.mode ? `\nRequested mode: ${options.mode}` : "";

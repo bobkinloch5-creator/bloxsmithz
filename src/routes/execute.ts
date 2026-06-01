@@ -16,6 +16,10 @@ import {
 import { getModelProfile, recordProviderHealth, resolveAiGateway } from "@/lib/ai-providers.server";
 import { buildBloxSmithTools } from "@/lib/ai-tools.server";
 import { buildProjectMemoryBlock, rememberProjectInteraction } from "@/lib/ai-memory.server";
+import {
+  buildSmartContextBlock,
+  isSmartFullPromptRequest,
+} from "@/lib/ai-smartest-builder-core";
 
 // ---------- Prompt-size protection helpers ----------
 // Rough token estimate: 1 token ≈ 4 chars of English. Good enough for budgeting.
@@ -161,6 +165,7 @@ type ContextInputs = {
   keywords: string[];
   memoryBlock?: string;
   docsBlock?: string;
+  smartBlock?: string;
 };
 
 function buildContextBlock(
@@ -181,6 +186,7 @@ function buildContextBlock(
     const contextBlock =
       `Studio plugin status: ${inp.studioConnected ? "connected" : "not connected"}.\n\n` +
       (inp.memoryBlock ? `${inp.memoryBlock.slice(0, 700)}\n\n` : "") +
+      (inp.smartBlock ? `${inp.smartBlock.slice(0, 900)}\n\n` : "") +
       `User request:\n${inp.prompt}\n\n` +
       `Return ONLY the strict JSON object from the output contract.`;
     return { contextBlock, trimmedHistory: [], filesIncluded: 0 };
@@ -213,6 +219,7 @@ function buildContextBlock(
   const contextBlock =
     `${liveBlock}\n\n` +
     `Studio plugin status: ${inp.studioConnected ? "connected" : "not connected"}.\n\n` +
+    (inp.smartBlock ? `${inp.smartBlock}\n\n` : "") +
     (inp.memoryBlock ? `${inp.memoryBlock}\n\n` : "") +
     (inp.docsBlock ? `${inp.docsBlock}\n\n` : "") +
     `Relevant project files:\n${filesBlock}\n\n` +
@@ -2114,6 +2121,13 @@ export const Route = createFileRoute("/execute")({
                 }
 
                 const keywords = extractKeywords(prompt);
+                const smartBlock = buildSmartContextBlock(prompt, {
+                  aiMode: typeof aiMode === "string" ? aiMode : null,
+                  studioConnected: !!studioConnected,
+                  hasVisionImages: visionImages.length > 0,
+                  fileCount: existingFiles?.length ?? 0,
+                  liveInstanceCount: liveContext?.instance_count ?? null,
+                });
 
                 // Retrieve relevant Roblox docs (best-effort; never block on failure)
                 docsCitations = [];
@@ -2142,6 +2156,7 @@ export const Route = createFileRoute("/execute")({
                   keywords,
                   memoryBlock,
                   docsBlock,
+                  smartBlock,
                 };
 
                 // Build attempts. For external API-key sources we use a
@@ -2161,6 +2176,7 @@ export const Route = createFileRoute("/execute")({
                 // attempt #0 instead of waiting for the 8B to fail first.
                 const wantsFullPrompt =
                   !!thinking ||
+                  isSmartFullPromptRequest(prompt, typeof aiMode === "string" ? aiMode : null) ||
                   /\b(game|tycoon|simulator|obby|shop|inventory|menu|hud|loading|splash|main\s*menu|settings|cutscene|quest|admin|rpg|combat|weapon|npc|enemy|boss|pet|map|world|city|lobby|tower\s*defense)\b/i.test(
                     prompt,
                   );
@@ -2311,6 +2327,10 @@ export const Route = createFileRoute("/execute")({
                     // On retry (i>0) we drop tools entirely so the model just emits JSON —
                     // dramatically faster and avoids another timeout.
                     const heavyBuild =
+                      isSmartFullPromptRequest(
+                        prompt,
+                        typeof aiMode === "string" ? aiMode : null,
+                      ) ||
                       /\b(shop|inventory|menu|settings|tycoon|simulator|gui|ui|system|leaderboard|quest|admin|hud|panel|dashboard)\b/i.test(
                         prompt,
                       );
