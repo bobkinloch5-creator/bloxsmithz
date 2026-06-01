@@ -404,10 +404,27 @@ function normalizeElement(el: UIElement, fallbackName: string): UIElement {
   return out;
 }
 
+function applyVisibilityDefaults(el: UIElement, zIndex = 1): UIElement {
+  const next: UIElement = {
+    ...el,
+    zIndex: el.zIndex ?? zIndex,
+    backgroundTransparency:
+      el.type === "TextLabel"
+        ? (el.backgroundTransparency ?? 1)
+        : el.backgroundTransparency,
+  };
+  const childZ = Math.max(next.zIndex ?? zIndex, zIndex) + 1;
+  next.children = next.children?.map((child, idx) => {
+    const requestedZ = child.zIndex ?? childZ + idx;
+    return applyVisibilityDefaults(child, requestedZ);
+  });
+  return next;
+}
+
 function normalizeUISpec(spec: UISpec, opts: { category: UICategory; bgColor?: { r: number; g: number; b: number } }): UISpec {
   const title = spec.title?.trim() || `${opts.category} UI`;
   const screenGuiName = safeInstanceName(spec.screenGuiName, `${safeInstanceName(title, "BloxSmithUI")}Gui`);
-  const root = normalizeElement(spec.root, "RootFrame");
+  const root = applyVisibilityDefaults(normalizeElement(spec.root, "RootFrame"), 1);
   root.type = "Frame";
   root.id ||= "RootFrame";
   root.name ||= "RootFrame";
@@ -415,6 +432,7 @@ function normalizeUISpec(spec: UISpec, opts: { category: UICategory; bgColor?: {
   root.size ??= { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 };
   root.backgroundColor ??= opts.bgColor ?? { r: 15, g: 23, b: 42 };
   root.backgroundTransparency ??= 0;
+  root.zIndex ??= 1;
   return UISpecSchema.parse({ ...spec, title, screenGuiName, root, mobileFriendly: spec.mobileFriendly ?? true });
 }
 
@@ -1067,6 +1085,7 @@ function color3(c?: { r: number; g: number; b: number }) {
 
 function propsForElement(el: UIElement) {
   const props: Record<string, unknown> = {};
+  props.Visible = true;
   if (el.size) props.Size = udim2(el.size);
   if (el.position) props.Position = udim2(el.position);
   if (el.anchorPoint) props.AnchorPoint = { __t: "Vector2", x: el.anchorPoint.x, y: el.anchorPoint.y };
@@ -1081,11 +1100,19 @@ function propsForElement(el: UIElement) {
     if (el.font) props.Font = { __t: "Enum", enum: "Font", value: el.font };
     if (el.textAlign) props.TextXAlignment = { __t: "Enum", enum: "TextXAlignment", value: el.textAlign };
   }
+  if (el.type === "TextButton" || el.type === "ImageButton") {
+    props.Active = true;
+    props.AutoButtonColor = true;
+  }
   if (el.type === "ImageButton" || el.type === "ImageLabel") {
     if (el.image) {
       const img = /^\d+$/.test(el.image) ? `rbxassetid://${el.image}` : el.image;
       props.Image = img;
     }
+  }
+  if (el.type === "ScrollingFrame") {
+    props.ScrollBarThickness = 8;
+    props.CanvasSize = udim2({ xScale: 0, xOffset: 0, yScale: 1, yOffset: 200 });
   }
   return props;
 }
@@ -1190,6 +1217,25 @@ function pushElement(
   for (const child of el.children ?? []) pushElement(child, myPath, actions);
 }
 
+function visibilityBootstrapSource(screenGuiName: string, source: string) {
+  return `-- BloxSmith visibility guard: generated UI should be visible immediately in Studio and Play.
+local gui = script.Parent
+if gui and gui:IsA("ScreenGui") then
+\tgui.Enabled = true
+\tgui.IgnoreGuiInset = true
+\tgui.ResetOnSpawn = false
+\tgui.DisplayOrder = math.max(gui.DisplayOrder, 999999)
+end
+for _, item in ipairs(gui:GetDescendants()) do
+\tif item:IsA("GuiObject") then
+\t\titem.Visible = true
+\tend
+end
+print("[BloxSmith UI] ${screenGuiName} is enabled and visible.")
+
+${source}`;
+}
+
 export function specToPluginPayload(spec: UISpec): { actions: PluginAction[]; files: GenFile[] } {
   const actions: PluginAction[] = [];
   const files: GenFile[] = [];
@@ -1201,8 +1247,10 @@ export function specToPluginPayload(spec: UISpec): { actions: PluginAction[]; fi
     name: spec.screenGuiName,
     parent: "StarterGui",
     properties: {
+      Enabled: true,
       ResetOnSpawn: false,
       IgnoreGuiInset: true,
+      DisplayOrder: 999999,
       ZIndexBehavior: { __t: "Enum", enum: "ZIndexBehavior", value: "Sibling" },
     },
   });
@@ -1222,18 +1270,28 @@ export function specToPluginPayload(spec: UISpec): { actions: PluginAction[]; fi
 
   // 4. LocalScript inside the ScreenGui
   if (spec.localScript && spec.localScript.trim()) {
+    const localScript = visibilityBootstrapSource(spec.screenGuiName, spec.localScript);
     files.push({
       path: `StarterGui/${spec.screenGuiName}/UIController`,
       file_type: "LocalScript",
       service_location: "StarterGui",
-      content: spec.localScript,
+      content: localScript,
     });
     actions.push({
       type: "create",
       className: "LocalScript",
       name: "UIController",
       parent: `StarterGui.${spec.screenGuiName}`,
-      properties: { Source: spec.localScript },
+      properties: { Source: localScript },
+    });
+  } else {
+    const localScript = visibilityBootstrapSource(spec.screenGuiName, "");
+    actions.push({
+      type: "create",
+      className: "LocalScript",
+      name: "UIVisibilityGuard",
+      parent: `StarterGui.${spec.screenGuiName}`,
+      properties: { Source: localScript },
     });
   }
 

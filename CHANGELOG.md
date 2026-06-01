@@ -4,6 +4,8 @@
 
 ### Playtest Apply Fixes & Premium UI Variety
 
+- Forced generated Roblox UI to insert visibly by default with `ScreenGui.Enabled = true`, high `DisplayOrder`, visible GuiObjects, and a small visibility guard LocalScript.
+- Added z-index defaults during UI spec normalization so generated overlays, panels, labels, and buttons do not accidentally hide behind their own backgrounds.
 - Fixed Playtest mode so approved QA findings no longer fail with "Couldn't turn the plan into Studio actions" when the AI action converter returns empty output.
 - Added deterministic Playtest repair actions for missing remotes/folders, script-placement moves, unwired UI buttons, and safe diagnostic notes so Roblox Studio receives useful actions even during provider failures.
 - Expanded the Roblox UI generator with more UI types including title screens, pause menus, crafting, skill trees, battle passes, map voting, dialogue, and notification UIs.

@@ -105,9 +105,9 @@ const changelogItems = [
         category: "UI",
         tagColor: tagStyles.ui,
         icon: LayoutDashboard,
-        title: "Main Menu Background Fix",
+        title: "Always-Visible Generated UI",
         detail:
-          "Main-menu generation now treats backgrounds as full-screen ScreenGui layers behind the title and buttons, preventing accidental Workspace parts or giant selected blocks from being used as the menu background.",
+          "Generated ScreenGuis now insert enabled with a high DisplayOrder, visible GuiObjects, z-index defaults, and a small visibility guard LocalScript so menus, HUDs, and panels are much harder to accidentally hide.",
       },
       {
         category: "UI",
@@ -115,7 +115,7 @@ const changelogItems = [
         icon: Palette,
         title: "More Roblox UI Types & Background Variety",
         detail:
-          "The UI generator now supports more categories like title screens, pause menus, crafting, skill trees, battle passes, map voting, dialogue, and notifications, with prompt-specific 2D background layers and varied fallback layouts instead of repeating the same panel.",
+          "Main-menu generation now treats backgrounds as full-screen ScreenGui layers, and the UI generator supports more categories like title screens, pause menus, crafting, skill trees, battle passes, map voting, dialogue, and notifications with prompt-specific 2D background layers.",
       },
       {
         category: "Config",
