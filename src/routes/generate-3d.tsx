@@ -779,7 +779,7 @@ function Generate3DPage() {
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)]">
-          <section className="rounded-2xl border border-border bg-surface/50 p-5 shadow-lg sm:p-6 flex flex-col justify-between">
+          <section className="rounded-2xl border border-border/80 bg-surface/50 p-5 shadow-md sm:p-6 flex flex-col justify-between">
             <div>
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
                 <div>
@@ -1078,7 +1078,7 @@ function Generate3DPage() {
             </button>
           </section>
 
-          <section className="flex flex-col rounded-2xl border border-border bg-surface/50 p-5 shadow-lg sm:p-6 border border-border/80 shadow-md">
+          <section className="flex flex-col rounded-2xl border border-border/80 bg-surface/50 p-5 shadow-md sm:p-6">
             <div className="mb-4 flex items-center justify-between gap-3 border-b border-border/60 pb-3">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Preview</div>

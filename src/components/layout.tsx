@@ -336,7 +336,7 @@ export function Header() {
                       >
                         <div className="relative z-10 py-1.5">
                           <Link
-                             to="/account"
+                            to="/account"
                             onClick={() => setProfileOpen(false)}
                             className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground/90 hover:bg-surface transition"
                           >
