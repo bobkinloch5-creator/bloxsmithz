@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { generatePluginToken } from "@/lib/projects.functions";
 import { deleteOwnAccount } from "@/lib/account.functions";
+import { updateProfileCustomization } from "@/lib/profile-customization.functions";
 import {
   Copy,
   KeyRound,
@@ -27,6 +28,7 @@ import {
   Zap,
   TrendingUp,
   Award,
+  Loader2,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -119,8 +121,10 @@ function Account() {
   const [model3dCount, setModel3dCount] = useState(0);
   const runToken = useServerFn(generatePluginToken);
   const runDelete = useServerFn(deleteOwnAccount);
+  const updateProfile = useServerFn(updateProfileCustomization);
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -215,12 +219,10 @@ function Account() {
   useEffect(() => {
     if (profile) {
       setName(profile.display_name ?? "");
-      setBio(profile.bio ?? user?.user_metadata?.bio ?? "");
-      setSpecialization(
-        profile.specialization ?? user?.user_metadata?.specialization ?? "General Builder",
-      );
+      setBio(profile.bio ?? "");
+      setSpecialization(profile.specialization ?? "General Builder");
     }
-  }, [profile, user?.user_metadata?.bio, user?.user_metadata?.specialization]);
+  }, [profile]);
   useEffect(() => {
     if (!user) return;
     supabase
@@ -270,24 +272,31 @@ function Account() {
       specialization,
     };
 
-    const profileUpdate = await supabase
-      .from("profiles")
-      .update({
-        display_name: displayName,
-        bio: bio.trim(),
-        specialization,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
+    setProfileSaving(true);
+    try {
+      await updateProfile({
+        data: {
+          display_name: displayName,
+          bio: bio.trim() || null,
+          specialization,
+        },
+      });
 
-    const metadataUpdate = await supabase.auth.updateUser({ data: metadata });
+      const metadataUpdate = await supabase.auth.updateUser({
+        data: metadata,
+      });
 
-    if (profileUpdate.error && metadataUpdate.error) {
-      return toast.error(profileUpdate.error.message || metadataUpdate.error.message);
+      if (metadataUpdate.error) {
+        console.warn("[account] profile metadata fallback update failed", metadataUpdate.error);
+      }
+
+      await refresh();
+      toast.success("Profile saved successfully");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save profile");
+    } finally {
+      setProfileSaving(false);
     }
-
-    await refresh();
-    toast.success("Profile saved successfully");
   };
 
   const newToken = async () => {
@@ -457,7 +466,7 @@ function Account() {
             {
               icon: CreditCard,
               label: "Credit Balance",
-              value: formatCreditBalance(profile?.credits, isOwner),
+              value: profile ? formatCreditBalance(profile.credits, isOwner) : "Loading",
               color: "text-primary-glow",
               desc: isOwner ? "Owner account: no spending cap" : "Available to run generations",
             },
@@ -839,9 +848,11 @@ function Account() {
                 </div>
                 <button
                   onClick={saveProfile}
-                  className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-sm font-semibold transition shadow-sm"
+                  disabled={profileSaving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-sm font-semibold transition shadow-sm disabled:opacity-50"
                 >
-                  Save Profile Details
+                  {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {profileSaving ? "Saving..." : "Save Profile Details"}
                 </button>
               </div>
             </section>

@@ -15,20 +15,9 @@ export const publishToShowcase = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { error } = await supabase
-      .from("projects")
-      .update({
-        showcase_published: true,
-        showcase_title: data.title,
-        showcase_description: data.description,
-        showcase_thumbnail_url: data.thumbnailUrl ?? null,
-        showcase_published_at: new Date().toISOString(),
-      })
-      .eq("id", data.projectId)
-      .eq("user_id", userId);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    void data;
+    void context;
+    throw new Error("Project sharing is disabled. Projects are private to their owner.");
   });
 
 export const unpublishFromShowcase = createServerFn({ method: "POST" })
@@ -49,22 +38,9 @@ export const toggleShowcaseLike = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ projectId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: existing } = await supabase
-      .from("showcase_likes")
-      .select("id")
-      .eq("project_id", data.projectId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (existing) {
-      await supabase.from("showcase_likes").delete().eq("id", existing.id);
-      return { liked: false };
-    }
-    const { error } = await supabase
-      .from("showcase_likes")
-      .insert({ project_id: data.projectId, user_id: userId });
-    if (error) throw new Error(error.message);
-    return { liked: true };
+    void data;
+    void context;
+    throw new Error("Project sharing is disabled. Projects are private to their owner.");
   });
 
 export const remixShowcaseProject = createServerFn({ method: "POST" })

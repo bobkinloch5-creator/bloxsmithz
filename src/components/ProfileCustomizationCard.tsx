@@ -3,6 +3,7 @@
 // authenticated server function so it persists to the database.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { createRobloxStyleAvatar } from "@/lib/generated-avatar";
 import { useServerFn } from "@tanstack/react-start";
 import { updateProfileCustomization } from "@/lib/profile-customization.functions";
 import { setCustomBackground } from "@/lib/profile-media.functions";
@@ -13,8 +14,9 @@ import { PROFILE_BACKGROUNDS, ProfileBackground, type ProfileBackgroundId } from
 import { PFP_EFFECTS, PfpRing, type PfpEffectId } from "./profile/PfpRing";
 import { ProfileEffect, PROFILE_EFFECTS, type ProfileEffectId } from "./chat/ProfileEffect";
 import { Sparkles, Lock, Eye, Activity, Save, Loader2, Wand2, ImagePlus, LayoutPanelTop, CircleUserRound, Upload, Trash2, Film, Award, Palette } from "lucide-react";
-import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow } from "./profile/ProfileBadges";
+import { PROFILE_BADGES, ProfileBadgeIcon, ProfileBadgeRow, getBadgeDef } from "./profile/ProfileBadges";
 import { PROFILE_DECORATIONS, AvatarDecoration } from "./profile/ProfileDecoration";
+import { ProfileMenuPreview } from "./profile/ProfileMenuPreview";
 import {
   PROFILE_CARD_EFFECTS,
   ProfileCardChrome,
@@ -25,6 +27,7 @@ import {
   selectableProfileBadgeIds,
   SELECTABLE_PROFILE_BADGE_IDS,
   normalizeProfileBadgeIds,
+  type ProfileBadgeId,
 } from "@/lib/profile-badges";
 
 const ACCENTS = ["#7c3cff", "#00d9ff", "#ff4da6", "#22c55e", "#f59e0b", "#ef4444", "#a78bfa", "#38bdf8"];
@@ -42,62 +45,66 @@ const STATUSES = [
   { id: "invisible", label: "Invisible",       color: "bg-zinc-500",    glow: "",                                       icon: "○" },
 ] as const;
 
+type ProfileCustomizationSource = {
+  display_name?: string | null;
+  bio?: string | null;
+  pronouns?: string | null;
+  location?: string | null;
+  status_message?: string | null;
+  profile_accent?: string | null;
+  profile_card_color?: string | null;
+  profile_card_effect?: string | null;
+  profile_effect?: string | null;
+  profile_background?: string | null;
+  custom_background_url?: string | null;
+  profile_layout?: string | null;
+  pfp_effect?: string | null;
+  private_profile?: boolean | null;
+  hide_email?: boolean | null;
+  presence_enabled?: boolean | null;
+  show_activity?: boolean | null;
+  presence_status?: string | null;
+  profile_badges?: unknown;
+  profile_decoration?: string | null;
+};
+
+function profileStateFromProfile(profile: ProfileCustomizationSource | null | undefined) {
+  return {
+    display_name: profile?.display_name ?? "",
+    bio: profile?.bio ?? "",
+    pronouns: profile?.pronouns ?? "",
+    location: profile?.location ?? "",
+    status_message: profile?.status_message ?? "",
+    profile_accent: (profile?.profile_accent ?? "#7c3cff") as string,
+    profile_card_color: (profile?.profile_card_color ?? "#0f172a") as string,
+    profile_card_effect: (profile?.profile_card_effect ?? "soft_glow") as ProfileCardEffectId,
+    profile_effect: (profile?.profile_effect ?? "none") as ProfileEffectId,
+    profile_background: (profile?.profile_background ?? "none") as ProfileBackgroundId,
+    custom_background_url: (profile?.custom_background_url ?? null) as string | null,
+    profile_layout: (profile?.profile_layout ?? "classic") as "classic" | "card" | "cinematic" | "compact",
+    pfp_effect: (profile?.pfp_effect ?? "none") as PfpEffectId,
+    private_profile: !!profile?.private_profile,
+    hide_email: profile?.hide_email !== false,
+    presence_enabled: profile?.presence_enabled !== false,
+    show_activity: profile?.show_activity !== false,
+    presence_status: (profile?.presence_status ?? "online") as "online" | "idle" | "dnd" | "invisible",
+    profile_badges: selectableProfileBadgeIds(profile?.profile_badges),
+    profile_decoration: (profile?.profile_decoration ?? "none") as string,
+  };
+}
+
 export function ProfileCustomizationCard() {
   const { user, profile, refresh, roles } = useAuth();
   const p = (profile ?? {}) as any;
   const save = useServerFn(updateProfileCustomization);
 
-  const [state, setState] = useState({
-    display_name: p.display_name ?? "",
-    bio: p.bio ?? "",
-    pronouns: p.pronouns ?? "",
-    location: p.location ?? "",
-    status_message: p.status_message ?? "",
-    profile_accent: (p.profile_accent ?? "#7c3cff") as string,
-    profile_card_color: (p.profile_card_color ?? "#0f172a") as string,
-    profile_card_effect: (p.profile_card_effect ?? "soft_glow") as ProfileCardEffectId,
-    profile_effect: (p.profile_effect ?? "none") as ProfileEffectId,
-    profile_background: (p.profile_background ?? "none") as ProfileBackgroundId,
-    custom_background_url: (p.custom_background_url ?? null) as string | null,
-    profile_layout: (p.profile_layout ?? "classic") as "classic" | "card" | "cinematic" | "compact",
-    pfp_effect: (p.pfp_effect ?? "none") as PfpEffectId,
-    private_profile: !!p.private_profile,
-    hide_email: p.hide_email !== false,
-    presence_enabled: p.presence_enabled !== false,
-    show_activity: p.show_activity !== false,
-    presence_status: (p.presence_status ?? "online") as "online" | "idle" | "dnd" | "invisible",
-    profile_badges: selectableProfileBadgeIds(p.profile_badges) as string[],
-    profile_decoration: (p.profile_decoration ?? "none") as string,
-  });
+  const [state, setState] = useState(() => profileStateFromProfile(p));
   const [saving, setSaving] = useState(false);
 
   // Re-sync when profile reloads (e.g., after another device pushes changes).
   useEffect(() => {
     if (!profile) return;
-    const q = profile as any;
-    setState((s) => ({
-      ...s,
-      display_name: q.display_name ?? s.display_name,
-      bio: q.bio ?? s.bio,
-      pronouns: q.pronouns ?? s.pronouns ?? "",
-      location: q.location ?? s.location ?? "",
-      status_message: q.status_message ?? s.status_message ?? "",
-      profile_accent: q.profile_accent ?? s.profile_accent,
-      profile_card_color: q.profile_card_color ?? s.profile_card_color,
-      profile_card_effect: q.profile_card_effect ?? s.profile_card_effect,
-      profile_effect: q.profile_effect ?? s.profile_effect,
-      profile_background: q.profile_background ?? s.profile_background,
-      custom_background_url: q.custom_background_url ?? s.custom_background_url ?? null,
-      profile_layout: q.profile_layout ?? s.profile_layout,
-      pfp_effect: q.pfp_effect ?? s.pfp_effect,
-      private_profile: !!q.private_profile,
-      hide_email: q.hide_email !== false,
-      presence_enabled: q.presence_enabled !== false,
-      show_activity: q.show_activity !== false,
-      presence_status: q.presence_status ?? s.presence_status,
-      profile_badges: selectableProfileBadgeIds(q.profile_badges),
-      profile_decoration: q.profile_decoration ?? s.profile_decoration,
-    }));
+    setState(profileStateFromProfile(profile));
   }, [profile]);
 
   const initial = useMemo(
@@ -117,10 +124,44 @@ export function ProfileCustomizationCard() {
     [roles, profile, state.profile_badges],
   );
   const previewBadgeIds = useMemo(
-    () => Array.from(new Set([...earnedRoleBadgeIds, ...state.profile_badges])),
+    () => Array.from(new Set([...earnedRoleBadgeIds, ...state.profile_badges])) as ProfileBadgeId[],
     [earnedRoleBadgeIds, state.profile_badges],
   );
   const selectableBadgeLimit = Math.max(0, 12 - earnedRoleBadgeIds.length);
+  const previewFallbackAvatar = useMemo(
+    () => createRobloxStyleAvatar(user?.id || user?.email),
+    [user?.id, user?.email],
+  );
+  const previewBadgeNames = useMemo(
+    () =>
+      previewBadgeIds
+        .map((id) => getBadgeDef(id)?.label)
+        .filter(Boolean)
+        .join(", "),
+    [previewBadgeIds],
+  );
+  const previewProfile = useMemo(
+    () => ({
+      ...(profile as any),
+      display_name:
+        state.display_name ||
+        (profile as any)?.display_name ||
+        user?.email?.split("@")[0] ||
+        "Builder",
+      email: user?.email ?? (profile as any)?.email ?? null,
+      hide_email: state.hide_email,
+      profile_accent: state.profile_accent,
+      profile_card_color: state.profile_card_color,
+      profile_card_effect: state.profile_card_effect,
+      profile_effect: state.profile_effect,
+      profile_background: state.profile_background,
+      custom_background_url: state.custom_background_url,
+      pfp_effect: state.pfp_effect,
+      profile_decoration: state.profile_decoration,
+      profile_badges: previewBadgeIds,
+    }),
+    [profile, previewBadgeIds, state, user?.email],
+  );
 
   async function onSave() {
     if (!user) return;
@@ -241,6 +282,20 @@ export function ProfileCustomizationCard() {
           </div>
         </div>
       </ProfileCardChrome>
+
+      <Section icon={<CircleUserRound className="h-4 w-4" />} title="Profile menu preview">
+        <div className="max-w-sm">
+          <ProfileMenuPreview
+            profile={previewProfile}
+            roles={roles}
+            avatarUrl={p.avatar_url}
+            fallbackAvatar={previewFallbackAvatar}
+            bannerUrl={p.banner_url}
+            badgeIds={previewBadgeIds}
+            badgeNames={previewBadgeNames}
+          />
+        </div>
+      </Section>
 
       {/* IDENTITY */}
       <div className="grid gap-3 sm:grid-cols-2">

@@ -221,7 +221,7 @@ function Dashboard() {
                   to="/pricing"
                   className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs font-semibold text-primary-glow hover:bg-primary/20 transition"
                 >
-                  {profile?.credits ?? 0} credits available
+                  {profile ? `${profile.credits} credits available` : "Loading credits"}
                 </Link>
               )}
               {isAdmin && !isOwner && <span className="text-muted-foreground">· Admin</span>}

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VideoGeneratorRouteImport } from './routes/video-generator'
 import { Route as UiGeneratorRouteImport } from './routes/ui-generator'
 import { Route as ToolboxRouteImport } from './routes/toolbox'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -68,6 +69,11 @@ import { Route as ApiPublicPaypalWebhookRouteImport } from './routes/api/public/
 import { Route as ApiPublicOauthTokenRouteImport } from './routes/api/public/oauth/token'
 import { Route as ApiPublicOauthRegisterRouteImport } from './routes/api/public/oauth/register'
 
+const VideoGeneratorRoute = VideoGeneratorRouteImport.update({
+  id: '/video-generator',
+  path: '/video-generator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UiGeneratorRoute = UiGeneratorRouteImport.update({
   id: '/ui-generator',
   path: '/ui-generator',
@@ -395,6 +401,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/toolbox': typeof ToolboxRoute
   '/ui-generator': typeof UiGeneratorRoute
+  '/video-generator': typeof VideoGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -455,6 +462,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/toolbox': typeof ToolboxRoute
   '/ui-generator': typeof UiGeneratorRoute
+  '/video-generator': typeof VideoGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -516,6 +524,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/toolbox': typeof ToolboxRoute
   '/ui-generator': typeof UiGeneratorRoute
+  '/video-generator': typeof VideoGeneratorRoute
   '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -578,6 +587,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/toolbox'
     | '/ui-generator'
+    | '/video-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/api/generate-image'
@@ -638,6 +648,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/toolbox'
     | '/ui-generator'
+    | '/video-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/api/generate-image'
@@ -698,6 +709,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/toolbox'
     | '/ui-generator'
+    | '/video-generator'
     | '/.well-known/oauth-authorization-server'
     | '/.well-known/oauth-protected-resource'
     | '/api/generate-image'
@@ -759,6 +771,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   ToolboxRoute: typeof ToolboxRoute
   UiGeneratorRoute: typeof UiGeneratorRoute
+  VideoGeneratorRoute: typeof VideoGeneratorRoute
   DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
@@ -788,6 +801,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/video-generator': {
+      id: '/video-generator'
+      path: '/video-generator'
+      fullPath: '/video-generator'
+      preLoaderRoute: typeof VideoGeneratorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ui-generator': {
       id: '/ui-generator'
       path: '/ui-generator'
@@ -1242,6 +1262,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   ToolboxRoute: ToolboxRoute,
   UiGeneratorRoute: UiGeneratorRoute,
+  VideoGeneratorRoute: VideoGeneratorRoute,
   DotwellKnownOauthAuthorizationServerRoute:
     DotwellKnownOauthAuthorizationServerRoute,
   DotwellKnownOauthProtectedResourceRoute:
@@ -1273,3 +1294,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -11,6 +11,7 @@ import {
   Flag,
   Gift,
   Globe2,
+  Handshake,
   Image as ImageIcon,
   Languages,
   Library,
@@ -19,6 +20,8 @@ import {
   Mail,
   Menu,
   MessageSquare,
+  Mic2,
+  Music2,
   Palette,
   Play,
   ScrollText,
@@ -29,6 +32,7 @@ import {
   Sparkles,
   Trash2,
   Users,
+  Video,
   Wrench,
   Zap,
 } from "lucide-react";
@@ -44,6 +48,95 @@ const tagStyles = {
 };
 
 const changelogItems = [
+  {
+    version: "v3.9.0",
+    date: "May 31, 2026",
+    title: "Roblox Video, Music & Speech Studio",
+    description:
+      "A new creator workspace adds Seedance video generation, Roblox promo presets, image-to-video, music generation, and Gemini speech-to-text.",
+    updates: [
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Video,
+        title: "Seedance Roblox Video Generator",
+        detail:
+          "Added /video-generator with Doubao Seedance 2.0, Roblox-safe prompt wrapping, 5s/10s/15s/30s/1m durations, and storyboarded multi-clip generation for longer videos.",
+      },
+      {
+        category: "Reliability",
+        tagColor: tagStyles.security,
+        icon: Clock,
+        title: "One Video Per Week",
+        detail:
+          "Video generation now has a server-enforced weekly limit with unlock timing shown in the UI before a user starts a new generation.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.ui,
+        icon: Sparkles,
+        title: "Mobile Preview & Video Downloads",
+        detail:
+          "Added a live mobile-ready preview frame, selected aspect-ratio previewing, per-clip video players, download buttons, and open/save links for mobile browsers.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.integrations,
+        icon: ImageIcon,
+        title: "Image to Video",
+        detail:
+          "Users can upload a safe PNG, JPG, or WEBP reference image and use it to guide the first Seedance video segment.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.ui,
+        icon: Sparkles,
+        title: "Roblox Presets & Animation Direction",
+        detail:
+          "Added presets for ads, trailers, UGC, obbies, tycoons, simulators, spooky teasers, and vertical shorts, plus animation guidance for smoother Roblox-style movement.",
+      },
+      {
+        category: "Audio",
+        tagColor: tagStyles.ai,
+        icon: Music2,
+        title: "Roblox Music Generator & Import Kit",
+        detail:
+          "Added a configurable music panel for clean promo loops and a downloadable Roblox Studio Lua script users can fill with their uploaded Roblox audio asset id.",
+      },
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Mic2,
+        title: "Gemini Speech to Text",
+        detail:
+          "Added Gemini 3.1 Flash Lite Preview transcription for uploaded audio or video, with transcript, caption, and script-notes output modes.",
+      },
+      {
+        category: "Backend",
+        tagColor: tagStyles.backend,
+        icon: ShieldCheck,
+        title: "Generated Media Storage",
+        detail:
+          "Added Supabase storage buckets for generated video and audio files so provider results can be saved as BloxSmith download links.",
+      },
+      {
+        category: "Community",
+        tagColor: tagStyles.tools,
+        icon: Handshake,
+        title: "Global Chat Collaboration Invites",
+        detail:
+          "Added a collaboration invite button in Global Chat so users can post structured team-up requests for builders, scripters, UI designers, animators, testers, or partners.",
+      },
+      {
+        category: "Credits",
+        tagColor: tagStyles.tools,
+        icon: Gift,
+        title: "How To Earn Credits",
+        detail:
+          "Added credit-earning guidance to the Browse menu and community page covering daily claims, Discord, referrals, chat rewards, badges, promo codes, promo videos, and credit packs.",
+      },
+    ],
+  },
   {
     version: "v3.8.1",
     date: "May 31, 2026",

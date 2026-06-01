@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { publishToShowcase, unpublishFromShowcase } from "@/lib/showcase.functions";
-import { Globe, Loader2, X, Eye, EyeOff } from "lucide-react";
+import { Globe, Loader2, X, EyeOff, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 type Props = {
@@ -60,17 +60,21 @@ export function ShowcasePublishButton({
   return (
     <>
       <button
-        onClick={() => (isPublished ? unpublishMut.mutate() : setOpen(true))}
+        onClick={() =>
+          isPublished
+            ? unpublishMut.mutate()
+            : toast.info("Project sharing is disabled. Projects are private to your account.")
+        }
         disabled={publishMut.isPending || unpublishMut.isPending}
-        title={isPublished ? "Remove from public showcase" : "Publish to community showcase"}
+        title={isPublished ? "Remove from public showcase" : "Projects are private to your account"}
         className={`inline-flex items-center gap-1.5 rounded-lg border px-2 sm:px-3 py-1.5 text-xs font-semibold transition ${
           isPublished
             ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-            : "border-border hover:border-primary/40 hover:text-primary-glow"
+            : "border-border text-muted-foreground"
         }`}
       >
-        {isPublished ? <EyeOff className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-        <span className="hidden sm:inline">{isPublished ? "Showcased" : "Showcase"}</span>
+        {isPublished ? <EyeOff className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+        <span className="hidden sm:inline">{isPublished ? "Unpublish" : "Private"}</span>
       </button>
 
       {open && (

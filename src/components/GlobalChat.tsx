@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   Clock,
   Ban,
+  Handshake,
 } from "lucide-react";
 import { translateChatMessage } from "@/lib/chat-translate.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,8 +104,34 @@ type Author = {
 
 type Reaction = { id: string; message_id: string; user_id: string; emoji: string };
 type RenderMessage = DbMessage & { ephemeralBot?: boolean };
+type SendGlobalChatMessageArgs = {
+  content: string;
+  replyToId?: string | null;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
+  channelId?: string | null;
+};
 
 const OPEN_KEY = "bloxsmith.globalchat.open";
+
+const DEFAULT_CHANNELS: Channel[] = [
+  {
+    slug: "general",
+    name: "general",
+    description: "Hang out and chat with everyone",
+    view_role: "user",
+    post_role: "user",
+    icon: "hash",
+  },
+  {
+    slug: "help",
+    name: "help",
+    description: "Ask questions and get help from the community",
+    view_role: "user",
+    post_role: "user",
+    icon: "life-buoy",
+  },
+];
 
 const CHAT_RULES = [
   {
@@ -162,6 +189,52 @@ const CHAT_CONSEQUENCES = [
   },
 ];
 
+function isRpcSignatureError(error: any) {
+  const code = String(error?.code ?? "");
+  const message = String(error?.message ?? error ?? "");
+  return (
+    code === "PGRST202" ||
+    code === "PGRST203" ||
+    /schema cache|could not find.*function|function .* does not exist|parameter|argument/i.test(
+      message,
+    )
+  );
+}
+
+async function sendGlobalChatMessage({
+  content,
+  replyToId = null,
+  attachmentUrl = null,
+  attachmentType = null,
+  channelId = "general",
+}: SendGlobalChatMessageArgs) {
+  const full = await (supabase as any).rpc("send_global_chat_message_v2", {
+    _content: content,
+    _reply_to_id: replyToId,
+    _attachment_url: attachmentUrl,
+    _attachment_type: attachmentType,
+    _channel_id: channelId || "general",
+  });
+  if (!full.error || !isRpcSignatureError(full.error)) return full;
+
+  const withoutChannel = await (supabase as any).rpc("send_global_chat_message_v2", {
+    _content: content,
+    _reply_to_id: replyToId,
+    _attachment_url: attachmentUrl,
+    _attachment_type: attachmentType,
+  });
+  if (!withoutChannel.error || !isRpcSignatureError(withoutChannel.error)) return withoutChannel;
+
+  if (!replyToId && !attachmentUrl && !attachmentType) {
+    const oneArg = await (supabase as any).rpc("send_global_chat_message_v2", {
+      p_content: content,
+    });
+    if (!oneArg.error || !isRpcSignatureError(oneArg.error)) return oneArg;
+  }
+
+  return full;
+}
+
 function realtimeTopic(prefix: string) {
   const id =
     typeof globalThis.crypto?.randomUUID === "function"
@@ -176,6 +249,42 @@ function formatTime(iso: string) {
   } catch {
     return "";
   }
+}
+
+function parseCollabInvite(content: string) {
+  if (!content.startsWith("[COLLAB INVITE]")) return null;
+  const lines = content.split("\n").slice(1);
+  const data = new Map<string, string>();
+  for (const line of lines) {
+    const idx = line.indexOf(":");
+    if (idx > 0) data.set(line.slice(0, idx).trim().toLowerCase(), line.slice(idx + 1).trim());
+  }
+  return {
+    project: data.get("project") || "Roblox project",
+    need: data.get("looking for") || "Collaborators",
+    details: data.get("details") || "DM me if you want to team up.",
+  };
+}
+
+function CollabInviteCard({ content }: { content: string }) {
+  const invite = parseCollabInvite(content);
+  if (!invite) return null;
+  return (
+    <div className="mt-1 rounded-xl border border-primary/25 bg-primary/10 p-3 text-xs">
+      <div className="mb-2 flex items-center gap-2 font-bold text-primary">
+        <Handshake className="h-4 w-4" /> Collaboration invite
+      </div>
+      <div className="space-y-1 text-foreground">
+        <div>
+          <span className="text-muted-foreground">Project:</span> {invite.project}
+        </div>
+        <div>
+          <span className="text-muted-foreground">Looking for:</span> {invite.need}
+        </div>
+        <div className="text-muted-foreground">{invite.details}</div>
+      </div>
+    </div>
+  );
 }
 
 // Tiny safe markdown: **bold**, *italic*, `code`, links + @mentions
@@ -315,6 +424,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [authors, setAuthors] = useState<Map<string, Author>>(new Map());
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const [slow, setSlow] = useState(0);
   const [muted, setMuted] = useState<Date | null>(null);
   const [unread, setUnread] = useState(0);
@@ -327,8 +438,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   const [showUsers, setShowUsers] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showRobloxShare, setShowRobloxShare] = useState(false);
+  const [showCollabInvite, setShowCollabInvite] = useState(false);
   const [robloxUrl, setRobloxUrl] = useState("");
   const [robloxCaption, setRobloxCaption] = useState("");
+  const [collabProject, setCollabProject] = useState("");
+  const [collabNeed, setCollabNeed] = useState("Builder");
+  const [collabDetails, setCollabDetails] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [localMuted, setLocalMuted] = useState<Set<string>>(new Set());
   const [chatBubbles, setChatBubbles] = useState<
@@ -1117,12 +1232,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         attachment_type = "image";
       }
 
-      const { error } = await (supabase as any).rpc("send_global_chat_message_v2", {
-        _content: trimmed,
-        _reply_to_id: replyTo?.id ?? null,
-        _attachment_url: attachment_url,
-        _attachment_type: attachment_type,
-        _channel_id: currentChannel,
+      const { error } = await sendGlobalChatMessage({
+        content: trimmed,
+        replyToId: replyTo?.id ?? null,
+        attachmentUrl: attachment_url,
+        attachmentType: attachment_type,
+        channelId: currentChannel,
       });
       if (error) {
         const m = String(error.message || "Failed to send");
@@ -1473,7 +1588,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
   }
 
   async function sendRaw(content: string) {
-    await (supabase as any).rpc("send_global_chat_message_v2", { _content: content });
+    const { error } = await sendGlobalChatMessage({ content, channelId: currentChannel });
+    if (error) toast.error(error.message);
   }
 
   async function shareRobloxGame() {
@@ -1495,12 +1611,12 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     }
     setSending(true);
     try {
-      const { error } = await (supabase as any).rpc("send_global_chat_message_v2", {
-        _content: caption, // caption text only; link goes in attachment_url
-        _reply_to_id: null,
-        _attachment_url: parsed.toString(),
-        _attachment_type: "roblox",
-        _channel_id: currentChannel,
+      const { error } = await sendGlobalChatMessage({
+        content: caption, // caption text only; link goes in attachment_url
+        replyToId: null,
+        attachmentUrl: parsed.toString(),
+        attachmentType: "roblox",
+        channelId: currentChannel,
       });
       if (error) {
         toast.error(error.message);
@@ -1509,6 +1625,37 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         setShowRobloxShare(false);
         setRobloxUrl("");
         setRobloxCaption("");
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function sendCollabInvite() {
+    const project = collabProject.trim().slice(0, 80);
+    const need = collabNeed.trim().slice(0, 60) || "Roblox collaborator";
+    const details = collabDetails.trim().slice(0, 180);
+    if (!project) return toast.error("Add a project name for the collaboration invite");
+    if (checkBlocked(`${project} ${need} ${details}`)) {
+      return toast.error("That invite contains blocked words.");
+    }
+    setSending(true);
+    try {
+      const content = [
+        "[COLLAB INVITE]",
+        `Project: ${project}`,
+        `Looking for: ${need}`,
+        details ? `Details: ${details}` : "Details: DM me if you want to team up.",
+      ].join("\n");
+      const { error } = await sendGlobalChatMessage({ content, channelId: currentChannel });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Collaboration invite posted");
+        setShowCollabInvite(false);
+        setCollabProject("");
+        setCollabNeed("Builder");
+        setCollabDetails("");
       }
     } finally {
       setSending(false);
@@ -2091,7 +2238,9 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                         />
                       )}
                     </div>
-                    {m.content && (
+                    {m.content && parseCollabInvite(m.content) ? (
+                      <CollabInviteCard content={m.content} />
+                    ) : m.content ? (
                       <div
                         className={cn(
                           "mt-0.5 break-words leading-relaxed whitespace-pre-wrap text-foreground",
@@ -2108,7 +2257,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                       >
                         {renderRich(m.content, myName, accent)}
                       </div>
-                    )}
+                    ) : null}
                     {!isBot &&
                       m.content &&
                       (() => {
@@ -2312,6 +2461,16 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                 disabled={!!muted || !canPostHere}
               >
                 <Gamepad2 className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCollabInvite(true)}
+                aria-label="Post collaboration invite"
+                title="Post collaboration invite"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface hover:text-primary"
+                disabled={!!muted || !canPostHere}
+              >
+                <Handshake className="h-4 w-4" />
               </button>
               <EmojiPicker
                 onPick={(em) => {
@@ -2538,6 +2697,80 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
                     className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
                   >
                     <Send className="h-3 w-3" /> Share
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showCollabInvite && (
+            <div
+              className="absolute inset-0 z-40 grid place-items-center bg-background/70 backdrop-blur-sm p-4"
+              onClick={() => setShowCollabInvite(false)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl border border-border bg-surface-elevated p-4 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/15 text-primary">
+                    <Handshake className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold">Post a collaboration invite</h3>
+                    <p className="text-[11px] text-muted-foreground">
+                      Ask builders, scripters, artists, or testers to team up.
+                    </p>
+                  </div>
+                </div>
+                <label className="text-[11px] font-semibold text-muted-foreground">
+                  Project name
+                </label>
+                <input
+                  type="text"
+                  value={collabProject}
+                  onChange={(e) => setCollabProject(e.target.value.slice(0, 80))}
+                  placeholder="Tycoon update, obby map, simulator UI..."
+                  className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                />
+                <label className="mt-2 block text-[11px] font-semibold text-muted-foreground">
+                  Looking for
+                </label>
+                <select
+                  value={collabNeed}
+                  onChange={(e) => setCollabNeed(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                >
+                  <option>Builder</option>
+                  <option>Scripter</option>
+                  <option>UI designer</option>
+                  <option>Animator</option>
+                  <option>Tester</option>
+                  <option>Partner</option>
+                </select>
+                <label className="mt-2 block text-[11px] font-semibold text-muted-foreground">
+                  Details
+                </label>
+                <textarea
+                  value={collabDetails}
+                  onChange={(e) => setCollabDetails(e.target.value.slice(0, 180))}
+                  placeholder="What you are making and how people should help."
+                  rows={3}
+                  className="mt-1 w-full resize-none rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary"
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    onClick={() => setShowCollabInvite(false)}
+                    className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={sendCollabInvite}
+                    disabled={sending}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  >
+                    <Send className="h-3 w-3" /> Post invite
                   </button>
                 </div>
               </div>

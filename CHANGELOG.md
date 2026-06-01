@@ -2,6 +2,26 @@
 
 ## Latest Updates
 
+### Roblox Video, Music & Speech Studio
+
+- Added a new `/video-generator` creator workspace for Roblox-safe AI videos, music, and speech-to-text.
+- Added Doubao Seedance 2.0 (`doubao-seedance-2-0`) video generation through CometAPI.
+- Added a server-enforced one-video-per-week limit with unlock timing so users clearly know when they can generate again.
+- Added a live mobile-ready preview frame before generation with the selected aspect ratio, prompt, CTA, reference image, and clip plan.
+- Added stronger download controls for generated video clips, including mobile-friendly open/save links and a ready-downloads section.
+- Added Roblox video presets for ad promos, trailers, update teasers, UGC showcases, obbies, tycoons, simulators, spooky teasers, before/after builds, and vertical shorts.
+- Added animation-direction controls and safer prompt guidance for smooth Roblox avatar/object motion.
+- Added 5s, 10s, 15s, 30s, and 1m duration choices. Longer videos are split into safe Seedance clip segments because the current Seedance API supports short clips per task.
+- Added image-to-video reference uploads for PNG, JPG, and WEBP files.
+- Added a Roblox-safe music generator panel with configurable title, style, length, instrumental mode, and Comet music endpoint support.
+- Added a Roblox music import kit that downloads a Studio Lua script after users upload generated audio to Roblox and paste the audio asset ID.
+- Added Gemini 3.1 Flash Lite Preview speech-to-text for uploaded audio/video, with transcript, captions, and script-notes modes.
+- Added storage buckets for generated video and audio outputs so signed provider URLs can be re-hosted as public BloxSmith downloads.
+- Added Roblox safety filtering before video and music provider calls.
+- Added `gemini-3.1-flash-lite-preview` to the Google provider model list.
+- Added a Global Chat collaboration invite button so users can post structured team-up requests for builders, scripters, UI designers, animators, testers, or partners.
+- Added “How to earn credits” guidance to the Browse menu and community page so users can quickly see daily claims, Discord, referrals, chat rewards, badges, promo codes, promo videos, and credit packs.
+
 ### MCP & Provider Secret Vault Migration
 
 - Removed stale UI and server references to the dropped `user_mcp_servers.auth_header` column.

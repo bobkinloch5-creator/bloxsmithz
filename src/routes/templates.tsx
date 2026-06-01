@@ -172,13 +172,14 @@ function TemplatesPage() {
                     {t.credits_cost === 0 ? "Free" : `${t.credits_cost} credits`}
                   </span>
                 </div>
-                <div className="relative -mx-1 overflow-hidden rounded-xl border border-border/60 bg-background/50">
+                <div className="relative -mx-1 overflow-hidden rounded-xl border border-white/10 bg-background/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_18px_40px_-28px_rgba(0,217,255,0.75)]">
                   <img
-                    src={t.thumbnail_url ?? "/template-previews/simulator.svg"}
+                    src={t.thumbnail_url ?? "/template-previews/simulator-real.jpg"}
                     alt={`${t.name} preview`}
-                    className="h-36 w-full object-cover"
+                    className="h-40 w-full object-cover saturate-[1.08] contrast-[1.04]"
                     loading="lazy"
                   />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-white/5" />
                   <div className="absolute bottom-2 left-2 rounded-full border border-black/20 bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
                     Roblox game template
                   </div>

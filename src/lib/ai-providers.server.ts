@@ -99,7 +99,13 @@ export const PROVIDER_MODELS: Record<ProviderId, string[]> = {
     "claude-3-5-sonnet-latest",
     "claude-3-5-haiku-latest",
   ],
-  google: ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview"],
+  google: [
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
+  ],
   groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
   // Neokens proxies many models behind a single key — see neokens.com/docs.
   // We list whichever Neokens has working on their side at the moment;

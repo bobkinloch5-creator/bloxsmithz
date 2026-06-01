@@ -18,6 +18,7 @@ const Schema = z
   .object({
     display_name: z.string().min(1).max(64).optional().nullable(),
     bio: z.string().max(500).optional().nullable(),
+    specialization: z.string().min(1).max(64).optional().nullable(),
     pronouns: z.string().max(32).optional().nullable(),
     location: z.string().max(64).optional().nullable(),
     status_message: z.string().max(100).optional().nullable(),
@@ -90,7 +91,9 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
       .from("profiles")
       .update(patch)
       .eq("id", userId)
-      .select("profile_badges, profile_decoration")
+      .select(
+        "display_name,bio,specialization,pronouns,location,status_message,banner_url,avatar_url,profile_accent,profile_card_color,profile_card_effect,profile_effect,profile_background,custom_background_url,profile_layout,pfp_effect,private_profile,hide_email,presence_enabled,show_activity,presence_status,profile_badges,profile_decoration",
+      )
       .single();
 
     if (error) {
@@ -134,5 +137,5 @@ export const updateProfileCustomization = createServerFn({ method: "POST" })
       }
     }
 
-    return { ok: true };
+    return { ok: true, profile: row };
   });

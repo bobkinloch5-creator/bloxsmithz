@@ -21,7 +21,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Simulator",
     description:
       "A polished simulator starter with leaderstats, coin zones, upgrades, rebirths, pets, boosts, and a clean HUD.",
-    thumbnail_url: "/template-previews/simulator.svg",
+    thumbnail_url: "/template-previews/simulator-real.jpg",
     credits_cost: 12,
     difficulty: "intermediate",
     features: ["Leaderstats and DataStore shell", "Coin zones and multipliers", "Upgrade shop", "Rebirth loop", "Boost UI"],
@@ -39,7 +39,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Obby",
     description:
       "A checkpoint obby kit with kill bricks, moving platforms, stage saves, victory rewards, skip-stage hooks, and timer UI.",
-    thumbnail_url: "/template-previews/obby.svg",
+    thumbnail_url: "/template-previews/obby-real.png",
     credits_cost: 10,
     difficulty: "easy",
     features: ["Checkpoint stages", "Kill brick system", "Moving platforms", "Stage save data", "Timer and win UI"],
@@ -57,7 +57,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Tycoon",
     description:
       "A secure tycoon foundation with plot claiming, purchase pads, droppers, conveyors, collectors, rebirths, and owner-only controls.",
-    thumbnail_url: "/template-previews/tycoon.svg",
+    thumbnail_url: "/template-previews/tycoon-real.jpg",
     credits_cost: 16,
     difficulty: "advanced",
     features: ["Plot claiming", "Purchase pads", "Droppers and conveyors", "Collector validation", "Rebirth upgrades"],
@@ -75,7 +75,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Pet",
     description:
       "A pet game kit with eggs, rarity rolls, inventory, equip slots, coin boosts, notifications, and server-authenticated hatching.",
-    thumbnail_url: "/template-previews/pet.svg",
+    thumbnail_url: "/template-previews/pet-real.jpg",
     credits_cost: 18,
     difficulty: "advanced",
     features: ["Egg hatching", "Rarity tiers", "Pet inventory", "Equip slots", "Server hatch validation"],
@@ -93,7 +93,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Mining",
     description:
       "A mining loop with breakable ores, pickaxe upgrades, backpack capacity, sell zone, rebirth boosts, and cave progression.",
-    thumbnail_url: "/template-previews/mining.svg",
+    thumbnail_url: "/template-previews/mining-real.jpg",
     credits_cost: 14,
     difficulty: "intermediate",
     features: ["Breakable ores", "Tool upgrades", "Backpack capacity", "Sell zone", "Cave progression"],
@@ -111,7 +111,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Fighting",
     description:
       "A round-based sword fighting arena with lobby, maps, teams, safe weapon grants, scoreboard, rewards, and anti-spam checks.",
-    thumbnail_url: "/template-previews/fighting.svg",
+    thumbnail_url: "/template-previews/fighting-real.jpg",
     credits_cost: 15,
     difficulty: "intermediate",
     features: ["Round manager", "Lobby and arena flow", "Sword tool grant", "Scoreboard", "Reward payout"],
@@ -129,7 +129,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Racing",
     description:
       "A racing template with spawn grid, laps, checkpoints, finish detection, placements, reward payout, and mobile-friendly race UI.",
-    thumbnail_url: "/template-previews/racing.svg",
+    thumbnail_url: "/template-previews/racing-real.jpg",
     credits_cost: 17,
     difficulty: "advanced",
     features: ["Spawn grid", "Lap checkpoints", "Finish placements", "Race countdown", "Reward payout"],
@@ -147,7 +147,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Roleplay",
     description:
       "A city roleplay starter with job spawns, interactable doors, apartments, vehicles, role tags, and clean profile-style UI.",
-    thumbnail_url: "/template-previews/roleplay.svg",
+    thumbnail_url: "/template-previews/roleplay-real.png",
     credits_cost: 13,
     difficulty: "intermediate",
     features: ["City districts", "Job spawns", "Door interactions", "Vehicle pads", "Role tag UI"],
@@ -165,7 +165,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Horror",
     description:
       "A spooky story game starter with objectives, keys, doors, chase trigger, flashlight, jumpscare-safe effects, and chapter UI.",
-    thumbnail_url: "/template-previews/horror.svg",
+    thumbnail_url: "/template-previews/horror-real.jpg",
     credits_cost: 19,
     difficulty: "advanced",
     features: ["Objective tracker", "Keys and doors", "Chase trigger", "Flashlight tool", "Chapter UI"],
@@ -183,7 +183,7 @@ export const GAME_TEMPLATE_CATALOG: GameTemplateCatalogItem[] = [
     category: "Tower Defense",
     description:
       "A compact tower defense framework with waves, enemy pathing, tower placement zones, upgrades, cash rewards, and health UI.",
-    thumbnail_url: "/template-previews/tower-defense.svg",
+    thumbnail_url: "/template-previews/tower-defense-real.jpg",
     credits_cost: 20,
     difficulty: "advanced",
     features: ["Wave manager", "Enemy pathing", "Tower placement", "Upgrade flow", "Base health UI"],
