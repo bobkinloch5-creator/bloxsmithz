@@ -1339,7 +1339,6 @@ export type Database = {
           custom_background_url: string | null
           discord_claimed: boolean
           display_name: string | null
-          email: string | null
           hide_email: boolean
           id: string
           last_seen_at: string | null
@@ -1394,7 +1393,6 @@ export type Database = {
           custom_background_url?: string | null
           discord_claimed?: boolean
           display_name?: string | null
-          email?: string | null
           hide_email?: boolean
           id: string
           last_seen_at?: string | null
@@ -1449,7 +1447,6 @@ export type Database = {
           custom_background_url?: string | null
           discord_claimed?: boolean
           display_name?: string | null
-          email?: string | null
           hide_email?: boolean
           id?: string
           last_seen_at?: string | null
