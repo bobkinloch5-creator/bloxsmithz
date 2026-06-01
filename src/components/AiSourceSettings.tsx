@@ -50,7 +50,7 @@ const PROVIDER_MODELS: Record<ProviderId, string[]> = {
 const SITE_ONLY_PROVIDERS: SiteOnlyProviderId[] = ["comet", "neokens"];
 
 const PROVIDER_KEY_HINTS: Record<ProviderId, string> = {
-  neokens: "Site-wide key managed by admin (NEOKENS_API_KEY)",
+  neokens: "Site-wide key managed by admin (NEOKENS_API_KEY or ANTHROPIC_API_KEY)",
   comet: "Site-wide BloxSmith AI key managed by admin",
 };
 
@@ -372,9 +372,10 @@ export function AiSourceSettings({
                 {provider === "neokens" || provider === "comet" ? (
                   <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] text-foreground">
                     <span className="font-semibold">{PROVIDER_LABELS[provider]}</span> uses a shared
-                    site key {provider === "neokens" ? "(NEOKENS_API_KEY)" : ""} — no per-user key
-                    needed. The app still charges BloxSmith credits and rate-limits usage to protect
-                    the shared balance.
+                    site key{" "}
+                    {provider === "neokens" ? "(NEOKENS_API_KEY or ANTHROPIC_API_KEY)" : ""} — no
+                    per-user key needed. The app still charges BloxSmith credits and rate-limits
+                    usage to protect the shared balance.
                   </div>
                 ) : (
                   <div>

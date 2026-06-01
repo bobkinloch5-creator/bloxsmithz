@@ -11,6 +11,7 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { tryComfyUI } from "@/lib/comfyui.server";
+import { getNeokensApiKey, getNeokensChatCompletionsUrl } from "@/lib/neokens-config.server";
 
 export type GenImageResult =
   | { imageUrl: string; markdown: string; modelUsed?: string }
@@ -178,7 +179,7 @@ export async function generateImageFromPrompt(opts: {
     }
   }
 
-  const neokensKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
+  const neokensKey = getNeokensApiKey();
 
   if (neokensKey) {
     try {
@@ -200,7 +201,7 @@ export async function generateImageFromPrompt(opts: {
         messages.push({ role: "user", content: fullPrompt });
       }
 
-      const r = await fetch("https://api.quatarly.cloud/v1/chat/completions", {
+      const r = await fetch(getNeokensChatCompletionsUrl(), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${neokensKey}`,

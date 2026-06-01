@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { generateText } from "ai";
 import { createProvider } from "@/lib/ai-providers.server";
 import { createGroqProvider, BLOXSMITH_FAST_MODEL } from "@/lib/ai-gateway.server";
+import { getNeokensApiKey } from "@/lib/neokens-config.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -86,7 +87,7 @@ function sanitizeHistory(raw: unknown): Message[] {
 }
 
 function pickGateway() {
-  const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
+  const neoKey = getNeokensApiKey();
   if (neoKey) {
     const gw = createProvider("neokens", neoKey);
     return { gw, modelName: "gemini-3-flash", providerName: "neokens" as const };

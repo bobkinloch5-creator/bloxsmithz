@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getNeokensApiKey } from "@/lib/neokens-config.server";
 import { z } from "zod";
 
 const InputSchema = z.object({
@@ -1248,7 +1249,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
                 {
                   provider: "neokens",
                   model: NEOKENS_SAFE_FALLBACK_MODEL,
-                  envKey: process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY,
+                  envKey: getNeokensApiKey(),
                 },
               ]
             : []

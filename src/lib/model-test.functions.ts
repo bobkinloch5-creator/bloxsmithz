@@ -9,6 +9,7 @@ import {
 } from "./ai-models";
 import { recordProviderHealth, type ProviderHealthEvent } from "./ai-providers.server";
 import { getCometApiKey } from "./comet-config.server";
+import { getNeokensApiKey } from "./neokens-config.server";
 
 export type ModelTestResult = {
   provider: SiteProviderId;
@@ -53,7 +54,9 @@ function classifyError(err: unknown): { kind: ModelTestResult["errorKind"]; mess
   }
   if (
     status === 404 ||
-    /not found|does not exist|unknown model|invalid model|no such model|no available channel|channel.*(not|un)available/i.test(lower)
+    /not found|does not exist|unknown model|invalid model|no such model|no available channel|channel.*(not|un)available/i.test(
+      lower,
+    )
   ) {
     return { kind: "model_not_found", message };
   }
@@ -93,7 +96,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
   let model: LanguageModel;
   try {
     if (provider === "neokens") {
-      const key = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
+      const key = getNeokensApiKey();
       if (!key) {
         return {
           provider,
@@ -102,7 +105,7 @@ async function testOneModel(provider: SiteProviderId, modelId: string): Promise<
           ok: false,
           durationMs: 0,
           errorKind: "not_configured",
-          errorMessage: "NEOKENS_API_KEY env var not set on the server.",
+          errorMessage: "NEOKENS_API_KEY or ANTHROPIC_API_KEY env var not set on the server.",
         };
       }
       const gw = createProvider("neokens", key);

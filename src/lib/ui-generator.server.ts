@@ -9,6 +9,7 @@ import {
   BLOXSMITH_THINK_MODEL,
   sanitizingFetch,
 } from "@/lib/ai-gateway.server";
+import { getNeokensApiKey } from "@/lib/neokens-config.server";
 
 function createLovableProvider(apiKey: string) {
   return createOpenAICompatible({
@@ -343,7 +344,7 @@ function listGateways(): GatewayChoice[] {
     out.push({ gw, modelName: "gemini-2.5-flash", providerName: "google" });
     out.push({ gw, modelName: "gemini-2.5-pro", providerName: "google" });
   }
-  const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
+  const neoKey = getNeokensApiKey();
   if (neoKey) {
     const gw = createProvider("neokens", neoKey);
     out.push({ gw, modelName: "gemini-3-flash", providerName: "neokens" });

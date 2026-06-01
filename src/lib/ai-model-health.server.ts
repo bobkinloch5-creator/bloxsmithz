@@ -8,6 +8,7 @@ import {
   type SiteProviderId,
 } from "./ai-models";
 import { hasCometApiKey } from "./comet-config.server";
+import { hasNeokensApiKey } from "./neokens-config.server";
 
 export type SiteModelHealthStatus = "online" | "down";
 
@@ -54,8 +55,7 @@ function healthKey(provider: SiteProviderId, modelId: string) {
 }
 
 function providerConfigured(provider: SiteProviderId) {
-  if (provider === "neokens")
-    return Boolean(process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY);
+  if (provider === "neokens") return hasNeokensApiKey();
   if (provider === "comet") return hasCometApiKey();
   return false;
 }

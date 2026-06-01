@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getNeokensApiKey, getNeokensChatCompletionsUrl } from "@/lib/neokens-config.server";
 
 // Tools the AI can call mid-thought to:
 //  - research the web
@@ -1011,13 +1012,11 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
         };
       };
 
-      const neokensKey =
-        process.env.NEOKENS_API_KEY ||
-        process.env.NEOKENS_KEY;
+      const neokensKey = getNeokensApiKey();
 
       if (neokensKey) {
         try {
-          const r = await fetch("https://api.quatarly.cloud/v1/chat/completions", {
+          const r = await fetch(getNeokensChatCompletionsUrl(), {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${neokensKey}`,

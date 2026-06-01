@@ -18,6 +18,7 @@ import {
   resolveNeokensModel,
 } from "./ai-models";
 import { getCometApiKey, getCometBaseUrl } from "./comet-config.server";
+import { getNeokensApiKey, getNeokensBaseUrl } from "./neokens-config.server";
 
 export type ProviderId = "openai" | "anthropic" | "google" | "groq" | "neokens" | "comet";
 export type ModelKind = "chat" | "build" | "fast" | "large";
@@ -232,25 +233,19 @@ const NEOKENS_MODEL_BY_KIND: Record<ModelKind, string> = {
 };
 
 const COMET_MODEL_BY_KIND: Record<ModelKind, string> = {
-  chat: "gpt-5.4-mini",
-  // Build default uses gpt-5.4-mini instead of deepseek-v4-flash because some
-  // shared CometAPI accounts have no channel allocated for DeepSeek models
-  // ("no available channel for group default and model deepseek-v4..."),
-  // while gpt-5.4-mini is consistently available.
-  build: "gpt-5.4-mini",
-  fast: "gpt-5.4-mini",
-  large: "qwen3.7-max",
+  chat: "deepseek-v4-flash",
+  build: "deepseek-v4-flash",
+  fast: "deepseek-v4-flash",
+  large: "claude-sonnet-4-6",
 };
 
-const COMET_STABLE_FALLBACK_MODELS = COMET_SAFE_FALLBACK_MODELS.filter(
-  (model) => model !== "gpt-5.4-nano",
-);
+const COMET_STABLE_FALLBACK_MODELS = COMET_SAFE_FALLBACK_MODELS;
 
 const COMET_MODEL_CANDIDATES_BY_KIND: Record<ModelKind, readonly string[]> = {
-  chat: ["gpt-5.4-mini", "qwen3.6-plus", ...COMET_STABLE_FALLBACK_MODELS],
-  fast: ["gpt-5.4-mini", "qwen3.6-plus", ...COMET_STABLE_FALLBACK_MODELS],
-  build: ["gpt-5.4-mini", "qwen3.6-plus", ...COMET_STABLE_FALLBACK_MODELS],
-  large: ["qwen3.7-max", "gemini-3-flash", "claude-haiku-4-5", ...COMET_STABLE_FALLBACK_MODELS],
+  chat: COMET_STABLE_FALLBACK_MODELS,
+  fast: COMET_STABLE_FALLBACK_MODELS,
+  build: COMET_STABLE_FALLBACK_MODELS,
+  large: ["claude-sonnet-4-6", "claude-opus-4-7", ...COMET_STABLE_FALLBACK_MODELS],
 };
 
 function uniqueModelNames(models: readonly string[]): string[] {
@@ -294,7 +289,7 @@ function providerEndpoint(provider: ProviderId): { name: string; baseURL: string
       };
     case "neokens":
       // Neokens credits gateway — OpenAI-compatible, one key for many models.
-      return { name: "neokens", baseURL: "https://api.quatarly.cloud/v1" };
+      return { name: "neokens", baseURL: getNeokensBaseUrl() };
     case "comet":
       return {
         name: "comet",
@@ -342,7 +337,7 @@ export function resolveBuiltInGatewayCandidates(opts: {
     }
   }
 
-  const neokensKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
+  const neokensKey = getNeokensApiKey();
   if (neokensKey) {
     const modelName = NEOKENS_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.neokens;
     const gw = createProvider("neokens", neokensKey);
@@ -365,7 +360,7 @@ export function resolveBuiltInGatewayCandidates(opts: {
 
   if (!candidates.length) {
     throw new Error(
-      "AI gateway not configured — COMETAPI_KEY/COMET_API_KEY, NEOKENS_API_KEY, or GROQ_API_KEY missing.",
+      "AI gateway not configured — COMETAPI_KEY/COMET_API_KEY, NEOKENS_API_KEY/ANTHROPIC_API_KEY, or GROQ_API_KEY missing.",
     );
   }
 
@@ -414,7 +409,7 @@ export async function resolveAiGateway(opts: {
 
   // BloxSmith AI, Neokens & Groq are site-wide gateways — use env keys, no per-user key.
   if (provider === "neokens" || provider === "comet") {
-    const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
+    const neoKey = getNeokensApiKey();
     const cometKey = getCometApiKey();
     const key = provider === "comet" ? cometKey : neoKey;
     if (!key) return fallback();

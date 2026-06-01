@@ -25,31 +25,19 @@ export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
     "claude-opus-4-7-thinking",
   ],
   comet: [
-    // Budget-first defaults to protect the shared site key. Keep the first
-    // entry on a stable Comet route; nano can be unavailable on shared groups.
-    "gpt-5.4-mini",
-    "qwen3.6-plus",
+    // Keep this list to routes currently available on the shared Comet group.
+    // Unavailable routes still exist in descriptions below, but should not be
+    // pinged by diagnostics or offered as site-available defaults.
     "deepseek-v4-flash",
-    "minimax-m2.7",
-    "gpt-5.4-nano",
-    "gpt-5.5-all",
-    "qwen3.7-max",
-    "gemini-3-flash",
-    "gemini-3.5-flash",
-    "gemini-3.1-pro",
-    "grok-4.3",
-    "deepseek-v4-pro",
-    // Premium picks are available, but intentionally later in the list.
-    "claude-haiku-4-5",
-    "claude-sonnet-4-6-thinking",
-    "claude-opus-4-7-thinking",
-    "claude-opus-4-8-thinking",
+    "claude-sonnet-4-6",
+    "claude-opus-4-7",
+    "claude-opus-4-8",
   ],
 };
 
 export const SITE_PROVIDER_DEFAULT_MODEL: Record<SiteProviderId, string> = {
   neokens: "gemini-3-flash",
-  comet: "gpt-5.4-mini",
+  comet: "deepseek-v4-flash",
 };
 
 export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
@@ -79,12 +67,18 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
     "Highest-depth Claude reasoning with adaptive thinking. Best for very large Roblox systems, deep debugging, architecture decisions, and hard multi-file builds. What it does for your game: plans entire game architectures, designs anti-exploit, ProfileService data, and complex combat systems end-to-end.",
   "claude-opus-4-8-thinking":
     "Very expensive deepest-reasoning model for rare, difficult builds only: full game architecture, severe bugs, security-sensitive economy/DataStore work, and large multi-system rewrites. Normal users are capped tightly so it cannot drain the shared balance.",
+  "claude-opus-4-8":
+    "Very expensive deepest-reasoning Claude model for rare, difficult Comet builds only: full game architecture, severe bugs, security-sensitive economy/DataStore work, and large multi-system rewrites.",
   "claude-opus-4-6-thinking":
     "Previous-gen Opus with deep reasoning. Best for large multi-system builds and tough debugging when you want maximum care. What it does for your game: architects full games, designs save systems, and untangles complex script bugs.",
   "claude-sonnet-4-7-thinking":
     "Newest Sonnet with adaptive thinking — fast frontier reasoning. Best for full-game architecture, anti-exploit, and hard debugging at a lower cost than Opus. What it does for your game: builds simulators/tycoons with leaderstats, gamepasses, and DataStore saves.",
+  "claude-opus-4-7":
+    "Premium Claude reasoning route on Comet for deep Roblox architecture, hard debugging, and large multi-file builds.",
   "claude-sonnet-4-6-thinking":
     "Frontier reasoning with adaptive thinking. Best for full-game architecture, complex anti-exploit, and hard debugging where it should slow down and think first. What it does for your game: builds full simulators/tycoons with leaderstats, gamepasses, and DataStore saves.",
+  "claude-sonnet-4-6":
+    "Stable Claude Sonnet route on Comet for full-game architecture, complex anti-exploit, and hard debugging at a lower cost than Opus.",
   "claude-haiku-4-5-20251001":
     "Cheap and careful for cleaning messy Luau, refactoring scripts, and writing tidy ModuleScripts. What it does for your game: tidies up existing scripts, renames variables, adds comments, and splits monolith scripts into ModuleScripts.",
   "gpt-5.2":
@@ -130,6 +124,9 @@ export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
   "grok-4.3": 2,
   "deepseek-v4-pro": 2.5,
   "claude-haiku-4-5": 1,
+  "claude-sonnet-4-6": 3,
+  "claude-opus-4-7": 7,
+  "claude-opus-4-8": 20,
   // Claude
   "claude-opus-4-8-thinking": 20,
   "claude-opus-4-7-thinking": 7,
@@ -284,6 +281,24 @@ export const MODEL_TOOL_CAPABILITIES: Record<
     thinking: true,
     label: "Web + premium",
   },
+  "claude-sonnet-4-6": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + reasoning",
+  },
+  "claude-opus-4-7": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + premium",
+  },
+  "claude-opus-4-8": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + elite",
+  },
   "claude-opus-4-7-thinking": {
     tools: true,
     webSearch: true,
@@ -433,13 +448,9 @@ export const NEOKENS_SAFE_FALLBACK_MODEL = "gemini-3-flash";
 // channel allocated for that model). Order from cheapest/most-stable to
 // progressively heavier so builds always recover.
 export const COMET_SAFE_FALLBACK_MODELS = [
-  "gpt-5.4-mini",
-  "qwen3.6-plus",
-  "gemini-3-flash",
-  "claude-haiku-4-5",
-  "minimax-m2.7",
   "deepseek-v4-flash",
-  "gpt-5.4-nano",
+  "claude-sonnet-4-6",
+  "claude-opus-4-7",
 ] as const;
 // Backwards-compat: single id consumers still import.
 export const COMET_SAFE_FALLBACK_MODEL = COMET_SAFE_FALLBACK_MODELS[0];
@@ -470,6 +481,9 @@ export const COMET_MODEL_MAP: Record<string, { comet: string; thinking?: boolean
   "grok-4.3": { comet: "grok-4.3" },
   // Anthropic Claude (thinking variants enable extended thinking)
   "claude-haiku-4-5": { comet: "claude-haiku-4-5-20251001" },
+  "claude-sonnet-4-6": { comet: "claude-sonnet-4-6" },
+  "claude-opus-4-7": { comet: "claude-opus-4-7" },
+  "claude-opus-4-8": { comet: "claude-opus-4-8" },
   "claude-sonnet-4-6-thinking": { comet: "claude-sonnet-4-6", thinking: true },
   "claude-opus-4-7-thinking": { comet: "claude-opus-4-7", thinking: true },
   "claude-opus-4-8-thinking": { comet: "claude-opus-4-8", thinking: true },
