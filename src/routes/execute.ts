@@ -930,6 +930,370 @@ function getMapStarterTemplate(prompt: string): ExecuteResult {
   };
 }
 
+function getOpenWorldCityStarterTemplate(prompt: string): ExecuteResult {
+  const v3 = (x: number, y: number, z: number) => ({ __t: "Vector3", x, y, z });
+  const color = (r: number, g: number, b: number) => ({ __t: "Color3", r, g, b });
+  const actions: GenAction[] = [
+    { type: "create", className: "Folder", name: "Map", parent: "Workspace" },
+    { type: "create", className: "Folder", name: "Districts", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "Roads", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "Buildings", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "Shops", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "Apartments", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "Garages", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "Vehicles", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "NPCs", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "MissionMarkers", parent: "Workspace/Map" },
+    { type: "create", className: "Folder", name: "Police", parent: "Workspace/Map" },
+    {
+      type: "spawn",
+      name: "SunsetSpawn",
+      parent: "Workspace/Map",
+      position: v3(0, 5, -60),
+    },
+    {
+      type: "create_part",
+      parent: "Workspace/Map/Districts",
+      name: "CityGround",
+      size: [620, 2, 620],
+      position: [0, -1, 0],
+      material: "Concrete",
+      color: [92, 98, 102],
+      anchored: true,
+    },
+    {
+      type: "create_part",
+      parent: "Workspace/Map/Districts",
+      name: "SouthBeachSand",
+      size: [620, 2, 130],
+      position: [0, 0, 245],
+      material: "Sand",
+      color: [235, 205, 145],
+      anchored: true,
+    },
+    {
+      type: "create_part",
+      parent: "Workspace/Map/Districts",
+      name: "Ocean",
+      size: [620, 1, 180],
+      position: [0, -0.2, 340],
+      material: "Glass",
+      color: [50, 190, 215],
+      anchored: true,
+    },
+    {
+      type: "create_part",
+      parent: "Workspace/Map/Districts",
+      name: "Boardwalk",
+      size: [560, 1, 18],
+      position: [0, 1, 176],
+      material: "WoodPlanks",
+      color: [172, 126, 84],
+      anchored: true,
+    },
+  ];
+
+  for (const x of [-220, -110, 0, 110, 220]) {
+    actions.push({
+      type: "create_part",
+      parent: "Workspace/Map/Roads",
+      name: `Avenue_${x}`,
+      size: [24, 0.5, 520],
+      position: [x, 0.3, -35],
+      material: "Asphalt",
+      color: [24, 27, 30],
+      anchored: true,
+    });
+  }
+  for (const z of [-230, -125, -20, 85]) {
+    actions.push({
+      type: "create_part",
+      parent: "Workspace/Map/Roads",
+      name: `Street_${z}`,
+      size: [560, 0.5, 24],
+      position: [0, 0.35, z],
+      material: "Asphalt",
+      color: [24, 27, 30],
+      anchored: true,
+    });
+  }
+
+  const buildings = [
+    ["NeonBank", -170, -170, 46, 86, [50, 90, 150]],
+    ["PalmViewHotel", -55, -170, 42, 116, [230, 125, 150]],
+    ["MetroOffice", 80, -170, 48, 138, [70, 125, 190]],
+    ["SunsetMall", 205, -170, 86, 42, [245, 160, 80]],
+    ["ArcadeBlock", -170, -55, 54, 46, [140, 70, 190]],
+    ["CinemaRow", -55, -55, 74, 34, [210, 60, 95]],
+    ["Hospital", 80, -55, 62, 58, [235, 235, 235]],
+    ["PoliceHQ", 205, -55, 64, 52, [60, 90, 140]],
+    ["BeachApartmentsA", -170, 90, 44, 72, [255, 210, 130]],
+    ["BeachApartmentsB", -55, 90, 44, 84, [110, 220, 200]],
+    ["GarageTower", 80, 90, 72, 38, [95, 95, 105]],
+    ["NightMarket", 205, 90, 86, 28, [255, 105, 65]],
+  ] as const;
+
+  for (const [name, x, z, width, height, c] of buildings) {
+    actions.push({
+      type: "create_part",
+      parent:
+        name.includes("Apartment") || name.includes("Hotel")
+          ? "Workspace/Map/Apartments"
+          : name.includes("Garage")
+            ? "Workspace/Map/Garages"
+            : name.includes("Police")
+              ? "Workspace/Map/Police"
+              : name.includes("Mall") || name.includes("Market") || name.includes("Arcade")
+                ? "Workspace/Map/Shops"
+                : "Workspace/Map/Buildings",
+      name,
+      size: [width, height, 52],
+      position: [x, height / 2, z],
+      material: "SmoothPlastic",
+      color: c,
+      anchored: true,
+    });
+    actions.push({
+      type: "create_part",
+      parent: "Workspace/Map/Buildings",
+      name: `${name}_RoofGlow`,
+      size: [width + 4, 2, 56],
+      position: [x, height + 2, z],
+      material: "Neon",
+      color: [255, 95, 170],
+      anchored: true,
+    });
+  }
+
+  const markers = [
+    ["DeliveryMission", -205, 3, 125],
+    ["PolicePatrolJob", 205, 3, -15],
+    ["BeachRaceStart", -20, 3, 175],
+    ["ApartmentLobby", -170, 3, 128],
+    ["GarageSpawn", 80, 3, 128],
+  ] as const;
+  for (const [name, x, y, z] of markers) {
+    actions.push({
+      type: "create_part",
+      parent: "Workspace/Map/MissionMarkers",
+      name,
+      size: [8, 1, 8],
+      position: [x, y, z],
+      material: "Neon",
+      color: [255, 210, 65],
+      anchored: true,
+    });
+  }
+
+  for (const [name, x, z, c] of [
+    ["Cruiser", 230, -10, [35, 60, 120]],
+    ["SportCoupe", 55, 130, [255, 65, 105]],
+    ["Taxi", -225, -120, [255, 210, 45]],
+    ["DeliveryVan", -205, 130, [245, 245, 245]],
+  ] as const) {
+    actions.push({
+      type: "create_part",
+      parent: "Workspace/Map/Vehicles",
+      name,
+      size: [12, 4, 20],
+      position: [x, 3, z],
+      material: "Metal",
+      color: c,
+      anchored: true,
+    });
+  }
+
+  actions.push({
+    type: "lighting",
+    properties: {
+      ClockTime: 18.4,
+      Brightness: 2.3,
+      Ambient: color(95, 75, 105),
+      OutdoorAmbient: color(255, 150, 100),
+      FogEnd: 900,
+    },
+  });
+  actions.push({ type: "select", path: "Workspace.Map" });
+
+  return {
+    message:
+      "The AI timed out, so I queued a real open-world city starter instead of plot pads: streets, beach, boardwalk, buildings, shops, apartments, garage, police HQ, vehicles, mission markers, HUD, money/jobs/wanted systems, and mobile-friendly UI.",
+    files: [
+      {
+        path: "ServerScriptService/Systems/SunsetCityCore.server.lua",
+        file_type: "Script",
+        service_location: "ServerScriptService/Systems",
+        content: `-- BloxSmith open-world city starter systems
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
+remotes.Name = "Remotes"
+remotes.Parent = ReplicatedStorage
+
+local missionRemote = remotes:FindFirstChild("CityMissionComplete") or Instance.new("RemoteEvent")
+missionRemote.Name = "CityMissionComplete"
+missionRemote.Parent = remotes
+
+local jobRemote = remotes:FindFirstChild("CityJobChanged") or Instance.new("RemoteEvent")
+jobRemote.Name = "CityJobChanged"
+jobRemote.Parent = remotes
+
+local rewards = {
+\tDeliveryMission = { cash = 125, job = "Courier", wanted = 0 },
+\tPolicePatrolJob = { cash = 150, job = "Police", wanted = -1 },
+\tBeachRaceStart = { cash = 100, job = "Racer", wanted = 1 },
+\tApartmentLobby = { cash = 25, job = "Resident", wanted = 0 },
+\tGarageSpawn = { cash = 50, job = "Driver", wanted = 0 },
+}
+
+local lastUse = {}
+
+local function stat(player, name, default)
+\tlocal stats = player:FindFirstChild("leaderstats")
+\tif not stats then
+\t\tstats = Instance.new("Folder")
+\t\tstats.Name = "leaderstats"
+\t\tstats.Parent = player
+\tend
+\tlocal value = stats:FindFirstChild(name)
+\tif not value then
+\t\tvalue = typeof(default) == "string" and Instance.new("StringValue") or Instance.new("IntValue")
+\t\tvalue.Name = name
+\t\tvalue.Value = default
+\t\tvalue.Parent = stats
+\tend
+\treturn value
+end
+
+local function setupPlayer(player)
+\tstat(player, "Cash", 500)
+\tstat(player, "Wanted", 0)
+\tstat(player, "Job", "Visitor")
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+for _, player in ipairs(Players:GetPlayers()) do setupPlayer(player) end
+
+local function completeMission(player, missionName)
+\tsetupPlayer(player)
+\tlocal reward = rewards[missionName]
+\tif not reward then return end
+\tlocal key = player.UserId .. ":" .. missionName
+\tlocal now = os.clock()
+\tif lastUse[key] and now - lastUse[key] < 8 then return end
+\tlastUse[key] = now
+\tlocal cash = stat(player, "Cash", 500)
+\tlocal wanted = stat(player, "Wanted", 0)
+\tlocal job = stat(player, "Job", "Visitor")
+\tcash.Value += reward.cash
+\tjob.Value = reward.job
+\twanted.Value = math.clamp(wanted.Value + reward.wanted, 0, 5)
+\tmissionRemote:FireClient(player, missionName, reward.cash, job.Value, wanted.Value)
+\tjobRemote:FireClient(player, job.Value)
+end
+
+local markers = workspace:WaitForChild("Map"):WaitForChild("MissionMarkers")
+for _, marker in ipairs(markers:GetChildren()) do
+\tif marker:IsA("BasePart") then
+\t\tlocal prompt = marker:FindFirstChildOfClass("ProximityPrompt") or Instance.new("ProximityPrompt")
+\t\tprompt.ActionText = "Start"
+\t\tprompt.ObjectText = marker.Name
+\t\tprompt.HoldDuration = 0.25
+\t\tprompt.MaxActivationDistance = 12
+\t\tprompt.Parent = marker
+\t\tprompt.Triggered:Connect(function(player)
+\t\t\tcompleteMission(player, marker.Name)
+\t\tend)
+\tend
+end
+`,
+      },
+      {
+        path: "StarterGui/SunsetCityHUD/CityHUD.client.lua",
+        file_type: "LocalScript",
+        service_location: "StarterGui/SunsetCityHUD",
+        content: `-- Mobile-friendly open-world city HUD
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local gui = script.Parent
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame")
+frame.Name = "HUD"
+frame.AnchorPoint = Vector2.new(0, 0)
+frame.Position = UDim2.fromOffset(14, 14)
+frame.Size = UDim2.fromOffset(260, 112)
+frame.BackgroundColor3 = Color3.fromRGB(15, 18, 28)
+frame.BackgroundTransparency = 0.12
+frame.Parent = gui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(255, 120, 180)
+stroke.Thickness = 2
+stroke.Parent = frame
+
+local function label(name, y, text)
+\tlocal l = Instance.new("TextLabel")
+\tl.Name = name
+\tl.Position = UDim2.fromOffset(14, y)
+\tl.Size = UDim2.new(1, -28, 0, 26)
+\tl.BackgroundTransparency = 1
+\tl.Font = Enum.Font.GothamBold
+\tl.TextSize = 18
+\tl.TextXAlignment = Enum.TextXAlignment.Left
+\tl.TextColor3 = Color3.fromRGB(255, 255, 255)
+\tl.Text = text
+\tl.Parent = frame
+\treturn l
+end
+
+local cashLabel = label("Cash", 10, "$500")
+local jobLabel = label("Job", 42, "Job: Visitor")
+local wantedLabel = label("Wanted", 74, "Wanted: 0")
+
+local function bind()
+\tlocal stats = player:WaitForChild("leaderstats")
+\tlocal cash = stats:WaitForChild("Cash")
+\tlocal job = stats:WaitForChild("Job")
+\tlocal wanted = stats:WaitForChild("Wanted")
+\tlocal function refresh()
+\t\tcashLabel.Text = "$" .. tostring(cash.Value)
+\t\tjobLabel.Text = "Job: " .. tostring(job.Value)
+\t\twantedLabel.Text = "Wanted: " .. string.rep("★", wanted.Value)
+\tend
+\tcash.Changed:Connect(refresh)
+\tjob.Changed:Connect(refresh)
+\twanted.Changed:Connect(refresh)
+\trefresh()
+end
+task.spawn(bind)
+
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+remotes:WaitForChild("CityMissionComplete").OnClientEvent:Connect(function(_, reward)
+\tlocal startSize = frame.Size
+\tTweenService:Create(frame, TweenInfo.new(0.12), { Size = UDim2.fromOffset(276, 122) }):Play()
+\ttask.delay(0.18, function()
+\t\tTweenService:Create(frame, TweenInfo.new(0.18), { Size = startSize }):Play()
+\tend)
+\tcashLabel.Text = cashLabel.Text .. "  +" .. tostring(reward)
+end)
+`,
+      },
+    ],
+    actions: [
+      { type: "create", className: "Folder", name: "Systems", parent: "ServerScriptService" },
+      { type: "create", className: "Folder", name: "Remotes", parent: "ReplicatedStorage" },
+      { type: "create", className: "ScreenGui", name: "SunsetCityHUD", parent: "StarterGui" },
+      ...actions,
+    ],
+  };
+}
+
 function getGunTemplate(prompt: string): ExecuteResult {
   const name =
     /\b(pistol|rifle|shotgun|sniper|smg|ak|m4|gun|weapon|blaster)\b/i
@@ -1320,8 +1684,15 @@ function getSoundTemplate(prompt: string): ExecuteResult {
 
 function getFocusedFallbackTemplate(prompt: string): ExecuteResult {
   const lower = prompt.toLowerCase();
+  const wantsOpenWorldCity =
+    /\b(open[-\s]?world|city|downtown|miami|vice city|beach|streets?|police|wanted level|garages?|apartments?|roleplay|rp)\b/.test(
+      lower,
+    ) && /\b(map|game|world|city|roleplay|streets?|missions?|jobs?)\b/.test(lower);
   // Only return a template when the prompt clearly asks for that specific thing.
   // Otherwise return an honest error — never dump random grass/trees/maps the user did NOT ask for.
+  if (wantsOpenWorldCity) return getOpenWorldCityStarterTemplate(prompt);
+  if (/\b(map|baseplate|starter\s*map|terrain|world|environment)\b/.test(lower))
+    return getMapStarterTemplate(prompt);
   if (/\b(gun|pistol|rifle|shotgun|sniper|smg|ak|m4|weapon|blaster|firearm)\b/.test(lower))
     return getGunTemplate(prompt);
   if (/\bloading\s*screen|splash\s*screen|intro\s*screen|title\s*screen\b/.test(lower))
@@ -1335,8 +1706,6 @@ function getFocusedFallbackTemplate(prompt: string): ExecuteResult {
   if (/\bnpc|dummy\b/.test(lower)) return getNpcTemplate() as ExecuteResult;
   if (/\btree|forest\b/.test(lower)) return getTreesTemplate() as ExecuteResult;
   if (/\bgrass\b/.test(lower)) return getGrassTemplate() as ExecuteResult;
-  if (/\b(map|baseplate|starter\s*map|terrain|world)\b/.test(lower))
-    return getMapStarterTemplate(prompt);
   // No reliable match — refuse to invent random content. Tell the user honestly.
   return {
     message:

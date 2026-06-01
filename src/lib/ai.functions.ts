@@ -531,6 +531,207 @@ function getBuildingReplicaFallback(prompt: string): {
   };
 }
 
+function getProceduralCityFallback(p: string): {
+  message: string;
+  files: GenFile[];
+  actions: GenAction[];
+} {
+  const actions: GenAction[] = [];
+  const v3 = (x: number, y: number, z: number) => ({ __t: "Vector3", x, y, z });
+  const color = (r: number, g: number, b: number) => ({ __t: "Color3", r, g, b });
+  const mat = (m: string) => ({ __t: "Enum", enum: "Material", value: m });
+
+  for (const [name, parent] of [
+    ["Map", "Workspace"],
+    ["Roads", "Workspace/Map"],
+    ["Buildings", "Workspace/Map"],
+    ["Beach", "Workspace/Map"],
+    ["Vehicles", "Workspace/Map"],
+    ["MissionMarkers", "Workspace/Map"],
+    ["Police", "Workspace/Map"],
+  ] as const) {
+    actions.push({ type: "create", className: "Folder", name, parent, properties: {} });
+  }
+
+  const part = (
+    parent: string,
+    name: string,
+    size: [number, number, number],
+    position: [number, number, number],
+    material: string,
+    rgb: readonly [number, number, number],
+  ) =>
+    actions.push({
+      type: "create",
+      className: "Part",
+      name,
+      parent,
+      properties: {
+        Size: v3(size[0], size[1], size[2]),
+        Position: v3(position[0], position[1], position[2]),
+        Anchored: true,
+        Material: mat(material),
+        Color: color(rgb[0], rgb[1], rgb[2]),
+      },
+    });
+
+  part("Workspace/Map", "CityGround", [620, 2, 520], [0, -1, -30], "Concrete", [85, 90, 96]);
+  part(
+    "Workspace/Map/Beach",
+    "SouthBeachSand",
+    [620, 2, 130],
+    [0, 0, 245],
+    "Sand",
+    [235, 205, 145],
+  );
+  part("Workspace/Map/Beach", "Ocean", [620, 1, 180], [0, -0.2, 340], "Glass", [50, 190, 215]);
+  part("Workspace/Map/Beach", "Boardwalk", [560, 1, 18], [0, 1, 176], "WoodPlanks", [172, 126, 84]);
+
+  for (const x of [-220, -110, 0, 110, 220]) {
+    part(
+      "Workspace/Map/Roads",
+      `Avenue${x}`,
+      [24, 0.5, 500],
+      [x, 0.3, -40],
+      "Asphalt",
+      [24, 27, 30],
+    );
+  }
+  for (const z of [-225, -120, -15, 90]) {
+    part(
+      "Workspace/Map/Roads",
+      `Street${z}`,
+      [560, 0.5, 24],
+      [0, 0.35, z],
+      "Asphalt",
+      [24, 27, 30],
+    );
+  }
+
+  const buildings = [
+    ["NeonBank", -170, -165, 44, 80, [50, 90, 150]],
+    ["PalmViewHotel", -55, -165, 42, 112, [230, 125, 150]],
+    ["MetroOffice", 80, -165, 48, 130, [70, 125, 190]],
+    ["SunsetMall", 205, -165, 82, 42, [245, 160, 80]],
+    ["ArcadeBlock", -170, -45, 54, 46, [140, 70, 190]],
+    ["PoliceHQ", 205, -45, 64, 52, [60, 90, 140]],
+    ["BeachApartments", -120, 95, 54, 72, [255, 210, 130]],
+    ["CityGarage", 80, 95, 72, 38, [95, 95, 105]],
+  ] as const;
+  for (const [name, x, z, width, height, rgb] of buildings) {
+    part(
+      "Workspace/Map/Buildings",
+      name,
+      [width, height, 52],
+      [x, height / 2, z],
+      "SmoothPlastic",
+      rgb,
+    );
+    part(
+      "Workspace/Map/Buildings",
+      `${name}RoofGlow`,
+      [width + 4, 2, 56],
+      [x, height + 2, z],
+      "Neon",
+      [255, 95, 170],
+    );
+  }
+
+  for (const [name, x, z] of [
+    ["DeliveryMission", -205, 125],
+    ["PolicePatrolJob", 205, -5],
+    ["BeachRaceStart", -20, 175],
+    ["GarageSpawn", 80, 128],
+  ] as const) {
+    part("Workspace/Map/MissionMarkers", name, [8, 1, 8], [x, 3, z], "Neon", [255, 210, 65]);
+  }
+  for (const [name, x, z, rgb] of [
+    ["Cruiser", 230, -10, [35, 60, 120]],
+    ["SportCoupe", 55, 130, [255, 65, 105]],
+    ["Taxi", -225, -120, [255, 210, 45]],
+  ] as const) {
+    part("Workspace/Map/Vehicles", name, [12, 4, 20], [x, 3, z], "Metal", rgb);
+  }
+
+  actions.push({
+    type: "create",
+    className: "SpawnLocation",
+    name: "SunsetSpawn",
+    parent: "Workspace/Map",
+    properties: {
+      Size: v3(12, 1, 12),
+      Position: v3(0, 4, -70),
+      Anchored: true,
+      Neutral: true,
+      Material: mat("Neon"),
+      Color: color(90, 170, 255),
+    },
+  });
+  actions.push({
+    type: "lighting",
+    properties: {
+      ClockTime: 18.4,
+      Brightness: 2.3,
+      Ambient: color(95, 75, 105),
+      OutdoorAmbient: color(255, 150, 100),
+      FogEnd: 900,
+    },
+  });
+  actions.push({ type: "select", path: "Workspace.Map" });
+
+  return {
+    message:
+      "Queued an original open-world city starter instead of plot pads: beach, streets, buildings, police HQ, garages, cars, mission markers, spawn, sunset lighting, and starter money/wanted/job systems.",
+    files: [
+      {
+        path: "ServerScriptService/Systems/OpenWorldCityCore.server.lua",
+        file_type: "Script",
+        service_location: "ServerScriptService/Systems",
+        content: `local Players = game:GetService("Players")
+
+Players.PlayerAdded:Connect(function(player)
+\tlocal stats = Instance.new("Folder")
+\tstats.Name = "leaderstats"
+\tstats.Parent = player
+\tlocal cash = Instance.new("IntValue")
+\tcash.Name = "Cash"
+\tcash.Value = 500
+\tcash.Parent = stats
+\tlocal wanted = Instance.new("IntValue")
+\twanted.Name = "Wanted"
+\twanted.Value = 0
+\twanted.Parent = stats
+\tlocal job = Instance.new("StringValue")
+\tjob.Name = "Job"
+\tjob.Value = "Visitor"
+\tjob.Parent = stats
+end)
+
+for _, marker in ipairs(workspace.Map.MissionMarkers:GetChildren()) do
+\tif marker:IsA("BasePart") then
+\t\tlocal prompt = Instance.new("ProximityPrompt")
+\t\tprompt.ActionText = "Start"
+\t\tprompt.ObjectText = marker.Name
+\t\tprompt.HoldDuration = 0.25
+\t\tprompt.Parent = marker
+\t\tprompt.Triggered:Connect(function(player)
+\t\t\tlocal stats = player:FindFirstChild("leaderstats")
+\t\t\tif not stats then return end
+\t\t\tstats.Cash.Value += 100
+\t\t\tstats.Job.Value = marker.Name:gsub("Mission", ""):gsub("Job", "")
+\t\t\tif marker.Name == "BeachRaceStart" then
+\t\t\t\tstats.Wanted.Value = math.clamp(stats.Wanted.Value + 1, 0, 5)
+\t\t\tend
+\t\tend)
+\tend
+end
+`,
+      },
+    ],
+    actions,
+  };
+}
+
 // A genuine procedural map/tycoon: ground, spawn, central hub, player plots,
 // and connecting paths. Used when the model fails on a map/world/tycoon prompt
 // so the user gets a real, usable build instead of an empty folder.
@@ -539,6 +740,12 @@ function getProceduralMapFallback(p: string): {
   files: GenFile[];
   actions: GenAction[];
 } {
+  const isCity =
+    /\b(open[-\s]?world|city|downtown|miami|vice city|beach|streets?|police|wanted|garage|apartment|roleplay|rp)\b/.test(
+      p,
+    ) && /\b(map|game|world|city|streets?|missions?|jobs?)\b/.test(p);
+  if (isCity) return getProceduralCityFallback(p);
+
   const isTycoon = /\btycoon\b/.test(p);
   const plotCount = isTycoon ? 6 : 4;
   const actions: GenAction[] = [];
