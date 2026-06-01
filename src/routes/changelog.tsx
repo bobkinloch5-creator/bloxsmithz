@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Clock,
   CreditCard,
+  Film,
   FileCode,
   Flag,
   Gift,
@@ -83,6 +84,22 @@ const changelogItems = [
         title: "AI Memory & Playtest QA",
         detail:
           "Added a visible project AI Memory panel plus an AI Playtest shortcut that performs deeper Roblox QA and queues safe fixes when possible.",
+      },
+      {
+        category: "Animation",
+        tagColor: tagStyles.ui,
+        icon: Film,
+        title: "Simpler Roblox Animation Creator",
+        detail:
+          "Animation mode now starts with simple presets, plain usage steps, a clearer live demo-rig preview, and smaller three-keyframe blueprints that are easier to recreate in Roblox Animation Editor.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: LayoutDashboard,
+        title: "Main Menu Background Fix",
+        detail:
+          "Main-menu generation now treats backgrounds as full-screen ScreenGui layers behind the title and buttons, preventing accidental Workspace parts or giant selected blocks from being used as the menu background.",
       },
       {
         category: "Config",

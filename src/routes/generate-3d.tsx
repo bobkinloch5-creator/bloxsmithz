@@ -71,6 +71,63 @@ const animationPrompts = [
   "A spooky NPC walk with heavy shoulders and slow steps",
   "A victory dance with two arm pumps and a playful spin",
 ];
+const animationQuickPresets = [
+  {
+    label: "Idle bounce",
+    type: "idle",
+    style: "smooth",
+    focus: "full body",
+    duration: 2,
+    intensity: 35,
+    looped: true,
+    prompt: "A simple Roblox idle bounce with a small head tilt and relaxed arms",
+    detail: "Best for NPCs, pets, lobby characters, and starter emotes.",
+  },
+  {
+    label: "Walk cycle",
+    type: "walk",
+    style: "cartoony",
+    focus: "legs",
+    duration: 1.25,
+    intensity: 45,
+    looped: true,
+    prompt: "A clean Roblox walk cycle with swinging arms and steady blocky steps",
+    detail: "Use this as a readable base before making faster run or chase motions.",
+  },
+  {
+    label: "Sword swing",
+    type: "attack",
+    style: "snappy",
+    focus: "tool hand",
+    duration: 0.9,
+    intensity: 70,
+    looped: false,
+    prompt: "A simple sword swing with wind-up, one fast slash, and a reset pose",
+    detail: "Good for tools, weapons, and combat tests without overbuilt keyframes.",
+  },
+  {
+    label: "Victory emote",
+    type: "dance",
+    style: "cute",
+    focus: "upper body",
+    duration: 2,
+    intensity: 55,
+    looped: true,
+    prompt: "A simple victory emote with two arm pumps and a happy bounce",
+    detail: "Works well for rewards, wins, level ups, and social emotes.",
+  },
+  {
+    label: "Pet hop",
+    type: "pet",
+    style: "floaty",
+    focus: "tail/pet",
+    duration: 1.6,
+    intensity: 50,
+    looped: true,
+    prompt: "A cute pet hop with a tiny squash, bounce, and soft landing",
+    detail: "Use for simulator pets, hover companions, eggs, and small mascots.",
+  },
+];
 
 const previewSlug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const optionImages = (group: string, items: string[]) =>
@@ -110,8 +167,8 @@ const copy = {
     title: "Animation",
     kicker: "Custom Roblox animation blueprint",
     prompt: "Describe the motion",
-    placeholder: "A fast dash attack: lean forward, right arm swings, feet slide, then snap back ready",
-    empty: "Custom animation blueprints appear here with keyframe settings and controller code.",
+    placeholder: "A simple sword swing with one wind-up, one slash, and a clean reset",
+    empty: "Pick a preset or write a short motion prompt to preview the animation.",
   },
 } satisfies Record<Kind, { title: string; kicker: string; prompt: string; placeholder: string; empty: string }>;
 
@@ -177,12 +234,14 @@ function TextPreview({
 function AnimationPreview({
   type,
   style,
+  focus,
   intensity,
   looped,
   duration,
 }: {
   type: string;
   style: string;
+  focus: string;
   intensity: number;
   looped: boolean;
   duration: number;
@@ -196,6 +255,9 @@ function AnimationPreview({
       style={{ ["--preview-speed" as string]: `${speed}s`, ["--preview-power" as string]: String(power) }}
     >
       <div className="absolute inset-0 bg-[linear-gradient(rgba(20,241,149,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(20,241,149,0.08)_1px,transparent_1px)] bg-[length:34px_34px]" />
+      <div className="absolute left-4 top-4 rounded-xl border border-primary/30 bg-background/75 px-3 py-2 text-xs font-bold text-primary backdrop-blur">
+        Live preview
+      </div>
       <div className="absolute inset-x-8 bottom-14 h-12 rounded-[50%] bg-primary/10 blur-xl" />
       <div className={`roblox-preview-rig ${motionClass} ${looped ? "is-looped" : "is-once"}`} aria-hidden="true">
         <div className="rig-shadow" />
@@ -212,9 +274,12 @@ function AnimationPreview({
       </div>
       <div className="absolute bottom-5 left-5 right-5 rounded-xl border border-border/70 bg-background/70 p-3 backdrop-blur">
         <div className="flex items-center justify-between gap-3 text-xs">
-          <span className="font-semibold capitalize">Roblox demo rig: {type} / {style}</span>
-          <span className="text-muted-foreground">{looped ? "Looped" : "One-shot"} / {intensity}%</span>
+          <span className="font-semibold capitalize">Demo rig: {type} / {style}</span>
+          <span className="text-muted-foreground">{looped ? "Looped" : "One-shot"} / {duration}s</span>
         </div>
+        <p className="mt-1 text-[10px] leading-normal text-muted-foreground">
+          Focus: {focus}. The download is a simple Roblox keyframe blueprint based on this motion.
+        </p>
       </div>
       <style>{`
         .roblox-preview-rig {
@@ -397,6 +462,13 @@ function Generate3DPage() {
   const [animationLooped, setAnimationLooped] = useState(true);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [playtestChecks, setPlaytestChecks] = useState(true);
+  const selectedAnimationPreset =
+    animationQuickPresets.find(
+      (preset) =>
+        preset.type === animationType &&
+        preset.style === animationStyle &&
+        preset.focus === animationBodyFocus,
+    ) ?? animationQuickPresets.find((preset) => preset.type === animationType);
 
   const stageList =
     kind === "model"
@@ -542,6 +614,16 @@ function Generate3DPage() {
     };
     reader.onerror = () => toast.error("Could not read that image.");
     reader.readAsDataURL(file);
+  };
+
+  const applyAnimationPreset = (preset: (typeof animationQuickPresets)[number]) => {
+    setAnimationType(preset.type);
+    setAnimationStyle(preset.style);
+    setAnimationBodyFocus(preset.focus);
+    setAnimationDuration(preset.duration);
+    setAnimationIntensity(preset.intensity);
+    setAnimationLooped(preset.looped);
+    setPrompt(preset.prompt);
   };
 
   const generate = async () => {
@@ -750,14 +832,63 @@ function Generate3DPage() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={copy[kind].placeholder}
-              rows={kind === "animation" ? 5 : 4}
+              rows={kind === "animation" ? 3 : 4}
               maxLength={1024}
               disabled={busy}
               className="mt-2 w-full resize-none rounded-xl border border-border/80 bg-background/25 px-3.5 py-3 text-sm outline-none transition focus:border-primary/50 disabled:opacity-60 text-foreground placeholder:text-muted-foreground/60"
             />
             {kind === "animation" && (
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                {animationPrompts.map((item) => (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Simple presets</div>
+                    <div className="text-[11px] font-semibold text-muted-foreground">Pick one, then edit the sentence if needed.</div>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {animationQuickPresets.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => applyAnimationPreset(preset)}
+                        className={`rounded-xl border p-3 text-left transition hover:border-primary/40 hover:bg-primary/5 ${
+                          animationType === preset.type && animationStyle === preset.style
+                            ? "border-primary/60 bg-primary/10"
+                            : "border-border/80 bg-background/20"
+                        }`}
+                      >
+                        <div className="text-sm font-bold text-foreground">{preset.label}</div>
+                        <p className="mt-1 text-[11px] leading-normal text-muted-foreground">{preset.detail}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
+                  <div className="mb-2 flex items-center gap-2 font-bold text-foreground">
+                    <Info className="h-4 w-4 text-primary" /> How animation export works
+                  </div>
+                  <div className="grid gap-3 text-xs leading-relaxed text-muted-foreground sm:grid-cols-3">
+                    <div>
+                      <div className="font-bold text-foreground">1. Preview</div>
+                      The blocky demo rig shows the motion style before you spend credits.
+                    </div>
+                    <div>
+                      <div className="font-bold text-foreground">2. Download</div>
+                      BloxSmith creates a small Lua blueprint with simple keyframes.
+                    </div>
+                    <div>
+                      <div className="font-bold text-foreground">3. Use in Roblox</div>
+                      Recreate/publish it in Animation Editor, then paste the asset id into the included player script.
+                    </div>
+                  </div>
+                </div>
+
+                <details className="rounded-xl border border-border/80 bg-background/20 p-3 text-xs">
+                  <summary className="cursor-pointer font-bold text-muted-foreground hover:text-foreground">
+                    More prompt examples
+                  </summary>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {animationPrompts.map((item) => (
                   <button
                     key={item}
                     type="button"
@@ -766,7 +897,9 @@ function Generate3DPage() {
                   >
                     {item}
                   </button>
-                ))}
+                    ))}
+                  </div>
+                </details>
               </div>
             )}
 
@@ -838,14 +971,18 @@ function Generate3DPage() {
 
                   {kind === "animation" && (
                     <>
-                      <Group label="Animation type"><VisualChips value={animationType} set={setAnimationType} items={animationTypes} images={animationTypeImages} compact /></Group>
-                      <Group label="Motion style"><VisualChips value={animationStyle} set={setAnimationStyle} items={animationStyles} images={animationStyleImages} compact /></Group>
-                      <Group label="Body focus"><VisualChips value={animationBodyFocus} set={setAnimationBodyFocus} items={bodyFocuses} images={bodyFocusImages} compact /></Group>
+                      <div className="rounded-xl border border-border/80 bg-background/20 p-3 text-xs text-muted-foreground">
+                        <div className="font-bold text-foreground">Fine tune only if needed</div>
+                        Keep animations simple for Roblox. One clear motion is easier to import, publish, and test than a long cinematic sequence.
+                      </div>
+                      <Group label="Animation type"><Chips value={animationType} set={setAnimationType} items={animationTypes} /></Group>
+                      <Group label="Motion style"><Chips value={animationStyle} set={setAnimationStyle} items={animationStyles} /></Group>
+                      <Group label="Body focus"><Chips value={animationBodyFocus} set={setAnimationBodyFocus} items={bodyFocuses} /></Group>
                       <div className="grid gap-2 sm:grid-cols-3">
                         <TextInput label="Target" value={animationTarget} onChange={setAnimationTarget} />
                         <NumberInput label="Duration" value={animationDuration} min={0.25} max={30} step={0.25} onChange={setAnimationDuration} />
                       </div>
-                      <Group label="Easing"><VisualChips value={animationEasing} set={setAnimationEasing} items={animationEasings} images={animationEasingImages} compact /></Group>
+                      <Group label="Easing"><Chips value={animationEasing} set={setAnimationEasing} items={animationEasings} /></Group>
                       <label className="block text-xs font-medium">
                         Intensity: {animationIntensity}%
                         <input
@@ -959,6 +1096,7 @@ function Generate3DPage() {
                 <AnimationPreview
                   type={animationType}
                   style={animationStyle}
+                  focus={animationBodyFocus}
                   intensity={animationIntensity}
                   looped={animationLooped}
                   duration={animationDuration}
@@ -1005,6 +1143,17 @@ function Generate3DPage() {
                 ))}
               </div>
             </div>
+
+            {kind === "animation" && (
+              <div className="mt-4 rounded-xl border border-border/80 bg-background/25 p-4 text-xs">
+                <div className="flex items-center gap-2 font-bold text-foreground">
+                  <Film className="h-4 w-4 text-primary" /> What users get
+                </div>
+                <p className="mt-2 leading-relaxed text-muted-foreground">
+                  {selectedAnimationPreset?.detail ?? "A simple Roblox-ready motion blueprint."} The file includes a short keyframe list, a controller snippet, and clear import steps.
+                </p>
+              </div>
+            )}
 
             {result && (
               <div className="mt-4 space-y-3">

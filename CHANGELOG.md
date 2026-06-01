@@ -27,6 +27,8 @@
 - Added Supabase migration support for BloxSmith AI provider settings and the new AI rate-limit event table.
 - Added safe environment documentation for `COMETAPI_KEY`, `COMET_API_KEY`, `COMET_BASE_URL`, and daily AI limit settings.
 - Updated the project usage indicator to show the 24-hour timer with AM/PM reset time.
+- Simplified the 3D Studio animation creator with preset motions, clearer website previews, plain-language usage steps, and smaller three-keyframe Roblox animation blueprints.
+- Fixed main-menu generation guidance so requested backgrounds are built as full-screen ScreenGui background layers instead of accidental Workspace parts or selected 3D blocks.
 
 ### MCP & Provider Secret Vault Migration
 

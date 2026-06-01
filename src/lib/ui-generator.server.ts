@@ -179,6 +179,7 @@ LAYOUT RULES
 - Root Frame should fill the screen or center a modal. Use Scale (not Offset) so it scales on all devices.
 - Use anchorPoint {x:0.5, y:0.5} + position {xScale:0.5, yScale:0.5} for centered modals.
 - Make the UI look premium: layered panels, clear hierarchy, vivid accent borders, gradients, decorative badges, status rows, and strong Roblox game readability.
+- For Main Menu, title screen, loading screen, or any request mentioning a background: build a full-screen 2D background INSIDE the ScreenGui. Use an ImageLabel or Frame named BackgroundImage/BackgroundLayer with size {1,0,1,0}, position {0,0,0,0}, zIndex 1, ScaleType Crop if image, plus a dark overlay if needed. Put title/buttons above it at zIndex 3+. Never represent UI backgrounds with Workspace parts, 3D models, terrain, or giant blocks.
 - Buttons: cornerRadius 10-18, strokeThickness 1-3, hover-friendly sizes (min 44px height), bold labels.
 - Circular widgets such as spin wheels, profile rings, or meters may use high cornerRadius values matching half their pixel size.
 - For shop grids use layout:"Grid" with cellSize.
@@ -195,6 +196,15 @@ LUAU RULES
 - Use task.wait / task.spawn (not wait/spawn).
 
 DO NOT include markdown, prose, or explanations — JSON only.`;
+
+function wantsMainMenuBackground(opts: { category: UICategory; prompt: string }) {
+  return (
+    opts.category === "Main Menu" ||
+    /\b(main\s*menu|title\s*screen|start\s*screen|play\s*button|menu\s+background|background\s+menu)\b/i.test(
+      opts.prompt,
+    )
+  );
+}
 
 // ---------------- AI gateway pick (mirrors help-chat) ----------------
 type GatewayChoice = { gw: (m: string) => any; modelName: string; providerName: string };
@@ -310,6 +320,159 @@ function createFallbackUISpec(opts: {
   const screenGuiName = safeInstanceName(`${title}Gui`, "BloxSmithGeneratedGui");
   const buttons = buttonTextForCategory(opts.category);
   const needsRemote = /Shop|Rewards|Spin|Codes|Trading|Admin/.test(opts.category);
+
+  if (wantsMainMenuBackground(opts)) {
+    const menuButtons = ["Play", "Settings", "Shop", "Credits"].map((label, idx): UIElement => ({
+      type: "TextButton",
+      id: `${label}Button`,
+      name: `${label}Button`,
+      text: label,
+      textColor: { r: 255, g: 255, b: 255 },
+      textSize: idx === 0 ? 28 : 22,
+      font: "GothamBlack",
+      size: { xScale: 1, xOffset: 0, yScale: 0, yOffset: idx === 0 ? 76 : 62 },
+      backgroundColor: idx === 0 ? primary : { r: 24, g: 34, b: 52 },
+      backgroundTransparency: idx === 0 ? 0 : 0.06,
+      strokeColor: idx === 0 ? { r: 255, g: 255, b: 255 } : accent,
+      strokeThickness: idx === 0 ? 3 : 2,
+      cornerRadius: opts.style === "Cartoon" ? 24 : 18,
+      gradient:
+        opts.style === "Minimal"
+          ? undefined
+          : { from: idx === 0 ? primary : { r: 30, g: 41, b: 59 }, to: idx === 0 ? accent : bg, rotation: 115 },
+      zIndex: 4,
+    }));
+
+    const spec: UISpec = {
+      title,
+      screenGuiName,
+      mobileFriendly: true,
+      description:
+        "Generated main menu with a real full-screen 2D ScreenGui background layer, overlay, title, and animated buttons.",
+      root: {
+        type: "Frame",
+        id: "RootFrame",
+        name: "RootFrame",
+        position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
+        size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
+        backgroundColor: bg,
+        children: [
+          {
+            type: "Frame",
+            id: "BackgroundLayer",
+            name: "BackgroundLayer",
+            position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
+            size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
+            backgroundColor: bg,
+            backgroundTransparency: 0,
+            gradient: { from: bg, to: { r: Math.max(0, primary.r - 40), g: Math.max(0, primary.g - 35), b: Math.max(0, primary.b - 30) }, rotation: 35 },
+            zIndex: 1,
+          },
+          {
+            type: "Frame",
+            id: "BackgroundGlowLeft",
+            name: "BackgroundGlowLeft",
+            position: { xScale: -0.08, xOffset: 0, yScale: 0.12, yOffset: 0 },
+            size: { xScale: 0, xOffset: 420, yScale: 0, yOffset: 420 },
+            backgroundColor: primary,
+            backgroundTransparency: 0.72,
+            cornerRadius: 210,
+            zIndex: 1,
+          },
+          {
+            type: "Frame",
+            id: "BackgroundGlowRight",
+            name: "BackgroundGlowRight",
+            position: { xScale: 0.72, xOffset: 0, yScale: 0.56, yOffset: 0 },
+            size: { xScale: 0, xOffset: 520, yScale: 0, yOffset: 520 },
+            backgroundColor: accent,
+            backgroundTransparency: 0.76,
+            cornerRadius: 260,
+            zIndex: 1,
+          },
+          {
+            type: "Frame",
+            id: "DarkOverlay",
+            name: "DarkOverlay",
+            position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
+            size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
+            backgroundColor: { r: 0, g: 0, b: 0 },
+            backgroundTransparency: 0.42,
+            zIndex: 2,
+          },
+          {
+            type: "TextLabel",
+            id: "TitleLabel",
+            name: "TitleLabel",
+            text: title,
+            textColor: { r: 255, g: 255, b: 255 },
+            textSize: 52,
+            font: opts.style === "Cartoon" ? "LuckiestGuy" : "GothamBlack",
+            position: { xScale: 0.055, xOffset: 0, yScale: 0.12, yOffset: 0 },
+            size: { xScale: 0.72, xOffset: 0, yScale: 0, yOffset: 72 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 4,
+          },
+          {
+            type: "TextLabel",
+            id: "SubtitleLabel",
+            name: "SubtitleLabel",
+            text: opts.prompt.slice(0, 74) || "Jump into your Roblox adventure",
+            textColor: { r: 226, g: 232, b: 240 },
+            textSize: 18,
+            font: "GothamBold",
+            position: { xScale: 0.06, xOffset: 0, yScale: 0.23, yOffset: 0 },
+            size: { xScale: 0.56, xOffset: 0, yScale: 0, yOffset: 38 },
+            backgroundTransparency: 1,
+            textAlign: "Left",
+            zIndex: 4,
+          },
+          {
+            type: "Frame",
+            id: "ButtonStack",
+            name: "ButtonStack",
+            position: { xScale: 0.06, xOffset: 0, yScale: 0.38, yOffset: 0 },
+            size: { xScale: 0, xOffset: 360, yScale: 0, yOffset: 330 },
+            backgroundColor: { r: 5, g: 8, b: 18 },
+            backgroundTransparency: 0.22,
+            cornerRadius: 24,
+            strokeColor: { r: 255, g: 255, b: 255 },
+            strokeThickness: 1.5,
+            layout: "List",
+            layoutPadding: 14,
+            zIndex: 3,
+            children: menuButtons,
+          },
+        ],
+      },
+      remoteEvents: [],
+      localScript: `local TweenService = game:GetService("TweenService")
+local gui = script.Parent
+local stack = gui:FindFirstChild("ButtonStack", true)
+local function wireButton(button)
+\tif not button:IsA("TextButton") then return end
+\tlocal normalSize = button.Size
+\tbutton.MouseEnter:Connect(function()
+\t\tTweenService:Create(button, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = normalSize + UDim2.fromOffset(10, 4) }):Play()
+\tend)
+\tbutton.MouseLeave:Connect(function()
+\t\tTweenService:Create(button, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = normalSize }):Play()
+\tend)
+\tbutton.MouseButton1Click:Connect(function()
+\t\tprint("[BloxSmith MainMenu] clicked", button.Name)
+\t\tif button.Name == "PlayButton" then gui.Enabled = false end
+\tend)
+end
+for _, item in ipairs(gui:GetDescendants()) do wireButton(item) end
+if stack then
+\tstack.Position = stack.Position + UDim2.fromOffset(-30, 0)
+\tTweenService:Create(stack, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.06, 0.38) }):Play()
+end`,
+    };
+
+    return normalizeUISpec(spec, opts);
+  }
 
   if (opts.category === "Spin Wheel") {
     const rewards = ["500 Coins", "2x Luck", "Rare Pet", "Gems", "Boost", "Jackpot"];
@@ -726,7 +889,8 @@ Palette: ${palette}
 ${opts.title ? `Preferred title text: "${opts.title}"\n` : ""}User request:
 ${opts.prompt}
 
-Produce a polished, fully populated UISpec for this Roblox UI. Include working LocalScript and (where it makes sense) a ServerScript with RemoteEvents for purchase/reward validation. Keep the hierarchy concise and complete.`;
+Produce a polished, fully populated UISpec for this Roblox UI. Include working LocalScript and (where it makes sense) a ServerScript with RemoteEvents for purchase/reward validation. Keep the hierarchy concise and complete.
+${wantsMainMenuBackground(opts) ? "Main menu background requirement: create the background as ScreenGui children only. Use BackgroundLayer/BackgroundImage plus overlay behind the buttons; do not create or imply Workspace parts, 3D blocks, terrain, or camera-selected objects." : ""}`;
 
   let lastErr: any = null;
   for (const gateway of gateways.slice(0, 2)) {

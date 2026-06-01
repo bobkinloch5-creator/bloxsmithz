@@ -150,18 +150,23 @@ function buildAnimationScript(data: z.infer<typeof InputSchema>) {
   const intensity = Math.max(0, Math.min(100, data.animationIntensity));
   const swing = Math.max(6, Math.round(10 + intensity * 0.55));
   const lift = Math.max(0.04, Number((0.04 + intensity / 420).toFixed(2)));
+  const mainTime = Math.max(0.1, data.animationDuration * 0.5).toFixed(2);
   const style = data.animationStyle;
   const easing = data.animationEasing;
   const focus = data.animationBodyFocus;
-  return `-- BloxSmith Roblox Animation Blueprint
+  return `-- BloxSmith Simple Roblox Animation Blueprint
 -- Description: ${prompt}
 -- Target: ${data.animationTarget}; Type: ${data.animationType}; Style: ${style}; Focus: ${focus}
 -- Duration: ${data.animationDuration}s; Looped: ${data.animationLooped}; Intensity: ${intensity}; Easing: ${easing}
+--
+-- This is intentionally simple: start pose -> main motion pose -> reset pose.
+-- Simple animations are easier to recreate, publish, and test in Roblox Studio.
+--
 -- How to use:
 -- 1. Keep this ModuleScript in ReplicatedStorage/GeneratedAnimations.
--- 2. Open Roblox Animation Editor or a BloxSmith importer script.
--- 3. Recreate/publish the keyframes below as a Roblox Animation asset.
--- 4. Use the generated Controller snippet at the bottom to play your uploaded animation id.
+-- 2. Open Roblox Animation Editor on your R15/R6 rig.
+-- 3. Recreate the three keyframes below, publish the animation, and copy the asset id.
+-- 4. Paste the asset id into ControllerSnippet where it says PASTE_YOUR_UPLOADED_ANIMATION_ID.
 
 local AnimationBlueprint = {}
 AnimationBlueprint.Name = "${animationName}"
@@ -176,15 +181,15 @@ AnimationBlueprint.Looped = ${data.animationLooped}
 AnimationBlueprint.Prompt = ${JSON.stringify(prompt)}
 
 AnimationBlueprint.Keyframes = {
+  -- Start pose
   { Time = 0, Poses = { Root = CFrame.new(0, 0, 0), RightArm = CFrame.Angles(0, 0, 0), LeftArm = CFrame.Angles(0, 0, 0), Head = CFrame.Angles(0, 0, 0) } },
-  { Time = ${Math.max(0.1, data.animationDuration * 0.25).toFixed(2)}, Poses = { Root = CFrame.new(0, ${lift}, 0), RightArm = CFrame.Angles(math.rad(-${swing}), 0, math.rad(${Math.round(swing * 0.7)})), LeftArm = CFrame.Angles(math.rad(${Math.round(swing * 0.6)}), 0, math.rad(-${Math.round(swing * 0.45)})), Head = CFrame.Angles(math.rad(${Math.round(swing * 0.12)}), 0, 0) } },
-  { Time = ${Math.max(0.2, data.animationDuration * 0.5).toFixed(2)}, Poses = { Root = CFrame.new(0, ${Number((-lift / 2).toFixed(2))}, 0), RightArm = CFrame.Angles(math.rad(${Math.round(swing * 0.5)}), 0, math.rad(-${Math.round(swing * 0.75)})), LeftArm = CFrame.Angles(math.rad(-${Math.round(swing * 0.65)}), 0, math.rad(${Math.round(swing * 0.6)})), Head = CFrame.Angles(math.rad(-${Math.round(swing * 0.1)}), 0, 0) } },
-  { Time = ${Math.max(0.3, data.animationDuration * 0.75).toFixed(2)}, Poses = { Root = CFrame.new(0, ${Number((lift * 0.45).toFixed(2))}, 0), RightArm = CFrame.Angles(math.rad(-${Math.round(swing * 0.35)}), 0, math.rad(${Math.round(swing * 0.5)})), LeftArm = CFrame.Angles(math.rad(${Math.round(swing * 0.35)}), 0, math.rad(-${Math.round(swing * 0.5)})), Head = CFrame.Angles(math.rad(${Math.round(swing * 0.08)}), 0, 0) } },
+  -- Main readable motion pose
+  { Time = ${mainTime}, Poses = { Root = CFrame.new(0, ${lift}, 0), RightArm = CFrame.Angles(math.rad(-${swing}), 0, math.rad(${Math.round(swing * 0.7)})), LeftArm = CFrame.Angles(math.rad(${Math.round(swing * 0.55)}), 0, math.rad(-${Math.round(swing * 0.45)})), Head = CFrame.Angles(math.rad(${Math.round(swing * 0.12)}), 0, 0) } },
+  -- Reset pose
   { Time = ${data.animationDuration.toFixed(2)}, Poses = { Root = CFrame.new(0, 0, 0), RightArm = CFrame.Angles(0, 0, 0), LeftArm = CFrame.Angles(0, 0, 0), Head = CFrame.Angles(0, 0, 0) } },
 }
 
 AnimationBlueprint.ControllerSnippet = [[
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local ANIMATION_ID = "rbxassetid://PASTE_YOUR_UPLOADED_ANIMATION_ID"
@@ -206,7 +211,7 @@ if Players.LocalPlayer.Character then playOnCharacter(Players.LocalPlayer.Charac
 ]]
 
 function AnimationBlueprint:Instructions()
-  return "Use the keyframes to create a Roblox Animation asset, publish it, then paste the asset id into ControllerSnippet."
+  return "Preview the motion on the website, recreate the three keyframes in Roblox Animation Editor, publish it, then paste the animation id into ControllerSnippet."
 end
 
 return AnimationBlueprint
@@ -490,7 +495,7 @@ export const generate3DModelFn = createServerFn({ method: "POST" })
         data.generationKind === "model"
           ? "Download the file, then in Roblox Studio open the 3D Importer (Avatar tab -> Import 3D) and select it. The mesh drops into your Workspace ready to position."
           : data.generationKind === "animation"
-            ? "Download the Lua ModuleScript, put it in ReplicatedStorage/GeneratedAnimations, recreate or publish the keyframes in Roblox Animation Editor, then paste the uploaded animation id into the included ControllerSnippet."
+            ? "Download the Lua ModuleScript, put it in ReplicatedStorage/GeneratedAnimations, recreate the three simple keyframes in Roblox Animation Editor, publish the animation, then paste the uploaded animation id into the included ControllerSnippet."
             : "Download the Lua package or open the selected project in Studio with the BloxSmith plugin to insert this generated Roblox asset.",
       nextAvailable,
       generationKind: data.generationKind,
