@@ -79,6 +79,8 @@ import { AssistantMessage } from "@/components/AssistantMessage";
 import { BuildHistoryDrawer } from "@/components/BuildHistoryDrawer";
 import { OrganizeProjectButton } from "@/components/OrganizeProjectButton";
 import { TaskBoard } from "@/components/TaskBoard";
+import { TeamChat } from "@/components/TeamChat";
+import { ProjectCollaboratorsButton } from "@/components/ProjectCollaboratorsButton";
 import { MessagesSquare, Kanban } from "lucide-react";
 
 export const Route = createFileRoute("/project/$projectId")({
@@ -2350,6 +2352,8 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                 >
                   <History className="h-3.5 w-3.5" />
                 </button>
+                <ProjectCollaboratorsButton projectId={projectId} />
+                <TeamChat projectId={projectId} />
                 <OrganizeProjectButton projectId={projectId} studioConnected={isStudioConnected} />
                 <ChatSettings
                   thinking={thinking}

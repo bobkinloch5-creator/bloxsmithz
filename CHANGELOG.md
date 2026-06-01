@@ -2,6 +2,14 @@
 
 ## Latest Updates
 
+### Project Collaboration & Private Team Chat
+
+- Re-added project collaboration controls on the project editor so owners can add BloxSmith teammates by username.
+- Limited teams to 5 people total: 1 project owner plus up to 4 collaborators.
+- Kept credits separate for every teammate; collaboration grants project access only and does not pool AI/image/3D credits.
+- Re-enabled private project Team Chat for project members, backed by project-member RLS so only the owner and collaborators can read/post.
+- Added a database trigger to enforce collaborator limits and prevent owners from adding themselves as collaborators.
+
 ### Playtest Apply Fixes & Premium UI Variety
 
 - Forced generated Roblox UI to insert visibly by default with `ScreenGui.Enabled = true`, high `DisplayOrder`, visible GuiObjects, and a small visibility guard LocalScript.

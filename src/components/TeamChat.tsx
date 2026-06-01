@@ -8,7 +8,7 @@ type ChatMessage = {
   user_id: string;
   content: string;
   created_at: string;
-  author?: { display_name: string | null; email: string | null };
+  author?: { display_name: string | null; username: string | null; avatar_url: string | null };
 };
 
 export function TeamChat({ projectId }: { projectId: string }) {
@@ -35,7 +35,7 @@ export function TeamChat({ projectId }: { projectId: string }) {
       if (ids.length) {
         const { data: profs } = await supabase
           .from("profiles")
-          .select("id,display_name,email")
+          .select("id,display_name,username,avatar_url")
           .in("id", ids);
         const map = new Map((profs ?? []).map((p: any) => [p.id, p]));
         rows.forEach((r) => {
@@ -64,10 +64,12 @@ export function TeamChat({ projectId }: { projectId: string }) {
           if (m.user_id !== user.id) {
             const { data: prof } = await supabase
               .from("profiles")
-              .select("id,display_name")
+              .select("id,display_name,username,avatar_url")
               .eq("id", m.user_id)
               .maybeSingle();
-            m.author = prof ? { display_name: prof.display_name, email: null } : undefined;
+            m.author = prof
+              ? { display_name: prof.display_name, username: prof.username, avatar_url: prof.avatar_url }
+              : undefined;
             if (!open) setUnread((u) => u + 1);
           }
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
@@ -134,12 +136,12 @@ export function TeamChat({ projectId }: { projectId: string }) {
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {messages.length === 0 ? (
               <p className="text-center text-xs text-muted-foreground py-8">
-                No messages yet. Say hi to your team 👋
+                No messages yet. Say hi to your team.
               </p>
             ) : (
               messages.map((m) => {
                 const mine = m.user_id === user?.id;
-                const name = m.author?.display_name ?? m.author?.email?.split("@")[0] ?? "Teammate";
+                const name = m.author?.display_name ?? m.author?.username ?? "Teammate";
                 return (
                   <div key={m.id} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
                     <div className="text-[10px] text-muted-foreground mb-0.5 px-1">

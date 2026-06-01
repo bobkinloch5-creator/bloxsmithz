@@ -54,6 +54,22 @@ const changelogItems = [
       "BloxSmith AI now has a safer Comet-compatible gateway setup, tighter usage timers, AI memory, playtest QA, and text-to-image generation directly inside project chat.",
     updates: [
       {
+        category: "Projects",
+        tagColor: tagStyles.tools,
+        icon: Users,
+        title: "Project Collaboration Returns",
+        detail:
+          "Project owners can add collaborators by BloxSmith username again, with teams capped at 5 people total and credits kept separate for each teammate.",
+      },
+      {
+        category: "Chat",
+        tagColor: tagStyles.ui,
+        icon: MessageSquare,
+        title: "Private Project Team Chat",
+        detail:
+          "Project members now have a private Team Chat inside the project editor, protected by project-member access rules so only the owner and collaborators can read or post.",
+      },
+      {
         category: "AI",
         tagColor: tagStyles.ai,
         icon: Bot,
