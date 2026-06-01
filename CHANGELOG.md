@@ -16,6 +16,9 @@
 - Added a Roblox-safe music generator panel with configurable title, style, length, instrumental mode, and Comet music endpoint support.
 - Added a Roblox music import kit that downloads a Studio Lua script after users upload generated audio to Roblox and paste the audio asset ID.
 - Added Gemini 3.1 Flash Lite Preview speech-to-text for uploaded audio/video, with transcript, captions, and script-notes modes.
+- Added a Voice / NPC mode with browser text-to-voice previews, selectable NPC speaking styles, rate/pitch/volume controls, and Roblox dialogue trigger settings.
+- Added a downloadable Roblox NPC voice/dialogue controller script with proximity prompt, click detector, or auto-on-spawn triggers plus optional typewriter dialogue.
+- Added browser voice-control commands for switching studio modes, setting video/music prompts, setting game name/CTA, updating NPC dialogue, previewing voice, and adding NPC voice direction into video prompts.
 - Added storage buckets for generated video and audio outputs so signed provider URLs can be re-hosted as public BloxSmith downloads.
 - Added Roblox safety filtering before video and music provider calls.
 - Added `gemini-3.1-flash-lite-preview` to the Google provider model list.

@@ -10,15 +10,19 @@ import {
   ExternalLink,
   FileCode2,
   Film,
+  Bot,
   Image as ImageIcon,
   Loader2,
   Mic2,
   Music2,
   Play,
+  Radio,
   RefreshCw,
   ShieldCheck,
   Sparkles,
+  Square,
   Upload,
+  Volume2,
   WandSparkles,
 } from "lucide-react";
 import { Header, Footer } from "@/components/layout";
@@ -44,13 +48,13 @@ export const Route = createFileRoute("/video-generator")({
       {
         name: "description",
         content:
-          "Generate Roblox-safe AI videos with Seedance, create promo music, and transcribe creator clips for captions and scripts.",
+          "Generate Roblox-safe AI videos with Seedance, create promo music, preview NPC text-to-voice, and transcribe creator clips for captions and scripts.",
       },
     ],
   }),
 });
 
-type Mode = "video" | "music" | "speech";
+type Mode = "video" | "music" | "speech" | "voice";
 type VideoPreset =
   | "ad-promo"
   | "game-trailer"
@@ -115,6 +119,33 @@ const musicStyles = [
   "spooky ambience, PG suspense",
   "victory stinger for Roblox UI",
 ];
+const npcVoiceStyles = [
+  "friendly Roblox guide",
+  "excited simulator announcer",
+  "mysterious quest giver",
+  "confident shopkeeper",
+  "soft tutorial helper",
+  "dramatic trailer narrator",
+];
+const npcAnimations = ["wave", "point", "cheer", "idle bounce", "quest marker", "none"];
+const npcTriggerModes = ["proximity prompt", "auto on spawn", "click detector"] as const;
+
+type SpeechRecognitionConstructor = new () => {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  abort?: () => void;
+  onresult: ((event: Event & { results: SpeechRecognitionResultList }) => void) | null;
+  onerror: ((event: Event & { error?: string }) => void) | null;
+  onend: (() => void) | null;
+};
+
+type SpeechWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
+};
 
 function readFileAsDataUrl(file: File, maxBytes: number, allowed: RegExp) {
   return new Promise<string>((resolve, reject) => {
@@ -177,6 +208,111 @@ if not sound.IsLoaded then
 end
 
 sound:Play()
+`;
+}
+
+function robloxNpcVoiceScript(opts: {
+  npcName: string;
+  dialogue: string;
+  voiceStyle: string;
+  animation: string;
+  triggerMode: string;
+  typewriter: boolean;
+}) {
+  const npcName = opts.npcName.replace(/[^A-Za-z0-9_ ]/g, "").trim() || "BloxSmithGuide";
+  const lines = opts.dialogue
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+  const safeLines = lines.length ? lines : ["Welcome to the game!"];
+  const triggerMode = opts.triggerMode;
+  return `-- BloxSmith NPC voice/dialogue controller
+-- Put this Script inside your NPC Model. The model should have a Head part.
+-- Browser text-to-speech previews the voice on BloxSmith; Roblox displays these lines in-game.
+
+local npc = script.Parent
+local head = npc:FindFirstChild("Head") or npc:FindFirstChildWhichIsA("BasePart")
+if not head then
+  warn("BloxSmith NPC voice script needs a Head or BasePart.")
+  return
+end
+
+npc.Name = ${JSON.stringify(npcName)}
+
+local lines = ${JSON.stringify(safeLines, null, 2)}
+local voiceStyle = ${JSON.stringify(opts.voiceStyle)}
+local animationHint = ${JSON.stringify(opts.animation)}
+local triggerMode = ${JSON.stringify(triggerMode)}
+local typewriter = ${opts.typewriter ? "true" : "false"}
+
+local billboard = head:FindFirstChild("BloxSmithDialogue") or Instance.new("BillboardGui")
+billboard.Name = "BloxSmithDialogue"
+billboard.Size = UDim2.fromOffset(360, 120)
+billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+billboard.AlwaysOnTop = true
+billboard.Enabled = false
+billboard.Parent = head
+
+local label = billboard:FindFirstChild("Line") or Instance.new("TextLabel")
+label.Name = "Line"
+label.Size = UDim2.fromScale(1, 1)
+label.BackgroundColor3 = Color3.fromRGB(16, 20, 28)
+label.BackgroundTransparency = 0.12
+label.BorderSizePixel = 0
+label.Font = Enum.Font.GothamBold
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.TextScaled = true
+label.TextWrapped = true
+label.Parent = billboard
+
+local corner = label:FindFirstChildOfClass("UICorner") or Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = label
+
+local function showLine(text)
+  billboard.Enabled = true
+  if typewriter then
+    label.Text = ""
+    for index = 1, #text do
+      label.Text = string.sub(text, 1, index)
+      task.wait(0.025)
+    end
+  else
+    label.Text = text
+  end
+end
+
+local speaking = false
+local function speak()
+  if speaking then return end
+  speaking = true
+  for _, line in ipairs(lines) do
+    showLine(line)
+    task.wait(math.clamp(#line / 18, 2, 5))
+  end
+  billboard.Enabled = false
+  speaking = false
+end
+
+if triggerMode == "auto on spawn" then
+  task.delay(1, speak)
+elseif triggerMode == "click detector" then
+  local click = head:FindFirstChildOfClass("ClickDetector") or Instance.new("ClickDetector")
+  click.MaxActivationDistance = 16
+  click.Parent = head
+  click.MouseClick:Connect(speak)
+else
+  local prompt = head:FindFirstChildOfClass("ProximityPrompt") or Instance.new("ProximityPrompt")
+  prompt.ActionText = "Talk"
+  prompt.ObjectText = npc.Name
+  prompt.HoldDuration = 0
+  prompt.MaxActivationDistance = 12
+  prompt.Parent = head
+  prompt.Triggered:Connect(speak)
+end
+
+print(("BloxSmith NPC voice loaded: %s / %s / %s"):format(npc.Name, voiceStyle, animationHint))
 `;
 }
 
@@ -247,7 +383,25 @@ function VideoGeneratorPage() {
     TranscribeStudioResult,
     { ok: true }
   > | null>(null);
+  const [npcName, setNpcName] = useState("BloxSmith Guide");
+  const [npcDialogue, setNpcDialogue] = useState(
+    "Welcome builder! Follow the glowing path, collect coins, and unlock the next area.",
+  );
+  const [npcVoiceStyle, setNpcVoiceStyle] = useState(npcVoiceStyles[0]);
+  const [npcAnimation, setNpcAnimation] = useState(npcAnimations[0]);
+  const [npcTriggerMode, setNpcTriggerMode] =
+    useState<(typeof npcTriggerModes)[number]>("proximity prompt");
+  const [npcTypewriter, setNpcTypewriter] = useState(true);
+  const [ttsVoiceName, setTtsVoiceName] = useState("");
+  const [ttsRate, setTtsRate] = useState(1);
+  const [ttsPitch, setTtsPitch] = useState(1);
+  const [ttsVolume, setTtsVolume] = useState(1);
+  const [ttsVoices, setTtsVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceControlOn, setVoiceControlOn] = useState(false);
+  const [voiceCommand, setVoiceCommand] = useState("");
+  const [voiceControlSupported, setVoiceControlSupported] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recognitionRef = useRef<InstanceType<SpeechRecognitionConstructor> | null>(null);
 
   const videoCredits = 8 + Math.ceil(durationSeconds / 15) * 8;
   const canAffordVideo = isOwner || (profile?.credits ?? 0) >= videoCredits;
@@ -286,6 +440,19 @@ function VideoGeneratorPage() {
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const speechWindow = window as SpeechWindow;
+    setVoiceControlSupported(
+      Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition),
+    );
+    if (!("speechSynthesis" in window)) return;
+    const loadVoices = () => setTtsVoices(window.speechSynthesis.getVoices());
+    loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
   useEffect(() => {
@@ -493,6 +660,160 @@ function VideoGeneratorPage() {
     }
   };
 
+  const previewNpcVoice = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      toast.error("Text-to-voice is not supported in this browser.");
+      return;
+    }
+    const text = npcDialogue.trim();
+    if (!text) {
+      toast.error("Add NPC dialogue first.");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const selectedVoice = ttsVoices.find((voice) => voice.name === ttsVoiceName);
+    if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.rate = ttsRate;
+    utterance.pitch = ttsPitch;
+    utterance.volume = ttsVolume;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopNpcVoice = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  const addNpcVoiceToVideoPrompt = () => {
+    const line = npcDialogue.trim();
+    if (!line) return toast.error("Add NPC dialogue first.");
+    setPrompt((current) =>
+      `${current.trim()}\nInclude a clean ${npcVoiceStyle} NPC voiceover line: "${line}"`.trim(),
+    );
+    setMode("video");
+    toast.success("NPC voice direction added to the video prompt.");
+  };
+
+  const applyVoiceCommand = (spoken: string) => {
+    const command = spoken.trim();
+    const lower = command.toLowerCase();
+    if (!command) return;
+    setVoiceCommand(command);
+
+    const after = (prefixes: string[]) => {
+      const match = prefixes.find((prefix) => lower.startsWith(prefix));
+      return match ? command.slice(match.length).trim() : "";
+    };
+
+    if (["video mode", "open video", "go video"].some((item) => lower.includes(item))) {
+      setMode("video");
+      toast.success("Switched to video mode.");
+      return;
+    }
+    if (["music mode", "open music", "go music"].some((item) => lower.includes(item))) {
+      setMode("music");
+      toast.success("Switched to music mode.");
+      return;
+    }
+    if (["speech mode", "open speech", "go speech"].some((item) => lower.includes(item))) {
+      setMode("speech");
+      toast.success("Switched to speech-to-text mode.");
+      return;
+    }
+    if (["voice mode", "open voice", "go voice", "npc mode"].some((item) => lower.includes(item))) {
+      setMode("voice");
+      toast.success("Switched to voice / NPC mode.");
+      return;
+    }
+
+    const videoPrompt = after(["video prompt ", "set video prompt ", "prompt "]);
+    if (videoPrompt) {
+      setPrompt(videoPrompt);
+      setMode("video");
+      toast.success("Video prompt updated.");
+      return;
+    }
+    const musicPromptText = after(["music prompt ", "set music prompt "]);
+    if (musicPromptText) {
+      setMusicPrompt(musicPromptText);
+      setMode("music");
+      toast.success("Music prompt updated.");
+      return;
+    }
+    const npcLine = after(["npc says ", "npc say ", "voice line ", "dialogue "]);
+    if (npcLine) {
+      setNpcDialogue(npcLine);
+      setMode("voice");
+      toast.success("NPC dialogue updated.");
+      return;
+    }
+    const game = after(["game name ", "set game name "]);
+    if (game) {
+      setGameName(game);
+      toast.success("Game name updated.");
+      return;
+    }
+    const cta = after(["call to action ", "set call to action ", "cta "]);
+    if (cta) {
+      setCallToAction(cta);
+      toast.success("Call to action updated.");
+      return;
+    }
+    if (lower.includes("preview voice") || lower.includes("play voice")) {
+      previewNpcVoice();
+      return;
+    }
+    if (lower.includes("stop voice")) {
+      stopNpcVoice();
+      return;
+    }
+    if (lower.includes("add voice to video")) {
+      addNpcVoiceToVideoPrompt();
+      return;
+    }
+    toast.info("Voice command heard. Try: 'NPC says ...', 'video prompt ...', or 'open music'.");
+  };
+
+  const startVoiceControl = () => {
+    if (typeof window === "undefined") return;
+    const speechWindow = window as SpeechWindow;
+    const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      toast.error("Voice control needs Chrome, Edge, or another SpeechRecognition browser.");
+      return;
+    }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    const recognition = new Recognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+    recognition.onresult = (event) => {
+      const latest = event.results[event.results.length - 1];
+      const transcriptText = latest?.[0]?.transcript || "";
+      applyVoiceCommand(transcriptText);
+    };
+    recognition.onerror = (event) => {
+      toast.error(`Voice control stopped: ${event.error || "microphone error"}`);
+      setVoiceControlOn(false);
+    };
+    recognition.onend = () => setVoiceControlOn(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setVoiceControlOn(true);
+    toast.success("Voice control is listening.");
+  };
+
+  const stopVoiceControl = () => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setVoiceControlOn(false);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
@@ -503,11 +824,12 @@ function VideoGeneratorPage() {
               <Film className="h-3.5 w-3.5" /> Seedance Roblox Video Studio
             </div>
             <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-              Roblox videos, music, and captions in one creator workspace
+              Roblox videos, music, captions, and NPC voices in one creator workspace
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Build clean Roblox promo videos with Doubao Seedance 2.0, generate matching music, and
-              turn uploaded audio or video into captions with Gemini 3.1 Flash Lite Preview.
+              Build clean Roblox promo videos with Doubao Seedance 2.0, generate matching music,
+              preview NPC text-to-voice, and turn uploaded audio or video into captions with Gemini
+              3.1 Flash Lite Preview.
             </p>
           </div>
           <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm">
@@ -539,6 +861,12 @@ function VideoGeneratorPage() {
             icon={<Mic2 className="h-4 w-4" />}
             label="Speech to text"
             onClick={() => setMode("speech")}
+          />
+          <ModeButton
+            active={mode === "voice"}
+            icon={<Volume2 className="h-4 w-4" />}
+            label="Voice / NPC"
+            onClick={() => setMode("voice")}
           />
         </div>
 
@@ -1082,6 +1410,210 @@ function VideoGeneratorPage() {
             </div>
           </section>
         )}
+
+        {mode === "voice" && (
+          <section className="grid gap-5 lg:grid-cols-[1fr_30rem]">
+            <div className="rounded-2xl border border-border bg-surface/60 p-5">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Field label="NPC name">
+                  <input
+                    value={npcName}
+                    onChange={(event) => setNpcName(event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+                  />
+                </Field>
+                <SelectField
+                  label="NPC voice style"
+                  value={npcVoiceStyle}
+                  setValue={setNpcVoiceStyle}
+                  options={npcVoiceStyles}
+                />
+              </div>
+              <Field label="NPC dialogue" className="mt-4">
+                <textarea
+                  value={npcDialogue}
+                  onChange={(event) => setNpcDialogue(event.target.value)}
+                  rows={6}
+                  maxLength={1400}
+                  className="w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+                />
+              </Field>
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <SelectField
+                  label="Roblox trigger"
+                  value={npcTriggerMode}
+                  setValue={(value) => setNpcTriggerMode(value as (typeof npcTriggerModes)[number])}
+                  options={Array.from(npcTriggerModes)}
+                />
+                <SelectField
+                  label="Animation hint"
+                  value={npcAnimation}
+                  setValue={setNpcAnimation}
+                  options={npcAnimations}
+                />
+              </div>
+              <label className="mt-4 flex items-center gap-2 text-xs font-semibold">
+                <input
+                  type="checkbox"
+                  checked={npcTypewriter}
+                  onChange={(event) => setNpcTypewriter(event.target.checked)}
+                  className="h-4 w-4 accent-emerald-500"
+                />
+                Typewriter dialogue
+              </label>
+
+              <div className="mt-5 rounded-2xl border border-border bg-background/45 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-bold">
+                  <Volume2 className="h-4 w-4 text-primary" /> Text to voice
+                </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Field label="Browser voice">
+                    <select
+                      value={ttsVoiceName}
+                      onChange={(event) => setTtsVoiceName(event.target.value)}
+                      className="w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+                    >
+                      <option value="">System default</option>
+                      {ttsVoices.map((voice) => (
+                        <option key={`${voice.name}:${voice.lang}`} value={voice.name}>
+                          {voice.name} · {voice.lang}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <div className="grid grid-cols-3 gap-3">
+                    <RangeField
+                      label="Rate"
+                      min={0.6}
+                      max={1.5}
+                      step={0.05}
+                      value={ttsRate}
+                      onChange={setTtsRate}
+                    />
+                    <RangeField
+                      label="Pitch"
+                      min={0.5}
+                      max={1.8}
+                      step={0.05}
+                      value={ttsPitch}
+                      onChange={setTtsPitch}
+                    />
+                    <RangeField
+                      label="Volume"
+                      min={0.2}
+                      max={1}
+                      step={0.05}
+                      value={ttsVolume}
+                      onChange={setTtsVolume}
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={previewNpcVoice}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                  >
+                    <Play className="h-4 w-4" /> Preview voice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopNpcVoice}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2.5 text-xs font-semibold transition hover:bg-surface"
+                  >
+                    <Square className="h-4 w-4" /> Stop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addNpcVoiceToVideoPrompt}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2.5 text-xs font-semibold transition hover:bg-surface"
+                  >
+                    <Film className="h-4 w-4" /> Add to video
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-border bg-surface/60 p-5">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-bold">
+                      <Radio className="h-4 w-4 text-primary" /> Voice control
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Last command: {voiceCommand || "none"}
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2 py-1 text-[10px] font-bold ${
+                      voiceControlOn
+                        ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300"
+                        : "border-border bg-background/50 text-muted-foreground"
+                    }`}
+                  >
+                    {voiceControlOn ? "Listening" : "Idle"}
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={startVoiceControl}
+                    disabled={!voiceControlSupported || voiceControlOn}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-45"
+                  >
+                    <Mic2 className="h-4 w-4" /> Start listening
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopVoiceControl}
+                    disabled={!voiceControlOn}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2.5 text-xs font-semibold transition hover:bg-surface disabled:opacity-45"
+                  >
+                    <Square className="h-4 w-4" /> Stop listening
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-2 text-[11px] text-muted-foreground">
+                  <code className="rounded-lg bg-background/60 px-3 py-2">NPC says welcome</code>
+                  <code className="rounded-lg bg-background/60 px-3 py-2">
+                    video prompt make a Roblox trailer
+                  </code>
+                  <code className="rounded-lg bg-background/60 px-3 py-2">open music</code>
+                  <code className="rounded-lg bg-background/60 px-3 py-2">preview voice</code>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-surface/60 p-5">
+                <div className="mb-3 flex items-center gap-2 text-sm font-bold">
+                  <Bot className="h-4 w-4 text-primary" /> Roblox NPC kit
+                </div>
+                <div className="rounded-xl border border-border bg-background/50 p-3 text-xs">
+                  <div className="font-semibold">{npcName || "NPC"}</div>
+                  <div className="mt-1 text-muted-foreground">{npcVoiceStyle}</div>
+                  <p className="mt-3 whitespace-pre-wrap leading-relaxed">
+                    {npcDialogue || "Add NPC dialogue."}
+                  </p>
+                </div>
+                <a
+                  href={luaDataUrl(
+                    robloxNpcVoiceScript({
+                      npcName,
+                      dialogue: npcDialogue,
+                      voiceStyle: npcVoiceStyle,
+                      animation: npcAnimation,
+                      triggerMode: npcTriggerMode,
+                      typewriter: npcTypewriter,
+                    }),
+                  )}
+                  download="BloxSmithNPCVoiceController.lua"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                >
+                  <Download className="h-4 w-4" /> Download NPC voice script
+                </a>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
       <Footer />
     </div>
@@ -1170,6 +1702,40 @@ function SelectField({
         ))}
       </select>
     </Field>
+  );
+}
+
+function RangeField({
+  label,
+  min,
+  max,
+  step,
+  value,
+  onChange,
+}: {
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block text-xs font-semibold">
+      <span className="mb-1.5 flex items-center justify-between gap-2 text-muted-foreground">
+        {label}
+        <span className="font-mono text-[10px] text-foreground">{value.toFixed(2)}</span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full accent-primary"
+      />
+    </label>
   );
 }
 

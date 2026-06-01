@@ -33,6 +33,7 @@ import {
   Trash2,
   Users,
   Video,
+  Volume2,
   Wrench,
   Zap,
 } from "lucide-react";
@@ -110,6 +111,30 @@ const changelogItems = [
         title: "Gemini Speech to Text",
         detail:
           "Added Gemini 3.1 Flash Lite Preview transcription for uploaded audio or video, with transcript, caption, and script-notes output modes.",
+      },
+      {
+        category: "Audio",
+        tagColor: tagStyles.ai,
+        icon: Volume2,
+        title: "Text To Voice & NPC Voices",
+        detail:
+          "Added a Voice / NPC studio mode with browser text-to-voice previews, selectable speaking styles, rate/pitch/volume controls, and Roblox dialogue trigger settings.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.integrations,
+        icon: FileCode,
+        title: "Roblox NPC Voice Script",
+        detail:
+          "Added a downloadable NPC dialogue controller script with proximity prompt, click detector, or auto-on-spawn triggers plus optional typewriter dialogue.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.ui,
+        icon: Mic2,
+        title: "Voice-Controlled Studio Commands",
+        detail:
+          "Added browser voice commands for switching studio modes, setting video and music prompts, updating NPC dialogue, previewing voices, and adding voice direction into video prompts.",
       },
       {
         category: "Backend",
