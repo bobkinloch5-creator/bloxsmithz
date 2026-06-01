@@ -30,6 +30,7 @@ import {
   HelpCircle,
   Bug,
   Clock,
+  Film,
 } from "lucide-react";
 import { PluginStatus } from "@/components/PluginStatus";
 import { McpStatus } from "@/components/McpStatus";
@@ -58,12 +59,11 @@ type NavItem = {
   guestOnly?: boolean;
 };
 
-// Surfaced as visible top-level links on desktop (lg+). The full list stays in the Browse dropdown.
+// Surfaced as visible top-level links on desktop (lg+). Kept short so the
+// inline row never collides with the right-side controls; the full list
+// lives in the Browse dropdown.
 const PRIMARY_NAV_ITEMS: readonly NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", authOnly: true },
   { to: "/templates", label: "Templates" },
-  { to: "/generate-3d", label: "3D" },
-  { to: "/ui-generator", label: "UI" },
   { to: "/showcase", label: "Showcase" },
   { to: "/pricing", label: "Pricing" },
 ];
@@ -74,6 +74,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: "/script-doctor", label: "Script Doctor", authOnly: true },
   { to: "/clothing", label: "Clothing" },
   { to: "/image-generator", label: "Images" },
+  { to: "/video-generator", label: "Video Generator" },
   { to: "/generate-3d", label: "3D Model Generator" },
   { to: "/ui-generator", label: "UI Generator" },
   { to: "/showcase", label: "Showcase" },
@@ -100,6 +101,7 @@ const MOBILE_NAV_ITEMS: readonly NavItem[] = [
   { to: "/script-doctor", label: "Fix Scripts", icon: Bug, authOnly: true },
   { to: "/clothing", label: "Clothing", icon: Shirt },
   { to: "/image-generator", label: "Images", icon: ImageIcon },
+  { to: "/video-generator", label: "Video Generator", icon: Film },
   { to: "/generate-3d", label: "3D Model Generator", icon: Box },
   { to: "/ui-generator", label: "UI Generator", icon: LayoutIcon },
   { to: "/showcase", label: "Showcase", icon: Star },
@@ -163,7 +165,7 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground lg:flex">
+        <nav className="hidden min-w-0 flex-1 items-center gap-2 overflow-hidden text-sm text-muted-foreground lg:flex">
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background/40 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               Browse
@@ -252,8 +254,8 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2 lg:gap-2.5">
-          <LiveHeaderClock className="hidden sm:inline-flex" />
+        <div className="flex shrink-0 items-center gap-2 lg:gap-2.5 ml-auto">
+          <LiveHeaderClock className="hidden 2xl:inline-flex" />
           <div className="hidden md:flex shrink-0 items-center gap-2">
             <a
               href="https://discord.gg/ZzdqTpntB"
