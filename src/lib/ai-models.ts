@@ -7,25 +7,17 @@ export const SITE_PROVIDER_LABELS: Record<SiteProviderId, string> = {
 
 export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
   neokens: [
-    // All models from the Neokens dashboard. Ordered working-first per the
-    // June 2026 diagnostic so users default to models that actually respond.
-    // Confirmed working:
+    // Only models confirmed working in the June 1 2026 diagnostic. Removed
+    // gpt-5.1 / gpt-5.1-codex / gpt-5.1-codex-max / gpt-5.2-codex (Bad
+    // Request), gemini-3.1-pro (Timeout), and claude-sonnet-4-7-thinking
+    // (Bad Gateway). Re-add any here if Neokens fixes them upstream.
     "gemini-3-flash",
     "claude-haiku-4-5-20251001",
     "gpt-5.2",
     "gpt-5.4",
     "gpt-5.5",
-    // Also listed on the dashboard. NOTE: these returned errors in the last
-    // diagnostic (Bad Request / Bad Gateway / Timeout) — included per request,
-    // but they may show red until Neokens fixes their upstream routing.
     "gpt-5.3-codex",
-    "gpt-5.1",
-    "gpt-5.1-codex",
-    "gpt-5.1-codex-max",
-    "gpt-5.2-codex",
-    "gemini-3.1-pro",
     "claude-sonnet-4-6-thinking",
-    "claude-sonnet-4-7-thinking",
     "claude-opus-4-6-thinking",
     "claude-opus-4-7-thinking",
   ],

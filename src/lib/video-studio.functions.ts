@@ -17,11 +17,18 @@ import {
 // ---------------------------------------------------------------------------
 const DEFAULT_COMET_VIDEO_TASKS_URL = "https://api.cometapi.com/volc/v3/contents/generations/tasks";
 
-// CometAPI's working API examples use "doubao-seedance-2-pro" as the model
-// slug (the catalog *page* URL says "doubao-seedance-2-0", but that's not the
-// API id). Using the wrong slug makes CometAPI reject the request with a
-// misleading "Invalid URL" error. Override via COMET_VIDEO_MODEL if needed.
-const DEFAULT_SEEDANCE_MODEL = "doubao-seedance-2-pro";
+// Seedance model slugs differ between CometAPI's catalog page and their API
+// docs, and not every slug is enabled on every account. We try a list in
+// order and use the first one CometAPI accepts. COMET_VIDEO_MODEL (if set)
+// is tried first. 1.0 Pro is the most widely-available on base plans, so it
+// leads; the 2.0 variants follow for accounts that have them.
+const DEFAULT_SEEDANCE_MODEL = "bytedance-seedance-1-0-pro";
+const SEEDANCE_MODEL_FALLBACKS = [
+  "bytedance-seedance-1-0-pro",
+  "doubao-seedance-2-pro",
+  "doubao-seedance-2-0",
+  "bytedance-seedance-1-0-lite-t2v-250428",
+];
 const REFERENCE_IMAGE_BUCKET = "generated-images";
 
 // Video is gated TWO ways: a hard 1-per-week cap AND a heavy credit cost.
@@ -160,10 +167,13 @@ function getCometVideoTasksUrl(taskId?: string) {
   return taskId ? `${base}/${encodeURIComponent(taskId)}` : base;
 }
 
-function getSeedanceModel() {
-  return (
-    process.env.COMET_VIDEO_MODEL || process.env.COMET_SEEDANCE_MODEL || DEFAULT_SEEDANCE_MODEL
+function getSeedanceModelCandidates(): string[] {
+  const envModel = process.env.COMET_VIDEO_MODEL || process.env.COMET_SEEDANCE_MODEL;
+  const ordered = [envModel, ...SEEDANCE_MODEL_FALLBACKS].filter(
+    (m): m is string => typeof m === "string" && m.trim().length > 0,
   );
+  // De-dupe while preserving order.
+  return [...new Set(ordered)];
 }
 
 async function readJsonResponse(res: Response): Promise<JsonRecord> {
@@ -363,27 +373,52 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
       content.push({ type: "image", url: referenceImageUrl });
     }
 
-    // Submit the task.
+    // Submit the task. CometAPI's Seedance slug varies by account/plan and
+    // between their catalog vs API docs, so we try a list of candidates and
+    // use the first one accepted. "Invalid URL" / "model not found" style
+    // rejections move on to the next candidate.
     const url = getCometVideoTasksUrl();
-    const res = await fetch(url, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({
-        model: getSeedanceModel(),
-        content,
-        output: { resolution: data.resolution, duration_s: data.durationS },
-      }),
-    });
-    const json = await readJsonResponse(res);
-    if (!res.ok) {
-      const providerMessage =
+    const candidates = getSeedanceModelCandidates();
+    let json: JsonRecord = {};
+    let res: Response | null = null;
+    let lastProviderMessage = "";
+
+    for (const model of candidates) {
+      res = await fetch(url, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          model,
+          content,
+          output: { resolution: data.resolution, duration_s: data.durationS },
+        }),
+      });
+      json = await readJsonResponse(res);
+      if (res.ok) break;
+
+      lastProviderMessage =
         nestedString(json, ["error", "message"]) ??
         firstString(json.message) ??
         `Couldn't start video generation (${res.status}).`;
+
+      // If the failure looks like a bad/unavailable model, try the next slug.
+      // Any other error (auth, quota, bad request on content) — stop and report.
+      const looksLikeModelIssue =
+        /invalid url|model.*(not found|unavailable|no available channel)|no available channel|not found/i.test(
+          lastProviderMessage,
+        );
+      if (!looksLikeModelIssue) break;
+    }
+
+    if (!res || !res.ok) {
+      const allModelsFailed =
+        /invalid url|model.*(not found|unavailable)|no available channel|not found/i.test(
+          lastProviderMessage,
+        );
       throw new Error(
-        /invalid url/i.test(String(providerMessage))
-          ? `${providerMessage}. This usually means the model slug is wrong — COMET_VIDEO_MODEL should be "${DEFAULT_SEEDANCE_MODEL}" (or "bytedance-seedance-1-0-pro"), and COMET_VIDEO_TASKS_URL should be ${DEFAULT_COMET_VIDEO_TASKS_URL}.`
-          : providerMessage,
+        allModelsFailed
+          ? `Video generation isn't available on this CometAPI account yet. None of the Seedance models could be reached (${candidates.join(", ")}). This is a CometAPI plan/balance issue — enable a Seedance video model on your CometAPI account, or set COMET_VIDEO_MODEL to one your plan includes. Last error: ${lastProviderMessage}`
+          : lastProviderMessage,
       );
     }
 

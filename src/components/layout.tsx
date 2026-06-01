@@ -243,10 +243,8 @@ export function Header() {
                 Site controls
               </div>
               <div className="grid gap-2 px-2 pb-1" onClick={(event) => event.stopPropagation()}>
-                <div className="grid grid-cols-2 gap-2">
-                  <ThemeToggle />
-                  <LanguageSwitcher compact />
-                </div>
+                {/* Theme picker moved to the navbar — nesting it inside this
+                    Radix dropdown swallowed clicks and clipped the panel. */}
                 {user && (
                   <div className="flex flex-wrap items-center gap-2">
                     <PluginStatus compact />
@@ -265,12 +263,14 @@ export function Header() {
 
         <div className="flex shrink-0 items-center gap-2 lg:gap-2.5 ml-auto">
           <LiveHeaderClock className="hidden 2xl:inline-flex" />
-          <div className="hidden md:flex lg:hidden shrink-0 items-center gap-2">
+          {/* Theme + language selectors live directly on the navbar (not in
+              the Browse dropdown — nesting them in the Radix menu broke clicks
+              and clipped the panels). Shown at every breakpoint. */}
+          <div className="hidden md:flex shrink-0 items-center gap-2">
             <ThemeToggle />
             <LanguageSwitcher compact />
           </div>
-
-          <div className="md:hidden flex items-center gap-2">
+          <div className="flex md:hidden items-center gap-1.5">
             <ThemeToggle />
             <LanguageSwitcher compact />
           </div>
