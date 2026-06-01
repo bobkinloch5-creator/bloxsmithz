@@ -173,27 +173,27 @@ export function getModelProfile(
   const isClaude = provider === "anthropic" || id.includes("claude");
   const toolCaps = getModelToolCapabilities(modelName);
 
-  const inputTokenBudget = isHuge ? 100_000 : isSmall ? 12_000 : 32_000;
+  const inputTokenBudget = isHuge ? 120_000 : isSmall ? 18_000 : 48_000;
   const maxOutputTokens = opts.thinking
     ? isHuge
       ? 16_000
       : 9_000
     : opts.retry
       ? isHuge
-        ? 8_000
-        : 5_500
+        ? 9_000
+        : 6_500
       : opts.heavyBuild
         ? isHuge
-          ? 10_000
-          : 6_500
+          ? 12_000
+          : 8_000
         : isHuge
-          ? 6_500
-          : 4_500;
+          ? 7_500
+          : 5_500;
 
   return {
     inputTokenBudget,
     maxOutputTokens,
-    chatOutputTokens: opts.thinking ? (isHuge ? 2_000 : 1_600) : isSmall ? 700 : 1_100,
+    chatOutputTokens: opts.thinking ? (isHuge ? 2_400 : 1_800) : isSmall ? 900 : 1_400,
     // Timeouts. These were tightened in an earlier pass and combined with
     // the expanded system prompt produced 502 Bad Gateway errors on
     // heavier builds when Cloudflare's worker wall-time ran out before
@@ -207,7 +207,7 @@ export function getModelProfile(
     // model spends them all researching and never writes the final JSON (the
     // "empty bubble" bug). Give non-tiny models enough headroom to research AND
     // finalize. The generateTextWithToolFallback finalize step is the backstop.
-    stopSteps: opts.thinking ? 12 : opts.heavyBuild ? 10 : isSmall ? 4 : 8,
+    stopSteps: opts.thinking ? 14 : opts.heavyBuild ? 12 : isSmall ? 5 : 9,
     supportsTools:
       !opts.retry &&
       !(provider === "groq" && id.includes("gemma")) &&
@@ -220,23 +220,23 @@ export function getModelProfile(
         (id.includes("gemini") || id.includes("gpt-5") || id.includes("claude"))) ||
       (provider === "comet" &&
         (id.includes("gemini") || id.includes("gpt-") || id.includes("claude"))),
-    historyTurns: opts.thinking ? (isHuge ? 8 : 5) : isSmall ? 3 : 5,
-    historyChars: opts.thinking ? (isHuge ? 1_800 : 1_200) : isSmall ? 700 : 1_000,
+    historyTurns: opts.thinking ? (isHuge ? 10 : 6) : isSmall ? 4 : 6,
+    historyChars: opts.thinking ? (isHuge ? 2_200 : 1_500) : isSmall ? 900 : 1_300,
   };
 }
 
 const NEOKENS_MODEL_BY_KIND: Record<ModelKind, string> = {
   chat: "gemini-3-flash",
-  build: "gemini-3-flash",
+  build: "gpt-5.2-codex",
   fast: "gemini-3-flash",
-  large: "gpt-5.2",
+  large: "gemini-3.1-pro",
 };
 
 const COMET_MODEL_BY_KIND: Record<ModelKind, string> = {
   chat: "deepseek-v4-flash",
-  build: "deepseek-v4-flash",
+  build: "claude-sonnet-4-6",
   fast: "deepseek-v4-flash",
-  large: "claude-sonnet-4-6",
+  large: "claude-opus-4-7",
 };
 
 const COMET_STABLE_FALLBACK_MODELS = COMET_SAFE_FALLBACK_MODELS;
@@ -244,8 +244,8 @@ const COMET_STABLE_FALLBACK_MODELS = COMET_SAFE_FALLBACK_MODELS;
 const COMET_MODEL_CANDIDATES_BY_KIND: Record<ModelKind, readonly string[]> = {
   chat: COMET_STABLE_FALLBACK_MODELS,
   fast: COMET_STABLE_FALLBACK_MODELS,
-  build: COMET_STABLE_FALLBACK_MODELS,
-  large: ["claude-sonnet-4-6", "claude-opus-4-7", ...COMET_STABLE_FALLBACK_MODELS],
+  build: ["claude-sonnet-4-6", "deepseek-v4-flash", "claude-opus-4-7"],
+  large: ["claude-opus-4-7", "claude-sonnet-4-6", ...COMET_STABLE_FALLBACK_MODELS],
 };
 
 function uniqueModelNames(models: readonly string[]): string[] {

@@ -950,6 +950,8 @@ export const generateWithAI = createServerFn({ method: "POST" })
     } = await import("./ai-models");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
+    const { buildSmartContextBlock, isSmartFullPromptRequest } =
+      await import("./ai-smartest-builder-core");
 
     const { buildBloxSmithTools } = await import("./ai-tools.server");
 
@@ -960,9 +962,14 @@ export const generateWithAI = createServerFn({ method: "POST" })
       /(system|datastore|leaderboard|tycoon|simulator|obby|admin|gamepass|multiple|all|whole|full game|entire|refactor|rewrite|architecture|replica|replicate|recreate|reference image|attached image|building|house|tower|castle|facade|structure)/i;
     const wantsReplica = isBuildingReplicaPrompt(prompt);
     const isVisionBuild = !!imageDataUrl && mode === "generate";
+    const smartFull = isSmartFullPromptRequest(prompt, mode);
     const isComplex =
       mode === "generate" &&
-      (promptLen > 400 || complexKeywords.test(prompt) || wantsReplica || isVisionBuild);
+      (smartFull ||
+        promptLen > 400 ||
+        complexKeywords.test(prompt) ||
+        wantsReplica ||
+        isVisionBuild);
     const routingKind: "build" | "fast" = mode === "generate" && isComplex ? "build" : "fast";
 
     let resolved;
@@ -1121,6 +1128,13 @@ export const generateWithAI = createServerFn({ method: "POST" })
         liveBlock = `LIVE STUDIO WORKSPACE (${liveContext.instance_count} instances): present`;
       }
     }
+    const smartBlock = buildSmartContextBlock(prompt, {
+      aiMode: mode,
+      studioConnected: !!liveContext?.context,
+      hasVisionImages: !!imageDataUrl,
+      fileCount: (allFiles ?? []).length,
+      liveInstanceCount: liveContext?.instance_count ?? null,
+    });
 
     let result: { message: string; files: GenFile[]; actions: GenAction[] } = {
       message: "",
@@ -1134,7 +1148,8 @@ export const generateWithAI = createServerFn({ method: "POST" })
       ? `\n\nREFERENCE BUILDING REPLICA MODE:\n- A reference image may be attached. Analyze the visible architecture before emitting actions: silhouette, floor count, roof shape, facade colors, materials, windows, door placement, trim, stairs, balconies, pillars, signs, lights, and landscaping.\n- Return a complete Roblox-scale Model under Workspace/Map/Buildings/<DescriptiveName>, not a single block and not an empty folder.\n- Minimum action quality: create Workspace/Map and Workspace/Map/Buildings, one Model, ground/spawn/path, 20+ anchored visible Part/WedgePart/MeshPart details, glass windows, door, trim, roof, and a select action on the Model.\n- Prefer procedural parts for the reference structure so it resembles the image; only use toolbox assets for supporting props/landscaping.\n- If some image details are unclear, infer a polished matching building and say what you inferred in the message.\n`
       : "";
     try {
-      fullPrompt = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${studioErrorBlock ? `${studioErrorBlock}\n\n` : ""}${liveBlock}\n\nFULL PROJECT FILE MAP (${(allFiles ?? []).length} files - every file your project has, by location):\n${projectMap || "  (no files yet)"}\n\nRelevant project files (with content preview):\n${filesBlock || "(none indexed)"}\n\nUser request:\n${prompt}\n\nRules:\n- You have FULL AWARENESS of the project above. Reference real files by path. NEVER duplicate something that already exists - MODIFY it.\n- Use PROJECT MEMORY for durable preferences, naming, genre, and recent context. If memory conflicts with live files or the user's latest request, obey the latest request and live project state.
+      fullPrompt = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${studioErrorBlock ? `${studioErrorBlock}\n\n` : ""}${liveBlock}\n\n${smartBlock}\n\nFULL PROJECT FILE MAP (${(allFiles ?? []).length} files - every file your project has, by location):\n${projectMap || "  (no files yet)"}\n\nRelevant project files (with content preview):\n${filesBlock || "(none indexed)"}\n\nUser request:\n${prompt}\n\nRules:\n- You have FULL AWARENESS of the project above. Reference real files by path. NEVER duplicate something that already exists - MODIFY it.\n- Interpret short, typo-heavy, or broad requests by using the SMART BUILD ROUTER above. Preserve the latest user request exactly, then infer practical Roblox defaults.
+- Use PROJECT MEMORY for durable preferences, naming, genre, and recent context. If memory conflicts with live files or the user's latest request, obey the latest request and live project state.
 - Organize new files into clean subfolders by feature (e.g. ServerScriptService/Combat/HitService, ReplicatedStorage/Modules/Config, StarterPlayerScripts/UI/Hud). Do NOT dump everything at the root of a service.\n- Place server Scripts in ServerScriptService, LocalScripts in StarterPlayerScripts or StarterGui, GUIs in StarterGui, RemoteEvents/RemoteFunctions in ReplicatedStorage/Remotes, ModuleScripts in ReplicatedStorage/Modules (shared) or ServerStorage/Modules (server-only), Tools in StarterPack, physical/world objects in Workspace.\n- For ground/landscape requests (grass, sand, snow, water, hills, islands), use real Roblox Terrain via the \`terrainFill\` action. NEVER spawn hundreds of thin Parts.\n- Do NOT claim success - phrase as "Queued for Studio...".\n- If the request is a casual question (no code changes), reply naturally in 'message' with empty 'files' and 'actions'.\n- Use tools (web_search, roblox_asset_*, fetch_url) ONLY when you genuinely need fresh info - every tool call slows you down.\n\nReturn the JSON object as specified.`;
       fullPrompt += replicaInstruction;
       const { generateTextWithToolFallback } = await import("./ai-retry.server");
@@ -1656,10 +1671,13 @@ export const planBuild = createServerFn({ method: "POST" })
     const { resolveBuiltInGateway } = await import("./ai-providers.server");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
+    const { buildSmartContextBlock, isSmartFullPromptRequest } =
+      await import("./ai-smartest-builder-core");
     let model;
     let planTotalCost = PLAN_COST;
     try {
-      const builtIn = resolveBuiltInGateway({ kind: "fast", thinking });
+      const planKind = isSmartFullPromptRequest(prompt, "plan") || imageDataUrl ? "build" : "fast";
+      const builtIn = resolveBuiltInGateway({ kind: planKind, thinking });
       model = builtIn.model;
       const { applyModelCreditMultiplier } = await import("./ai-models");
       planTotalCost = applyModelCreditMultiplier(PLAN_COST, builtIn.modelName);
@@ -1690,7 +1708,7 @@ export const planBuild = createServerFn({ method: "POST" })
     const [liveContextResult, existingFilesResult, memoryBlock] = await Promise.all([
       supabase
         .from("plugin_context")
-        .select("context,updated_at")
+        .select("context,instance_count,updated_at")
         .eq("project_id", projectId)
         .maybeSingle(),
       supabase
@@ -1709,8 +1727,17 @@ export const planBuild = createServerFn({ method: "POST" })
     const liveBlock = liveContext?.context
       ? `LIVE STUDIO WORKSPACE (snapshot ${liveContext.updated_at}):\n${JSON.stringify(liveContext.context).slice(0, 6000)}`
       : "LIVE STUDIO WORKSPACE: (empty baseplate)";
+    const smartBlock = buildSmartContextBlock(prompt, {
+      aiMode: "plan",
+      studioConnected: !!liveContext?.context,
+      hasVisionImages: !!imageDataUrl,
+      fileCount: (existingFiles ?? []).length,
+      liveInstanceCount: liveContext?.instance_count ?? null,
+    });
 
     const planSystem = `You are BloxSmith's planner for Roblox Studio projects. The user describes a real Roblox game they want to build. You DO NOT write code. You produce a clear, detailed build plan that results in a complete, playable Roblox game — not a demo or snippet.
+
+Understand messy prompts: normalize typos/slang, infer sensible Roblox defaults, preserve the user's latest request, and plan the full connected feature when they ask for "better", "smarter", "everything", UI, sound, menus, saving, or polish.
 
 A real game means: a spawn system, core gameplay loop, win/lose conditions, currencies/leaderstats, UI, sound, and data persistence where appropriate. Plan everything.
 
@@ -1739,7 +1766,7 @@ Keep it under ~400 words. Be specific to the user's request and existing project
 
     let text = "";
     try {
-      const planUserText = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${liveBlock}\n\nExisting project files:\n${filesBlock || "(none)"}\n\nUser request:\n${prompt}`;
+      const planUserText = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${liveBlock}\n\n${smartBlock}\n\nExisting project files:\n${filesBlock || "(none)"}\n\nUser request:\n${prompt}`;
       const { text: out } = await generateText({
         model,
         system: planSystem,
@@ -1888,12 +1915,14 @@ export const chatWithAI = createServerFn({ method: "POST" })
     const { ROBLOX_KNOWLEDGE_PROMPT } = await import("./roblox-knowledge");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
+    const { buildSmartContextBlock } = await import("./ai-smartest-builder-core");
     let resolved;
     try {
+      const chatKind: "chat" | "large" = thinking ? "large" : "chat";
       resolved = await resolveAiGateway({
         userId,
         projectId: projectId ?? null,
-        kind: "fast",
+        kind: chatKind,
         thinking,
       });
       const { enforceExpensiveModelLimit } = await import("./ai-usage-limits.server");
@@ -1937,6 +1966,7 @@ export const chatWithAI = createServerFn({ method: "POST" })
     // Light project context so chat answers stay relevant.
     let projectBlock = "";
     let memoryBlock = "";
+    let projectFileCount = 0;
     if (projectId) {
       const [existingFilesResult, loadedMemory] = await Promise.all([
         supabase
@@ -1948,6 +1978,7 @@ export const chatWithAI = createServerFn({ method: "POST" })
       ]);
       const existingFiles = existingFilesResult.data;
       memoryBlock = loadedMemory;
+      projectFileCount = existingFiles?.length ?? 0;
       if (existingFiles && existingFiles.length > 0) {
         projectBlock =
           "\n\nProject files (for context only - DO NOT modify them):\n" +
@@ -1957,6 +1988,12 @@ export const chatWithAI = createServerFn({ method: "POST" })
             .join("\n");
       }
     }
+    const smartChatBlock = buildSmartContextBlock(prompt, {
+      aiMode: "chat",
+      studioConnected: !!projectId,
+      hasVisionImages: !!attachments?.length,
+      fileCount: projectFileCount,
+    });
 
     const buildSystem = (
       includeProject: boolean,
@@ -1972,8 +2009,11 @@ CHAT MODE RULES - never break these:
 - VISION: When the user attaches screenshots of Roblox Studio, their game, error popups, or reference images, analyze them in detail. Call out broken hierarchies, missing services, malformed Luau, UI layout issues, lighting/material problems, and red error text by exact wording. Tie every observation back to a concrete fix the user can apply.
 - MCP CONTEXT: If the user has connected MCP servers (Roblox docs, n8n, custom tools), reference relevant facts those servers expose. Cite which server you're drawing from so the user can trust the answer.
 - MEMORY: Use project memory for durable preferences, names, genre, style, and recent context. If it conflicts with the user's latest message or live project files, follow the latest message and live state.
+- PROMPT UNDERSTANDING: Normalize typos, shorthand, and broad requests before answering. If the prompt is actionable but chat mode cannot modify the project, explain the intended concrete build and suggest switching to build mode.
 
-${ROBLOX_KNOWLEDGE_PROMPT}${includeProject && memoryBlock ? `\n\n${memoryBlock}` : ""}${includeProject ? projectBlock : ""}`;
+${ROBLOX_KNOWLEDGE_PROMPT}
+
+${smartChatBlock}${includeProject && memoryBlock ? `\n\n${memoryBlock}` : ""}${includeProject ? projectBlock : ""}`;
 
     type Part = { type: "text"; text: string } | { type: "image"; image: string };
     type ChatModel = Parameters<typeof generateText>[0]["model"];
@@ -2079,7 +2119,7 @@ ${ROBLOX_KNOWLEDGE_PROMPT}${includeProject && memoryBlock ? `\n\n${memoryBlock}`
 
     try {
       const builtInCandidates = resolveBuiltInGatewayCandidates({
-        kind: thinking ? "large" : "fast",
+        kind: thinking ? "large" : "chat",
         thinking,
       });
       for (const builtIn of builtInCandidates) {
@@ -2244,6 +2284,8 @@ export const improvePrompt = createServerFn({ method: "POST" })
 
 Rules:
 - Keep the user's exact intent. Don't invent a different game or add unrelated systems.
+- Normalize typos, slang, and shorthand (gui/ui, tycon/tycoon, obbie/obby, pls/please) so the builder knows what the user means.
+- If the user says "better", "smarter", "perfect", "everything", "main menus", "sounds", or "all functions", rewrite it as one concrete polished Roblox feature request.
 - Output ONE short sentence (max ~25 words, hard cap 30). No lists, no multiple sentences.
 - Only add a detail if the original is truly vague (e.g. "make a game" → pick a genre). Otherwise just clean up grammar/clarity.
 - No services, no RemoteEvent names, no implementation details — that's the builder's job.
@@ -2251,7 +2293,7 @@ Rules:
 
     let lastErr: unknown = null;
     try {
-      const candidates = resolveBuiltInGatewayCandidates({ kind: "fast" });
+      const candidates = resolveBuiltInGatewayCandidates({ kind: "chat" });
       for (const candidate of candidates) {
         const profile = getModelProfile(candidate.provider, candidate.modelName, { retry: true });
         try {

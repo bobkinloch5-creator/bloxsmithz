@@ -215,6 +215,9 @@ export const SMART_BUILDER_RUNTIME_DIRECTIVE = `
 ## BloxSmith intelligence layer
 Before every answer, silently behave like a senior Roblox engineer, product designer, security reviewer, and playtester at once.
 - Convert vague or misspelled requests into a concrete Roblox build plan without asking repetitive clarification questions.
+- Normalize typos, shorthand, and casual wording before planning. Treat "pls/please", "make better", "smarter", "gui/ui", "main menus", and similar broad asks as requests for a polished complete feature, not a tiny example.
+- Preserve the user's latest message above project memory or older chat context. If the latest message says to fix, improve, replace, or add something, that is the controlling instruction.
+- Break compound prompts into separate deliverables and satisfy all of them in one coherent system when safe: gameplay, UI, audio, saves, mobile support, testing, and polish.
 - Think in connected systems: dependencies first, visible edit-mode objects second, scripts/remotes/modules/UI third, tests last.
 - Reuse existing project systems when the context shows them; create uniquely named additions when unsure.
 - Prefer high-quality Roblox outcomes over tiny demos: full-screen UI backgrounds for menus, real server authority for gameplay, mobile-safe UI, polish/VFX/audio where relevant.
@@ -222,23 +225,36 @@ Before every answer, silently behave like a senior Roblox engineer, product desi
 - Explain briefly where things go and how to test them, but keep the structured JSON valid and action-focused.
 `;
 
-type SmartIntent =
-  | "BUILD"
-  | "EDIT"
-  | "FIX"
-  | "POLISH"
-  | "ASSET"
-  | "IMAGE"
-  | "QUESTION"
-  | "META";
+type SmartIntent = "BUILD" | "EDIT" | "FIX" | "POLISH" | "ASSET" | "IMAGE" | "QUESTION" | "META";
 
 const INTENT_RULES: Array<{ intent: SmartIntent; pattern: RegExp }> = [
-  { intent: "FIX", pattern: /\b(fix|broken|error|bug|not working|doesn'?t work|failed|missing|issue|debug|why)\b/i },
-  { intent: "POLISH", pattern: /\b(polish|better|improve|premium|clean|smooth|less laggy|optimi[sz]e|effects?|vfx|particles?|animate|animation)\b/i },
-  { intent: "ASSET", pattern: /\b(toolbox|asset|model id|free model|decal|sound|music|skybox|mesh|catalog)\b/i },
-  { intent: "IMAGE", pattern: /\b(image|thumbnail|icon|logo|decal|badge|gamepass|banner|poster|picture|background art)\b/i },
-  { intent: "EDIT", pattern: /\b(change|update|move|rename|resize|recolor|replace|swap|remove|delete)\b/i },
-  { intent: "BUILD", pattern: /\b(make|add|create|build|generate|spawn|insert|give me|i want|need|ui|gui|system|game|map|shop|menu|hud|tool)\b/i },
+  {
+    intent: "FIX",
+    pattern: /\b(fix|broken|error|bug|not working|doesn'?t work|failed|missing|issue|debug|why)\b/i,
+  },
+  {
+    intent: "POLISH",
+    pattern:
+      /\b(polish|better|improve|premium|clean|smooth|less laggy|optimi[sz]e|effects?|vfx|particles?|animate|animation)\b/i,
+  },
+  {
+    intent: "ASSET",
+    pattern: /\b(toolbox|asset|model id|free model|decal|sound|music|skybox|mesh|catalog)\b/i,
+  },
+  {
+    intent: "IMAGE",
+    pattern:
+      /\b(image|thumbnail|icon|logo|decal|badge|gamepass|banner|poster|picture|background art)\b/i,
+  },
+  {
+    intent: "EDIT",
+    pattern: /\b(change|update|move|rename|resize|recolor|replace|swap|remove|delete)\b/i,
+  },
+  {
+    intent: "BUILD",
+    pattern:
+      /\b(make|add|create|build|generate|spawn|insert|give me|i want|need|ui|gui|system|game|map|shop|menu|hud|tool)\b/i,
+  },
   { intent: "META", pattern: /\b(cancel|stop|undo|revert|clear chat)\b/i },
   { intent: "QUESTION", pattern: /\b(how|what|why|when|where|explain)\b/i },
 ];
@@ -246,44 +262,135 @@ const INTENT_RULES: Array<{ intent: SmartIntent; pattern: RegExp }> = [
 const SYSTEM_DEPENDENCIES: Array<{ name: string; pattern: RegExp; deps: string[] }> = [
   {
     name: "Simulator",
-    pattern: /\b(simulator|pet sim|clicker|rebirth|zone|egg|hatch|backpack|sell)\b/i,
+    pattern: /\b(simulator|sim|pet sim|clicker|rebirth|zone|egg|hatch|backpack|sell)\b/i,
     deps: ["Currency/leaderstats", "DataService", "Inventory", "Shop", "Zones", "Mobile HUD"],
   },
   {
     name: "Tycoon",
-    pattern: /\b(tycoon|dropper|conveyor|collector|owner door|purchase pad)\b/i,
-    deps: ["Cash/leaderstats", "Plot ownership", "Purchase validation", "Templates", "Collector", "Save data"],
+    pattern: /\b(tycoon|tycon|dropper|conveyor|collector|owner door|purchase pad)\b/i,
+    deps: [
+      "Cash/leaderstats",
+      "Plot ownership",
+      "Purchase validation",
+      "Templates",
+      "Collector",
+      "Save data",
+    ],
   },
   {
     name: "Obby",
-    pattern: /\b(obby|checkpoint|stage|killbrick|jump pad|moving platform)\b/i,
-    deps: ["Checkpoints", "Stage save", "Spawn locations", "Hazards", "Finish reward", "Mobile HUD"],
+    pattern: /\b(obby|obbie|obbyy|checkpoint|stage|killbrick|jump pad|moving platform)\b/i,
+    deps: [
+      "Checkpoints",
+      "Stage save",
+      "Spawn locations",
+      "Hazards",
+      "Finish reward",
+      "Mobile HUD",
+    ],
   },
   {
     name: "Combat",
     pattern: /\b(combat|weapon|sword|gun|boss|enemy|npc|damage|ability|skill|pvp)\b/i,
-    deps: ["Server hit validation", "Cooldowns", "Tools/animations", "VFX/SFX", "Health/rewards", "Anti-exploit checks"],
+    deps: [
+      "Server hit validation",
+      "Cooldowns",
+      "Tools/animations",
+      "VFX/SFX",
+      "Health/rewards",
+      "Anti-exploit checks",
+    ],
   },
   {
     name: "UI",
-    pattern: /\b(ui|gui|menu|hud|shop screen|settings|inventory|loading|splash|main menu|button|panel)\b/i,
-    deps: ["StarterGui ScreenGui", "Responsive frames", "TweenService polish", "Input handlers", "Server remotes if gameplay changes"],
+    pattern:
+      /\b(ui|gui|guis|menus?|main menu|main menus|hud|shop screen|settings|inventory|loading|splash|button|panel|interface|screen|layout)\b/i,
+    deps: [
+      "StarterGui ScreenGui",
+      "Responsive frames",
+      "TweenService polish",
+      "Input handlers",
+      "Server remotes if gameplay changes",
+    ],
   },
   {
     name: "Economy",
-    pattern: /\b(coins?|cash|gems?|credits?|shop|buy|sell|reward|daily|code|promo|gamepass|developer product)\b/i,
-    deps: ["Server authority", "Leaderstats", "DataService", "Purchase validation", "Receipts/rewards", "Confirmation UI"],
+    pattern:
+      /\b(coins?|cash|gems?|credits?|shop|buy|sell|reward|daily|code|promo|gamepass|developer product)\b/i,
+    deps: [
+      "Server authority",
+      "Leaderstats",
+      "DataService",
+      "Purchase validation",
+      "Receipts/rewards",
+      "Confirmation UI",
+    ],
   },
   {
     name: "World",
     pattern: /\b(map|world|city|lobby|island|forest|school|horror|arena|base|background)\b/i,
-    deps: ["Workspace/Map folders", "SpawnLocation", "Lighting/PostFX", "Props/assets", "Collision/passability", "Performance budget"],
+    deps: [
+      "Workspace/Map folders",
+      "SpawnLocation",
+      "Lighting/PostFX",
+      "Props/assets",
+      "Collision/passability",
+      "Performance budget",
+    ],
   },
   {
     name: "Animation/VFX",
-    pattern: /\b(animation|animate|emote|walk|run|idle|particle|vfx|trail|beam|aura|explosion|spark|effect)\b/i,
-    deps: ["Animator-safe animation loading", "Reusable ReplicatedStorage/VFX helpers", "Debris cleanup", "Reasonable particle counts", "Preview/test step"],
+    pattern:
+      /\b(animation|animate|emote|walk|run|idle|particle|vfx|trail|beam|aura|explosion|spark|effect)\b/i,
+    deps: [
+      "Animator-safe animation loading",
+      "Reusable ReplicatedStorage/VFX helpers",
+      "Debris cleanup",
+      "Reasonable particle counts",
+      "Preview/test step",
+    ],
   },
+  {
+    name: "Audio",
+    pattern:
+      /\b(sound|sounds|sfx|music|audio|click sound|button sound|ambient|ambience|mute|volume)\b/i,
+    deps: [
+      "SoundService folders",
+      "Reusable audio config",
+      "UI feedback sounds",
+      "Mute/volume setting",
+      "No autoplay surprises",
+    ],
+  },
+];
+
+const PROMPT_NORMALIZATIONS: Array<{ pattern: RegExp; hint: string }> = [
+  {
+    pattern: /\b(guis?|ui|menus?|main menus?|hud|interface)\b/i,
+    hint: "Treat UI/menu requests as polished, mobile-safe ScreenGui systems with states, transitions, buttons, and feedback.",
+  },
+  {
+    pattern: /\b(better|smarter|perfect|premium|pro|polish|improve|upgrade)\b/i,
+    hint: "Treat quality words as a request for complete UX polish, not just wording changes.",
+  },
+  {
+    pattern: /\b(sound|sounds|sfx|music|audio)\b/i,
+    hint: "Include SoundService organization, safe defaults, UI click feedback, mute/volume controls, and graceful missing-asset fallback.",
+  },
+  {
+    pattern: /\b(know|understand|prompt|what i am saying|wat i mean|wut i mean)\b/i,
+    hint: "Infer the intended Roblox feature from messy wording while preserving the user's latest request.",
+  },
+  {
+    pattern: /\b(game|full|whole|entire|complete|all functions?|everything)\b/i,
+    hint: "Plan a connected vertical slice with core loop, UI, server authority, data, audio, mobile support, and test steps.",
+  },
+  {
+    pattern: /\b(fix|broken|not working|doesn'?t work|errors?|bug)\b/i,
+    hint: "Patch the likely broken system and add guards/tests instead of only explaining the issue.",
+  },
+  { pattern: /\b(tycon)\b/i, hint: "Normalize 'tycon' to tycoon." },
+  { pattern: /\b(obbie|obbyy)\b/i, hint: "Normalize obby misspellings to obby." },
 ];
 
 export function inferSmartIntent(prompt: string): SmartIntent {
@@ -296,10 +403,27 @@ export function inferSmartIntent(prompt: string): SmartIntent {
 export function isSmartFullPromptRequest(prompt: string, aiMode?: string | null): boolean {
   const combined = `${prompt}\n${aiMode ?? ""}`;
   return (
-    /\b(game|full|complete|entire|system|tycoon|simulator|obby|combat|inventory|shop|menu|hud|ui|gui|loading|splash|settings|quest|npc|enemy|boss|pet|map|world|city|lobby|datastore|save|gamepass|developer product|animation|vfx|particle|cutscene|playtest|debug|fix|premium|polish|mobile)\b/i.test(
+    /\b(game|full|complete|entire|everything|all functions?|system|tycoon|tycon|simulator|sim|obby|obbie|obbyy|combat|inventory|shop|menu|menus?|main menu|main menus|hud|ui|gui|guis|interface|loading|splash|settings|quest|npc|enemy|boss|pet|map|world|city|lobby|datastore|save|gamepass|developer product|animation|vfx|particle|sound|sounds|audio|music|cutscene|playtest|debug|fix|better|smarter|premium|polish|mobile)\b/i.test(
       combined,
-    ) || combined.length > 220
+    ) ||
+    /\b(and|also|plus|with|then)\b.+\b(ui|gui|sound|save|shop|map|menu|fix|better|polish|mobile)\b/i.test(
+      combined,
+    ) ||
+    combined.length > 160
   );
+}
+
+export function buildPromptUnderstandingBlock(prompt: string) {
+  const hints = PROMPT_NORMALIZATIONS.filter((rule) => rule.pattern.test(prompt)).map(
+    (rule) => rule.hint,
+  );
+  if (!hints.length) {
+    return "Prompt understanding: preserve the user's literal latest request, infer practical Roblox defaults, and avoid over-asking for clarification.";
+  }
+  return [
+    "Prompt understanding:",
+    ...[...new Set(hints)].slice(0, 6).map((hint) => `- ${hint}`),
+  ].join("\n");
 }
 
 export function buildSmartContextBlock(
@@ -318,6 +442,7 @@ export function buildSmartContextBlock(
   const dependencies = matched.flatMap((x) => x.deps);
   const uniqueDeps = [...new Set(dependencies)].slice(0, 12);
   const fullQuality = isSmartFullPromptRequest(prompt, options?.aiMode);
+  const understanding = buildPromptUnderstandingBlock(prompt);
   const shouldUseTools =
     intent !== "QUESTION" &&
     /\b(asset|toolbox|model|sound|music|decal|skybox|map|world|city|lobby|npc|weapon|vehicle|pet|thumbnail|image|docs?|api|current|roblox)\b/i.test(
@@ -329,9 +454,12 @@ export function buildSmartContextBlock(
     `Detected intent: ${intent}`,
     `Quality mode: ${fullQuality ? "deep connected Roblox build" : "fast focused Roblox edit"}`,
     `Likely systems: ${systems.join(", ")}`,
+    understanding,
     uniqueDeps.length ? `Dependency order to respect: ${uniqueDeps.join(" -> ")}` : "",
     `Studio context: ${options?.studioConnected ? "plugin connected" : "plugin not connected or unknown"}; live instances: ${options?.liveInstanceCount ?? "unknown"}; saved files: ${options?.fileCount ?? 0}`,
-    options?.hasVisionImages ? "Vision input: user attached image(s); inspect them for UI/layout/error clues before building." : "",
+    options?.hasVisionImages
+      ? "Vision input: user attached image(s); inspect them for UI/layout/error clues before building."
+      : "",
     shouldUseTools
       ? "Tool strategy: use Roblox docs/toolbox/image tools when useful; verify assets are free/safe; do not invent asset IDs."
       : "Tool strategy: no external lookup needed unless the model is unsure about a Roblox API.",
