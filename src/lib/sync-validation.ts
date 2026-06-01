@@ -556,12 +556,41 @@ export function validateGenerated(
       }
     }
 
-    if (a.type === "delete" && !a.path) {
+    if (a.type === "delete") {
+      const deletePath = String(a.path || "").replace(/\//g, ".");
+      if (!deletePath) {
+        errors.push({
+          level: "error",
+          scope: "action",
+          target,
+          message: "delete action missing 'path'",
+        });
+        continue;
+      }
+      if (deletePath !== "Workspace.Baseplate") {
+        errors.push({
+          level: "error",
+          scope: "security",
+          target,
+          message:
+            "delete action blocked to protect existing project work; use additive creates or clearly named new folders instead",
+        });
+        continue;
+      }
+      warnings.push({
+        level: "warning",
+        scope: "security",
+        target,
+        message: "default Baseplate delete allowed only when replacement ground is included",
+      });
+    }
+
+    if (a.type === "terrainClear") {
       errors.push({
         level: "error",
-        scope: "action",
+        scope: "security",
         target,
-        message: "delete action missing 'path'",
+        message: "terrainClear blocked to prevent wiping useful terrain; add new terrain/map folders instead",
       });
       continue;
     }

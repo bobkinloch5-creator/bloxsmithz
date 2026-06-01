@@ -2,6 +2,13 @@
 
 ## Latest Updates
 
+### VFX, Game Safety & Performance
+
+- Expanded BloxSmith AI build rules so Roblox effects are first-class: particles, trails, beams, lights, highlights, smoke/fire, reward bursts, hit sparks, weather, portal glows, auras, muzzle flashes, sound cues, and reusable `ReplicatedStorage/VFX` helpers.
+- Hardened Studio sync validation so AI-generated broad deletes and terrain clears are blocked before they can remove useful work from a project.
+- Improved site responsiveness by lazy-loading Global Chat bundles, delaying the floating chat on non-chat pages, disabling the ripple layer on heavier workspaces, and reducing initial chat payload sizes.
+- Added a lightweight Music Gen card to Browse marked as Coming soon; music generation is announced but not enabled yet.
+
 ### Project Collaboration & Private Team Chat
 
 - Re-added project collaboration controls on the project editor so owners can add BloxSmith teammates by username.

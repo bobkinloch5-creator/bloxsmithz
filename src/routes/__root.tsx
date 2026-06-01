@@ -9,16 +9,19 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { Toaster } from "sonner";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { useUnlockAudio } from "@/hooks/useSounds";
 import { ClickRipple } from "@/components/ClickRipple";
-import { GlobalChat } from "@/components/GlobalChat";
 import { MfaSessionGuard } from "@/components/MfaSessionGuard";
 import { RobloxModelExplainer } from "@/components/RobloxModelExplainer";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
+
+const GlobalChat = lazy(() =>
+  import("@/components/GlobalChat").then((mod) => ({ default: mod.GlobalChat })),
+);
 
 function NotFoundComponent() {
   return (
@@ -266,6 +269,22 @@ function RootComponent() {
   useUnlockAudio();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const hideFloatingChat = pathname.startsWith("/browse");
+  const heavyWorkspaceRoute =
+    pathname.startsWith("/project/") ||
+    pathname.startsWith("/generate-3d") ||
+    pathname.startsWith("/ui-generator");
+  const [enableFloatingChat, setEnableFloatingChat] = useState(false);
+  useEffect(() => {
+    setEnableFloatingChat(false);
+    if (hideFloatingChat || heavyWorkspaceRoute) return;
+    const start = () => setEnableFloatingChat(true);
+    const idle = (window as any).requestIdleCallback?.(start, { timeout: 1600 });
+    const timeout = idle ? null : window.setTimeout(start, 900);
+    return () => {
+      if (idle) (window as any).cancelIdleCallback?.(idle);
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, [hideFloatingChat, heavyWorkspaceRoute, pathname]);
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
@@ -276,8 +295,12 @@ function RootComponent() {
           <Outlet />
           <RobloxModelExplainer />
           
-          <ClickRipple />
-          {!hideFloatingChat && <GlobalChat />}
+          {!heavyWorkspaceRoute && <ClickRipple />}
+          {enableFloatingChat && (
+            <Suspense fallback={null}>
+              <GlobalChat />
+            </Suspense>
+          )}
           <Toaster theme="dark" position="top-right" />
         </AuthProvider>
       </QueryClientProvider>

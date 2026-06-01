@@ -6,10 +6,11 @@ export function ClickRipple() {
   const [ripples, setRipples] = useState<Ripple[]>([]);
 
   useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     let counter = 0;
     const onPointerDown = (e: PointerEvent) => {
       const id = ++counter;
-      setRipples((prev) => [...prev, { id, x: e.clientX, y: e.clientY }]);
+      setRipples((prev) => [...prev.slice(-4), { id, x: e.clientX, y: e.clientY }]);
       window.setTimeout(() => {
         setRipples((prev) => prev.filter((r) => r.id !== id));
       }, 650);

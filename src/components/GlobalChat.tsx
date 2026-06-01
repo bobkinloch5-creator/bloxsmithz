@@ -755,6 +755,8 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     if (!user) return;
     let cancelled = false;
     (async () => {
+      const messageLimit = inline ? 160 : 80;
+      const reactionLimit = inline ? 400 : 160;
       const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes, chanRes] =
         await Promise.all([
           supabase
@@ -764,7 +766,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             )
             .is("deleted_at", null)
             .order("created_at", { ascending: false })
-            .limit(200),
+            .limit(messageLimit),
           supabase
             .from("global_chat_settings")
             .select("slow_mode_seconds")
@@ -778,7 +780,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
           (supabase as any)
             .from("global_chat_reactions")
             .select("id,message_id,user_id,emoji")
-            .limit(500),
+            .limit(reactionLimit),
           (supabase as any).from("global_chat_blocked_words").select("word"),
           (supabase as any)
             .from("global_chat_warnings")
@@ -814,7 +816,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, loadAuthors]);
+  }, [user?.id, loadAuthors, inline]);
 
   // Realtime: messages + reactions + settings + presence + typing
   useEffect(() => {

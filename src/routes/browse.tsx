@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Header, Footer } from "@/components/layout";
-import { GlobalChat } from "@/components/GlobalChat";
 import { useAuth } from "@/lib/auth-context";
 import { MASCOT_SRC } from "@/lib/emotes";
-import { MessagesSquare, Users, Sparkles } from "lucide-react";
+import { lazy, Suspense } from "react";
+import { MessagesSquare, Users, Sparkles, Music2 } from "lucide-react";
+
+const GlobalChat = lazy(() =>
+  import("@/components/GlobalChat").then((mod) => ({ default: mod.GlobalChat })),
+);
 
 export const Route = createFileRoute("/browse")({
   component: BrowsePage,
@@ -49,8 +53,35 @@ function BrowsePage() {
           </div>
         </div>
 
+        <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/5 p-3 sm:p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/25 bg-primary/10 text-primary">
+              <Music2 className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-bold sm:text-base">Music Gen</h2>
+                <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-300">
+                  Coming soon
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                Roblox-ready background music and sound ideas are planned, but generation is not live yet.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {user ? (
-          <GlobalChat inline />
+          <Suspense
+            fallback={
+              <div className="grid min-h-[420px] place-items-center rounded-2xl border border-border bg-surface-elevated text-sm text-muted-foreground">
+                Loading community chat...
+              </div>
+            }
+          >
+            <GlobalChat inline />
+          </Suspense>
         ) : (
           <div className="rounded-2xl border border-border bg-surface-elevated p-8 text-center">
             <img src={MASCOT_SRC} alt="" className="mx-auto h-20 w-20 object-contain" />

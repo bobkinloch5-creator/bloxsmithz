@@ -20,6 +20,7 @@ import {
   Mail,
   Menu,
   MessageSquare,
+  Music,
   Palette,
   Play,
   Rocket,
@@ -53,6 +54,38 @@ const changelogItems = [
     description:
       "BloxSmith AI now has a safer Comet-compatible gateway setup, tighter usage timers, AI memory, playtest QA, and text-to-image generation directly inside project chat.",
     updates: [
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Sparkles,
+        title: "Roblox VFX Support Expanded",
+        detail:
+          "BloxSmith AI now treats particle effects, trails, beams, highlights, lights, smoke/fire, reward bursts, hit sparks, weather, auras, muzzle flashes, and reusable ReplicatedStorage/VFX helpers as first-class Roblox build pieces.",
+      },
+      {
+        category: "Security",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Safer Game Preservation",
+        detail:
+          "Studio sync validation now blocks broad AI-generated deletes and terrain clears before they can remove useful project work, forcing additive changes and clearly named new folders instead.",
+      },
+      {
+        category: "Performance",
+        tagColor: tagStyles.backend,
+        icon: Zap,
+        title: "Lighter Chat Loading",
+        detail:
+          "The site now lazy-loads Global Chat, delays the floating chat on non-chat pages, skips the ripple layer on heavy workspaces, and trims initial chat payloads for better responsiveness.",
+      },
+      {
+        category: "Audio",
+        tagColor: tagStyles.tools,
+        icon: Music,
+        title: "Music Gen Coming Soon",
+        detail:
+          "Browse now includes a lightweight Music Gen preview marked Coming soon. Roblox-ready music generation is planned but remains disabled for now.",
+      },
       {
         category: "Projects",
         tagColor: tagStyles.tools,
