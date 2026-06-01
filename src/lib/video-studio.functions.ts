@@ -15,19 +15,11 @@ import {
 // CometAPI's published docs (volc/v3 contents/generations/tasks).
 // The model slug + paths are isolated here in case CometAPI shifts them.
 // ---------------------------------------------------------------------------
-// Resolve the CometAPI host the SAME way the working text models do, then
-// strip the trailing "/v1" — the video task endpoint lives at the ROOT
-// (/volc/...), not under /v1. Building from the shared helper avoids the
-// "Invalid URL" failure that happened with a hardcoded constant.
-function cometHost() {
-  return getCometBaseUrl().replace(/\/v1\/?$/, "");
-}
-const CREATE_PATH = "/volc/v3/contents/generations/tasks";
-const GET_PATH = "/volc/v3/contents/generations/tasks"; // + /{taskId}
+const DEFAULT_COMET_VIDEO_TASKS_URL = "https://api.cometapi.com/volc/v3/contents/generations/tasks";
 
-// 1.0 Pro is the fully-live text-to-video model on CometAPI. 2.0 is staged
-// beta; swap this constant once it's GA on your key.
-const SEEDANCE_MODEL = "bytedance-seedance-1-0-pro";
+// Comet's current public model page lists this exact API slug for Seedance 2.0.
+const DEFAULT_SEEDANCE_MODEL = "doubao-seedance-2-0";
+const REFERENCE_IMAGE_BUCKET = "generated-images";
 
 // Video is gated TWO ways: a hard 1-per-week cap AND a heavy credit cost.
 // Seedance bills ~$0.05–0.06/sec, and a long clip is expensive, so this is
@@ -78,47 +70,200 @@ export type VideoRateLimit = {
   creditCost: number;
 };
 
+type JsonRecord = Record<string, unknown>;
+type ProviderError = { message?: string };
+type QueryResult<T> = { data: T | null; error: ProviderError | null };
+type VideoGenerationRow = { created_at: string };
+type VideoGenerationInsert = {
+  user_id: string;
+  task_id: string;
+  prompt: string;
+  credits_spent: number;
+};
+type VideoGenerationsQuery = {
+  select(columns: string): VideoGenerationsQuery;
+  eq(column: string, value: unknown): VideoGenerationsQuery;
+  gte(column: string, value: unknown): VideoGenerationsQuery;
+  order(
+    column: string,
+    options: { ascending: boolean },
+  ): Promise<QueryResult<VideoGenerationRow[]>>;
+  insert(row: VideoGenerationInsert): Promise<QueryResult<unknown>>;
+};
+type AuthedContext = { supabase: unknown; userId: string };
+type ContentPart = { type: "text"; text: string } | { type: "image"; url: string };
+
+class VideoRateLimitError extends Error {
+  rateLimited = true;
+  nextAvailableAt: string | null;
+
+  constructor(message: string, nextAvailableAt: string | null) {
+    super(message);
+    this.nextAvailableAt = nextAvailableAt;
+  }
+}
+
+function toRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
+}
+
+function nestedValue(json: JsonRecord, path: string[]) {
+  let current: unknown = json;
+  for (const key of path) {
+    const record = toRecord(current);
+    if (!(key in record)) return undefined;
+    current = record[key];
+  }
+  return current;
+}
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value;
+  }
+  return undefined;
+}
+
+function nestedString(json: JsonRecord, path: string[]) {
+  return firstString(nestedValue(json, path));
+}
+
+function videoGenerationsTable() {
+  return (
+    supabaseAdmin as unknown as { from(table: "video_generations"): VideoGenerationsQuery }
+  ).from("video_generations");
+}
+
 function authHeaders() {
   const key = getCometApiKey();
   if (!key) throw new Error("Video generation isn't configured (COMETAPI_KEY missing).");
   return { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
 }
 
-function parseTaskId(json: any): string | null {
-  return json?.id ?? json?.task_id ?? json?.data?.id ?? json?.data?.task_id ?? null;
+function absoluteCometUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return DEFAULT_COMET_VIDEO_TASKS_URL;
+  if (trimmed.startsWith("/")) {
+    return `${new URL(DEFAULT_COMET_VIDEO_TASKS_URL).origin}${trimmed}`.replace(/\/+$/, "");
+  }
+  return (/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`).replace(/\/+$/, "");
 }
 
-function parseStatus(json: any, fallbackId: string): VideoJob {
-  const raw = json?.status ?? json?.data?.status ?? json?.task?.status ?? "processing";
+function getCometVideoTasksUrl(taskId?: string) {
+  const explicit = process.env.COMET_VIDEO_TASKS_URL || process.env.COMET_SEEDANCE_TASKS_URL;
+  const base = explicit
+    ? absoluteCometUrl(explicit)
+    : `${new URL(absoluteCometUrl(getCometBaseUrl())).origin}/volc/v3/contents/generations/tasks`;
+  return taskId ? `${base}/${encodeURIComponent(taskId)}` : base;
+}
+
+function getSeedanceModel() {
+  return (
+    process.env.COMET_VIDEO_MODEL || process.env.COMET_SEEDANCE_MODEL || DEFAULT_SEEDANCE_MODEL
+  );
+}
+
+async function readJsonResponse(res: Response): Promise<JsonRecord> {
+  const text = await res.text().catch(() => "");
+  if (!text) return {};
+  try {
+    return toRecord(JSON.parse(text));
+  } catch {
+    return { message: text };
+  }
+}
+
+function parseReferenceImageDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,(.+)$/);
+  if (!match) throw new Error("Reference image must be a PNG, JPEG, or WEBP image.");
+
+  const mime = match[1] === "image/jpg" ? "image/jpeg" : match[1];
+  const ext = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
+  return { mime, ext, bytes: Buffer.from(match[2], "base64") };
+}
+
+async function uploadReferenceImage(dataUrl: string, userId: string) {
+  const { mime, ext, bytes } = parseReferenceImageDataUrl(dataUrl);
+  const randomId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2);
+  const path = `${userId}/video-reference-${Date.now()}-${randomId}.${ext}`;
+  const { error } = await supabaseAdmin.storage
+    .from(REFERENCE_IMAGE_BUCKET)
+    .upload(path, bytes, { contentType: mime, upsert: false });
+
+  if (error) throw new Error(`Reference image upload failed: ${error.message}`);
+
+  const { data } = supabaseAdmin.storage.from(REFERENCE_IMAGE_BUCKET).getPublicUrl(path);
+  if (!data.publicUrl) throw new Error("Reference image upload did not return a public URL.");
+  return data.publicUrl;
+}
+
+function parseTaskId(json: JsonRecord): string | null {
+  return (
+    firstString(
+      json.id,
+      json.task_id,
+      nestedValue(json, ["data", "id"]),
+      nestedValue(json, ["data", "task_id"]),
+      nestedValue(json, ["task", "id"]),
+      nestedValue(json, ["data", "task", "id"]),
+    ) ?? null
+  );
+}
+
+function parseStatus(json: JsonRecord, fallbackId: string): VideoJob {
+  const raw =
+    json.status ??
+    nestedValue(json, ["data", "status"]) ??
+    nestedValue(json, ["task", "status"]) ??
+    "processing";
   const status = String(raw).toLowerCase();
   const videoUrl =
-    json?.video?.url ??
-    json?.video_url ??
-    json?.data?.video_url ??
-    json?.content?.video_url ??
-    json?.data?.content?.video_url ??
-    json?.result?.video_url ??
-    undefined;
+    firstString(
+      nestedValue(json, ["video", "url"]),
+      json.video_url,
+      nestedValue(json, ["data", "video_url"]),
+      nestedValue(json, ["content", "video_url"]),
+      nestedValue(json, ["data", "content", "video_url"]),
+      nestedValue(json, ["result", "video_url"]),
+      nestedValue(json, ["result", "download_url"]),
+      nestedValue(json, ["data", "result", "video_url"]),
+      nestedValue(json, ["data", "result", "download_url"]),
+      nestedValue(json, ["output", "video_url"]),
+      nestedValue(json, ["output", "download_url"]),
+    ) ?? undefined;
   const taskId = parseTaskId(json) ?? fallbackId;
 
   if (status === "completed" || status === "succeeded" || status === "success" || videoUrl) {
     return { taskId, status: "completed", videoUrl };
   }
   if (status === "failed" || status === "error") {
-    return { taskId, status: "failed", error: json?.error?.message ?? json?.error ?? "Generation failed." };
+    return {
+      taskId,
+      status: "failed",
+      error:
+        nestedString(json, ["error", "message"]) ?? firstString(json.error) ?? "Generation failed.",
+    };
   }
   if (status === "queued" || status === "pending") return { taskId, status: "queued" };
   return { taskId, status: "processing" };
 }
 
 async function fetchTask(taskId: string): Promise<VideoJob> {
-  const res = await fetch(`${cometHost()}${GET_PATH}/${encodeURIComponent(taskId)}`, {
+  const url = getCometVideoTasksUrl(taskId);
+  const res = await fetch(url, {
     method: "GET",
     headers: authHeaders(),
   });
-  const json = await res.json().catch(() => ({}));
+  const json = await readJsonResponse(res);
   if (!res.ok) {
-    return { taskId, status: "failed", error: json?.error?.message ?? `Status check failed (${res.status}).` };
+    return {
+      taskId,
+      status: "failed",
+      error: nestedString(json, ["error", "message"]) ?? `Status check failed (${res.status}).`,
+    };
   }
   return parseStatus(json, taskId);
 }
@@ -128,8 +273,7 @@ async function checkWeeklyLimit(userId: string, isOwner: boolean): Promise<Video
   if (isOwner) return { allowed: true, nextAvailableAt: null, creditCost: 0 };
 
   const since = new Date(Date.now() - RATE_LIMIT_DAYS * 86400_000).toISOString();
-  const { data, error } = await supabaseAdmin
-    .from("video_generations")
+  const { data, error } = await videoGenerationsTable()
     .select("created_at")
     .eq("user_id", userId)
     .gte("created_at", since)
@@ -141,11 +285,12 @@ async function checkWeeklyLimit(userId: string, isOwner: boolean): Promise<Video
     return { allowed: true, nextAvailableAt: null, creditCost: VIDEO_CREDIT_COST };
   }
 
-  const used = data?.length ?? 0;
+  const rows = data ?? [];
+  const used = rows.length;
   if (used < RATE_LIMIT_COUNT) {
     return { allowed: true, nextAvailableAt: null, creditCost: VIDEO_CREDIT_COST };
   }
-  const earliest = data![data!.length - 1].created_at as string;
+  const earliest = rows[rows.length - 1].created_at;
   const nextAvailableAt = new Date(
     new Date(earliest).getTime() + RATE_LIMIT_DAYS * 86400_000,
   ).toISOString();
@@ -154,7 +299,7 @@ async function checkWeeklyLimit(userId: string, isOwner: boolean): Promise<Video
 
 async function recordGeneration(userId: string, taskId: string, prompt: string, credits: number) {
   try {
-    await supabaseAdmin.from("video_generations").insert({
+    await videoGenerationsTable().insert({
       user_id: userId,
       task_id: taskId,
       prompt: prompt.slice(0, 1000),
@@ -171,7 +316,7 @@ async function recordGeneration(userId: string, taskId: string, prompt: string, 
 export const getVideoRateLimit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<VideoRateLimit> => {
-    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { supabase, userId } = context as AuthedContext;
     const isOwner = await isGeneratorOwner(userId, supabase);
     return checkWeeklyLimit(userId, isOwner);
   });
@@ -180,7 +325,7 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => StartSchema.parse(input))
   .handler(async ({ data, context }): Promise<VideoJob> => {
-    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { supabase, userId } = context as AuthedContext;
 
     // Content safety on the prompt (reuse the shared checker).
     const { checkTextSafeFor3D, checkImageSafeFor3D } = await import("./content-safety.server");
@@ -199,34 +344,44 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
       const when = limit.nextAvailableAt
         ? new Date(limit.nextAvailableAt).toLocaleString()
         : "next week";
-      const err = new Error(`You can generate 1 video per week. Your next video unlocks ${when}.`);
-      (err as any).rateLimited = true;
-      (err as any).nextAvailableAt = limit.nextAvailableAt;
-      throw err;
+      throw new VideoRateLimitError(
+        `You can generate 1 video per week. Your next video unlocks ${when}.`,
+        limit.nextAvailableAt,
+      );
     }
 
     // Gate 2: credits (heavy). Checked up front, charged after a successful submit.
     await ensureCreditsAvailable({ userId, amount: VIDEO_CREDIT_COST, isOwner });
 
     // Build the content array — text always, plus an image if provided.
-    const content: any[] = [{ type: "text", text: data.prompt }];
+    const content: ContentPart[] = [{ type: "text", text: data.prompt }];
     if (data.referenceImageDataUrl) {
-      content.push({ type: "image", url: data.referenceImageDataUrl });
+      const referenceImageUrl = await uploadReferenceImage(data.referenceImageDataUrl, userId);
+      content.push({ type: "image", url: referenceImageUrl });
     }
 
     // Submit the task.
-    const res = await fetch(`${cometHost()}${CREATE_PATH}`, {
+    const url = getCometVideoTasksUrl();
+    const res = await fetch(url, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({
-        model: SEEDANCE_MODEL,
+        model: getSeedanceModel(),
         content,
         output: { resolution: data.resolution, duration_s: data.durationS },
       }),
     });
-    const json = await res.json().catch(() => ({}));
+    const json = await readJsonResponse(res);
     if (!res.ok) {
-      throw new Error(json?.error?.message ?? json?.message ?? `Couldn't start video generation (${res.status}).`);
+      const providerMessage =
+        nestedString(json, ["error", "message"]) ??
+        firstString(json.message) ??
+        `Couldn't start video generation (${res.status}).`;
+      throw new Error(
+        /invalid url/i.test(String(providerMessage))
+          ? `${providerMessage}. Check COMET_VIDEO_TASKS_URL is ${DEFAULT_COMET_VIDEO_TASKS_URL} and COMET_VIDEO_MODEL is ${DEFAULT_SEEDANCE_MODEL}.`
+          : providerMessage,
+      );
     }
 
     const taskId = parseTaskId(json);
@@ -234,11 +389,19 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
       const immediate = parseStatus(json, "immediate");
       if (immediate.videoUrl) {
         await spendCreditsAfterSuccess({
-          supabase, amount: VIDEO_CREDIT_COST, isOwner, userId,
+          supabase,
+          amount: VIDEO_CREDIT_COST,
+          isOwner,
+          userId,
           reason: "video generation",
           insufficientMessage: "Not enough credits for video generation.",
         });
-        await recordGeneration(userId, immediate.taskId || "immediate", data.prompt, isOwner ? 0 : VIDEO_CREDIT_COST);
+        await recordGeneration(
+          userId,
+          immediate.taskId || "immediate",
+          data.prompt,
+          isOwner ? 0 : VIDEO_CREDIT_COST,
+        );
         return immediate;
       }
       throw new Error("Couldn't read a task id from the generation response.");
@@ -246,7 +409,10 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
 
     // Charge once the task is accepted, then record it for the weekly counter.
     await spendCreditsAfterSuccess({
-      supabase, amount: VIDEO_CREDIT_COST, isOwner, userId,
+      supabase,
+      amount: VIDEO_CREDIT_COST,
+      isOwner,
+      userId,
       reason: "video generation",
       insufficientMessage: "Not enough credits for video generation.",
     });

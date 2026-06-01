@@ -118,11 +118,18 @@ function VideoGeneratorPage() {
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => () => { if (pollRef.current) clearTimeout(pollRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!user) return;
-    getLimit().then((r) => setLimit(r as VideoRateLimit)).catch(() => {});
+    getLimit()
+      .then((r) => setLimit(r as VideoRateLimit))
+      .catch(() => {});
   }, [getLimit, user]);
 
   useEffect(() => {
@@ -179,7 +186,9 @@ function VideoGeneratorPage() {
         },
       })) as VideoJob;
       setJob(result);
-      getLimit().then((r) => setLimit(r as VideoRateLimit)).catch(() => {});
+      getLimit()
+        .then((r) => setLimit(r as VideoRateLimit))
+        .catch(() => {});
       if (result.status === "completed" || result.status === "failed") {
         setBusy(false);
         setStartedAt(null);
@@ -187,14 +196,16 @@ function VideoGeneratorPage() {
       } else {
         poll(result.taskId);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setBusy(false);
       setStartedAt(null);
-      const msg = err?.message ?? "Failed to start generation.";
+      const msg = err instanceof Error ? err.message : "Failed to start generation.";
       setError(msg);
       toast.error(msg);
-      if (err?.rateLimited) {
-        getLimit().then((r) => setLimit(r as VideoRateLimit)).catch(() => {});
+      if (typeof err === "object" && err !== null && "rateLimited" in err) {
+        getLimit()
+          .then((r) => setLimit(r as VideoRateLimit))
+          .catch(() => {});
       }
     }
   }
@@ -212,7 +223,9 @@ function VideoGeneratorPage() {
   }
 
   const blocked = !!(limit && !limit.allowed && limit.nextAvailableAt);
-  const countdown = blocked ? formatCountdown(new Date(limit!.nextAvailableAt!).getTime() - now) : null;
+  const countdown = blocked
+    ? formatCountdown(new Date(limit!.nextAvailableAt!).getTime() - now)
+    : null;
 
   // Progress + ETA while rendering. Seedance typically finishes in ~90–180s,
   // so we estimate against a 150s baseline and cap visual progress at 95%
@@ -243,7 +256,9 @@ function VideoGeneratorPage() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Cinematic Roblox trailers &amp; cutscenes · <span className="text-foreground font-medium">{VIDEO_COST} credits</span> · one per week
+              Cinematic Roblox trailers &amp; cutscenes ·{" "}
+              <span className="text-foreground font-medium">{VIDEO_COST} credits</span> · one per
+              week
             </p>
           </div>
         </div>
@@ -294,7 +309,9 @@ function VideoGeneratorPage() {
               disabled={busy}
               className="mt-1.5 w-full rounded-lg border border-border bg-background/60 px-3 py-2 text-sm focus:outline-none focus:border-primary/50 resize-none disabled:opacity-50"
             />
-            <div className="text-[10px] text-muted-foreground text-right mt-1">{prompt.length}/1500</div>
+            <div className="text-[10px] text-muted-foreground text-right mt-1">
+              {prompt.length}/1500
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -342,14 +359,25 @@ function VideoGeneratorPage() {
 
           {/* Optional reference image */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Reference image (optional)</label>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Animate a still image instead of pure text-to-video.</p>
+            <label className="text-xs font-medium text-muted-foreground">
+              Reference image (optional)
+            </label>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Animate a still image instead of pure text-to-video.
+            </p>
             {refImage ? (
               <div className="mt-1.5 relative inline-block">
-                <img src={refImage} alt="reference" className="h-20 rounded-md border border-border object-cover" />
+                <img
+                  src={refImage}
+                  alt="reference"
+                  className="h-20 rounded-md border border-border object-cover"
+                />
                 <button
                   type="button"
-                  onClick={() => { setRefImage(null); if (fileRef.current) fileRef.current.value = ""; }}
+                  onClick={() => {
+                    setRefImage(null);
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
                   className="absolute -right-2 -top-2 grid h-5 w-5 place-items-center rounded-full bg-background border border-border text-muted-foreground hover:text-foreground"
                   aria-label="Remove reference image"
                 >
@@ -366,7 +394,13 @@ function VideoGeneratorPage() {
                 <Upload className="h-3.5 w-3.5" /> Upload image
               </button>
             )}
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickImage} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={onPickImage}
+            />
           </div>
 
           <button
@@ -405,16 +439,26 @@ function VideoGeneratorPage() {
                 {/* Animated 3D-style preview while rendering */}
                 <div className="reel-3d-scene mb-5">
                   <div className="reel-3d-cube">
-                    <div className="reel-3d-face reel-3d-front"><Film className="h-7 w-7" /></div>
-                    <div className="reel-3d-face reel-3d-back"><Film className="h-7 w-7" /></div>
-                    <div className="reel-3d-face reel-3d-right"><Sparkles className="h-7 w-7" /></div>
-                    <div className="reel-3d-face reel-3d-left"><Sparkles className="h-7 w-7" /></div>
+                    <div className="reel-3d-face reel-3d-front">
+                      <Film className="h-7 w-7" />
+                    </div>
+                    <div className="reel-3d-face reel-3d-back">
+                      <Film className="h-7 w-7" />
+                    </div>
+                    <div className="reel-3d-face reel-3d-right">
+                      <Sparkles className="h-7 w-7" />
+                    </div>
+                    <div className="reel-3d-face reel-3d-left">
+                      <Sparkles className="h-7 w-7" />
+                    </div>
                     <div className="reel-3d-face reel-3d-top" />
                     <div className="reel-3d-face reel-3d-bottom" />
                   </div>
                 </div>
 
-                <div className="text-sm font-medium capitalize">{job.status === "queued" ? "Queued" : "Rendering"}…</div>
+                <div className="text-sm font-medium capitalize">
+                  {job.status === "queued" ? "Queued" : "Rendering"}…
+                </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Building your Roblox clip — sit tight, this usually takes 1–3 minutes.
                 </div>

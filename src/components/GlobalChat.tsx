@@ -155,6 +155,11 @@ type SendGlobalChatMessageArgs = {
 };
 
 const OPEN_KEY = "bloxsmith.globalchat.open";
+const CHAT_MESSAGE_SELECT_FULL =
+  "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id,is_announcement";
+const CHAT_MESSAGE_SELECT_WITHOUT_ANNOUNCEMENT =
+  "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id";
+const CHAT_MESSAGE_SELECT_LEGACY = "id,user_id,content,created_at,deleted_at";
 
 const CHAT_RULES = [
   {
@@ -222,6 +227,59 @@ function isRpcSignatureError(error: any) {
       message,
     )
   );
+}
+
+function isMissingChatColumnError(error: any) {
+  const code = String(error?.code ?? "");
+  const message = String(error?.message ?? error ?? "");
+  return (
+    code === "42703" ||
+    code === "PGRST200" ||
+    code === "PGRST204" ||
+    /column .* does not exist|could not find .* column|schema cache/i.test(message)
+  );
+}
+
+function normalizeChatMessage(row: Partial<DbMessage>): DbMessage {
+  return {
+    id: String(row.id ?? ""),
+    user_id: String(row.user_id ?? ""),
+    content: String(row.content ?? ""),
+    created_at: String(row.created_at ?? new Date().toISOString()),
+    deleted_at: row.deleted_at ?? null,
+    reply_to_id: row.reply_to_id ?? null,
+    attachment_url: row.attachment_url ?? null,
+    attachment_type: row.attachment_type ?? null,
+    pinned_at: row.pinned_at ?? null,
+    flagged: row.flagged ?? false,
+    channel_id: row.channel_id ?? "general",
+    is_announcement: row.is_announcement ?? false,
+  };
+}
+
+async function fetchGlobalChatMessages(messageLimit: number) {
+  let lastError: any = null;
+  for (const select of [
+    CHAT_MESSAGE_SELECT_FULL,
+    CHAT_MESSAGE_SELECT_WITHOUT_ANNOUNCEMENT,
+    CHAT_MESSAGE_SELECT_LEGACY,
+  ]) {
+    const res = await (supabase as any)
+      .from("global_chat_messages")
+      .select(select)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(messageLimit);
+    if (!res.error) {
+      return {
+        data: ((res.data ?? []) as Partial<DbMessage>[]).map(normalizeChatMessage),
+        error: null,
+      };
+    }
+    lastError = res.error;
+    if (!isMissingChatColumnError(res.error)) break;
+  }
+  return { data: [] as DbMessage[], error: lastError };
 }
 
 async function sendGlobalChatMessage({
@@ -759,14 +817,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
       const reactionLimit = inline ? 400 : 160;
       const [msgRes, settingsRes, muteRes, reactRes, wordsRes, warnRes, localMuteRes, chanRes] =
         await Promise.all([
-          supabase
-            .from("global_chat_messages")
-            .select(
-              "id,user_id,content,created_at,deleted_at,reply_to_id,attachment_url,attachment_type,pinned_at,flagged,channel_id,is_announcement",
-            )
-            .is("deleted_at", null)
-            .order("created_at", { ascending: false })
-            .limit(messageLimit),
+          fetchGlobalChatMessages(messageLimit),
           supabase
             .from("global_chat_settings")
             .select("slow_mode_seconds")
@@ -797,6 +848,7 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
             .order("position"),
         ]);
       if (cancelled) return;
+      if (msgRes.error) console.warn("[global-chat] message fetch failed:", msgRes.error);
       const rows = (((msgRes as any).data ?? []) as DbMessage[]).reverse();
       setMessages(rows);
       setSlow(((settingsRes.data as any)?.slow_mode_seconds as number) ?? 0);
