@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import {
   MessagesSquare,
   MessageCircle,
@@ -2195,22 +2196,24 @@ export function GlobalChat({ inline = false }: { inline?: boolean } = {}) {
         </div>
       )}
 
-      {!inline && !open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Open chat"
-          className="fixed z-[9998] bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 md:left-5 flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-4 py-2.5 text-foreground shadow-2xl ring-1 ring-black/5 backdrop-blur-xl transition hover:bg-surface hover:scale-[1.02] active:scale-95"
-        >
-          <MessagesSquare className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Chat</span>
-          {unread > 0 && (
-            <span className="ml-1 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
-              {unread > 9 ? "9+" : unread}
-            </span>
-          )}
-        </button>
-      )}
+      {!inline && !open && typeof document !== "undefined" &&
+        createPortal(
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open chat"
+            className="fixed z-[9998] bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 md:left-5 flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-4 py-2.5 text-foreground shadow-2xl ring-1 ring-black/5 transition hover:bg-surface hover:scale-[1.02] active:scale-95"
+          >
+            <MessagesSquare className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-foreground">Chat</span>
+            {unread > 0 && (
+              <span className="ml-1 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </button>,
+          document.body,
+        )}
 
       {open && (
         <aside

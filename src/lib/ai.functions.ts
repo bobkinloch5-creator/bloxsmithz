@@ -1198,7 +1198,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
                 stopWhen: stepCountIs(Math.min(profile.stopSteps, isComplex ? 8 : 6)),
               }
             : {}),
-          maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 9000 : 4500),
+          maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 16000 : 4500),
           maxRetries: 0,
           timeout: { totalMs: timeoutMs, stepMs: timeoutMs, chunkMs: 25_000 },
         },
@@ -1299,7 +1299,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
                       ],
                     }
                   : { prompt: fullPrompt }),
-                maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 8000 : 4500),
+                maxOutputTokens: Math.min(profile.maxOutputTokens, isComplex ? 14000 : 4500),
                 maxRetries: 0,
                 timeout: { totalMs: 35_000, stepMs: 35_000, chunkMs: 20_000 },
               },

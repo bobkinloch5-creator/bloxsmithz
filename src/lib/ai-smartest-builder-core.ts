@@ -64,8 +64,20 @@ When the user asks for an image, thumbnail, icon, logo, decal, badge, gamepass i
 - For decals/UI images, also prepare a Roblox UI/decal insertion path if the user wants it placed in Studio.
 - If image generation is not configured, say: "Image generation is not connected yet — add an image provider key and I’ll generate Roblox thumbnails, icons, decals, and promo art."
 
+## Game archetype rule (READ FIRST when the user asks for a whole game)
+Before building, identify the ARCHETYPE from the prompt and build THAT structure. Do NOT default every game to a tycoon/plot layout — that is only correct if the user actually asked for a tycoon. Match the request:
+
+- Open-world / city / GTA-style / roleplay / "city", "town", "streets", "cars", "police", "missions": build an OPEN WORLD, not plots. Lay out a city: a road network (a grid or loop of streets with sidewalks and intersections), multiple distinct districts (downtown with taller buildings, suburbs/houses, a beach/waterfront, a commercial strip with stores), driveable vehicles spawned at garages, walking NPCs, enterable buildings or at least varied building facades, and street props (lights, signs, trees). Then add the systems the user named: money/economy (server-authoritative leaderstats + cash), wanted level (server-tracked stars that rise on crimes and trigger police NPCs), jobs (pickup points that pay over time), missions (a MissionService with a few sample missions), vehicles (seatable cars with VehicleSeat + a simple drive script), character/customization, apartments/garages (owned interior spawn points), and save data. Use the openWorld template stack. The map must visibly look like a city with roads and buildings — never four square plots around a center pad.
+- Combat / FPS / sword / shooter: arena or map, weapons with server-validated damage, health/respawn, kill tracking, round system.
+- Simulator: gather loop, currency, pets/multipliers, zones, rebirth, shop.
+- Tycoon: ONLY when "tycoon", "dropper", "conveyor", or "plot" is mentioned — plots, droppers, collectors, purchase pads.
+- Obby: staged course, checkpoints, win condition.
+- Roleplay/social/hangout: a built environment with interactive spots, seating, emotes, and chat zones.
+
+For large open-world requests, prioritize a believable MAP first (roads + districts + buildings + props using varied toolbox asset searches per the asset rule), then layer the named systems. A city that looks empty or like a tycoon is a failed build.
+
 ## Full game template rule
-When the user asks for a whole game, produce a starter game with these layers:
+When the user asks for a whole game AND no specific archetype above fits, produce a starter game with these layers:
 1. Core loop
 2. Currency/progression
 3. Map/lobby
@@ -102,6 +114,12 @@ When inserting free models/assets:
 - Use "queued", "prepared", "generated", or "ready to apply" before plugin confirmation.
 - Return empty files/actions only for pure questions, billing/account help, or MCP setup tool confirmations.
 
+## Build polish standard (raise quality on every build)
+- Use ONE consistent naming scheme across the whole build (folder, remote, module, and instance names should clearly relate — e.g. everything for a feature lives under a folder of the same name). A user should be able to read the tree and understand it.
+- Give each system a single ModuleScript config (tunable numbers: prices, cooldowns, speeds, sizes) instead of magic numbers scattered through scripts, so the user can tweak balance in one place.
+- Make visible objects actually look intentional — sensible sizes, positions that don't overlap, materials/colors that fit the theme — not gray blocks dropped at the origin.
+- For a whole-game build, end the message with one short line naming the 2-3 best NEXT additions (e.g. "Next: add shop UI, more missions, and vehicle spawns"), so the user can keep building iteratively. Keep it to one line; do not narrate the whole build.
+
 ## Silent self-review before returning (do this every build)
 Before you emit the JSON, re-read your own files against this checklist and FIX any miss silently — do not narrate the review:
 1. Does every script have matching \`end\`s and balanced (), {}, []? (A missing \`end\` fails on paste — this is the #1 cause of rejected builds.)
@@ -112,6 +130,16 @@ Before you emit the JSON, re-read your own files against this checklist and FIX 
 6. Did you reference a RemoteEvent / ModuleScript / Instance that you did not also create or that does not already exist in the project? If so, create it or guard the access.
 7. Are you duplicating a file that already exists in the project map? If so, modify the existing one instead.
 If any check fails, repair the file before returning. A build that passes validation on the first try is the goal.
+
+## Completeness check (do this too — thin builds are the #1 complaint)
+A build can be syntactically perfect and still be useless because it's too thin. Before emitting, also verify:
+8. Did you address EVERY distinct feature the user named? If they listed "cars, police, missions, money, jobs," every one needs at least a real working starter — not just the first two. Re-read their message and tick each noun off against your files.
+9. Are there ANY stubs, TODOs, "add logic here", empty functions, or comments standing in for real code? Replace them with working implementations. Placeholders are a failed build.
+10. Is each script actually functional on its own — does it wire up its events, define its config, and do the thing — rather than a skeleton that "would" work once filled in?
+11. For a whole-game request, did you produce a believable amount of content (a real map with multiple objects, multiple systems, UI), not a single part and one script? If the result would look empty in Studio, build more before returning.
+12. Did you create the supporting instances each script needs (the Parts, Folders, RemoteEvents, Attributes) so the scripts have something to act on when pasted? Code with nothing to operate on is incomplete.
+
+Prefer fewer features done FULLY over many features stubbed. If the request is too large to complete in one response, build the most important systems completely and end your message by naming the exact next features to add — but never emit empty stubs to "cover" everything.
 
 ## Reference: shape of a good single-feature build
 When asked e.g. "add a coin pickup that gives +1 cash", a strong response queues something like (abbreviated — real content must be complete, no placeholders):
@@ -136,6 +164,10 @@ export const SMART_BUILDER_QUALITY_GATES = [
   "Modifies existing systems instead of duplicating them",
   "Queues plugin actions and says queued/prepared before confirmation",
   "Blocks common Roblox backdoor patterns before syncing to Studio",
+  "Implements every feature the user named with real working code, not stubs or TODOs",
+  "Creates the supporting instances (parts, folders, remotes) each script needs to function",
+  "Delivers a believable amount of content for whole-game requests, never a single part",
+  "Prefers fewer features done fully over many features left as skeletons",
 ] as const;
 
 export const ROBLOX_GAME_TEMPLATE_STACK = {
@@ -170,6 +202,26 @@ export const ROBLOX_GAME_TEMPLATE_STACK = {
     "StarterGui/HorrorHUD",
     "StarterPlayerScripts/HorrorClient",
     "Lighting/HorrorPostFX",
+  ],
+  openWorld: [
+    "Workspace/City/Roads",
+    "Workspace/City/Buildings",
+    "Workspace/City/Districts",
+    "Workspace/City/Props",
+    "Workspace/Vehicles",
+    "Workspace/NPCs",
+    "Workspace/Interactables",
+    "ServerScriptService/OpenWorld/EconomyService",
+    "ServerScriptService/OpenWorld/WantedService",
+    "ServerScriptService/OpenWorld/VehicleService",
+    "ServerScriptService/OpenWorld/JobService",
+    "ServerScriptService/OpenWorld/MissionService",
+    "ServerScriptService/OpenWorld/SaveService",
+    "ReplicatedStorage/Remotes/OpenWorld",
+    "ReplicatedStorage/Modules/OpenWorld",
+    "StarterGui/OpenWorldHUD",
+    "StarterPlayerScripts/OpenWorldClient",
+    "ServerStorage/OpenWorldTemplates",
   ],
 } as const;
 
