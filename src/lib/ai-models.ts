@@ -324,11 +324,35 @@ export const NEOKENS_MODEL_MAP: Record<string, { neokens: string; thinking?: boo
 // a selected model errors at the gateway. Set this to your most reliable id.
 export const NEOKENS_SAFE_FALLBACK_MODEL = "gemini-3-flash";
 
+// Maps the app's UI model ids to the REAL CometAPI model slugs.
+// CometAPI uses dash-separated slugs (e.g. "gpt-5-4-nano", "qwen3-7-max"),
+// not the dotted display names the UI shows ("gpt-5.4-nano"). Sending the
+// dotted form makes CometAPI return model_not_found, which the UI then shows
+// as "Temporarily down". Verified against https://www.cometapi.com/models.
 export const COMET_MODEL_MAP: Record<string, { comet: string; thinking?: boolean }> = {
-  "claude-opus-4-8-thinking": { comet: "claude-opus-4-8", thinking: true },
-  "claude-opus-4-7-thinking": { comet: "claude-opus-4-7", thinking: true },
-  "claude-sonnet-4-6-thinking": { comet: "claude-sonnet-4-6", thinking: true },
+  // OpenAI
+  "gpt-5.4-nano": { comet: "gpt-5-4-nano" },
+  "gpt-5.4-mini": { comet: "gpt-5-4-mini" },
+  "gpt-5.5-all": { comet: "gpt-5-5-all" },
+  // DeepSeek
+  "deepseek-v4-flash": { comet: "deepseek-v4-flash" },
+  "deepseek-v4-pro": { comet: "deepseek-v4" },
+  // MiniMax
+  "minimax-m2.7": { comet: "minimax-m2-7" },
+  // Qwen / Aliyun
+  "qwen3.6-plus": { comet: "qwen3-6-plus" },
+  "qwen3.7-max": { comet: "qwen3-7-max" },
+  // Google Gemini
+  "gemini-3-flash": { comet: "gemini-3-flash-preview" },
+  "gemini-3.5-flash": { comet: "gemini-3-5-flash" },
+  "gemini-3.1-pro": { comet: "gemini-3-1-pro-preview" },
+  // xAI Grok
+  "grok-4.3": { comet: "grok-4-3" },
+  // Anthropic Claude (thinking variants enable extended thinking)
   "claude-haiku-4-5": { comet: "claude-haiku-4-5" },
+  "claude-sonnet-4-6-thinking": { comet: "claude-sonnet-4-6", thinking: true },
+  "claude-opus-4-7-thinking": { comet: "claude-opus-4-7", thinking: true },
+  "claude-opus-4-8-thinking": { comet: "claude-opus-4-8", thinking: true },
 };
 
 /**
