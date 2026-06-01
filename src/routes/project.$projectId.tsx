@@ -74,6 +74,7 @@ import { PluginStatus } from "@/components/PluginStatus";
 import { PushPreview, type PreviewPayload } from "@/components/PushPreview";
 import { ChatSettings } from "@/components/ChatSettings";
 import { SyncValidationDrawer } from "@/components/SyncValidationDrawer";
+import { PlaytestPanel } from "@/components/PlaytestPanel";
 import { AssistantMessage } from "@/components/AssistantMessage";
 import { BuildHistoryDrawer } from "@/components/BuildHistoryDrawer";
 import { OrganizeProjectButton } from "@/components/OrganizeProjectButton";
@@ -1100,6 +1101,8 @@ function ProjectEditor() {
   const isStudioConnected =
     aiContext?.updatedAt != null && Date.now() - new Date(aiContext.updatedAt).getTime() < 40_000;
 
+  const [playtestPanelOpen, setPlaytestPanelOpen] = useState(false);
+
   useEffect(() => {
     if (!scanRequestedAt) return;
     const contextTime = aiContext?.updatedAt ? new Date(aiContext.updatedAt).getTime() : 0;
@@ -1778,6 +1781,13 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
         outOfCredits={outOfCredits}
         fixCost={GENERATE_COST}
       />
+      {playtestPanelOpen && (
+        <PlaytestPanel
+          projectId={projectId}
+          studioConnected={isStudioConnected}
+          onClose={() => setPlaytestPanelOpen(false)}
+        />
+      )}
       <div className="shrink-0 border-b border-border bg-surface/40">
         <div className="mx-auto max-w-7xl px-3 sm:px-4 py-3 flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -2210,9 +2220,8 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                   <Bug className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={runPlaytestRequest}
-                  disabled={aiBusy || aiUsageBlocked}
-                  title="AI Playtest — inspect the game like Roblox QA and queue safe fixes"
+                  onClick={() => setPlaytestPanelOpen(true)}
+                  title="Playtest with AI — scan your game, find problems, and fix them in Studio"
                   className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-primary-glow hover:bg-primary/10 transition disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Gamepad2 className="h-3.5 w-3.5" />
@@ -2398,10 +2407,9 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                 </span>
               </button>
               <button
-                onClick={runPlaytestRequest}
-                disabled={aiBusy || aiUsageBlocked}
+                onClick={() => setPlaytestPanelOpen(true)}
                 className="rounded-lg border border-border bg-background/35 px-2 py-2 text-left hover:bg-surface-elevated transition disabled:cursor-not-allowed disabled:opacity-50"
-                title="Run an AI QA pass over the project and queue safe fixes"
+                title="Playtest with AI — scan, find problems, and Fix in Studio"
               >
                 <span className="flex items-center gap-1.5 font-semibold text-foreground">
                   <Gamepad2 className="h-3 w-3 text-primary" /> Playtest
