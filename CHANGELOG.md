@@ -2,6 +2,23 @@
 
 ## Latest Updates
 
+### AI Video Generator (CometAPI / Seedance)
+
+- Added a dedicated AI Video Generator that turns text prompts into cinematic Roblox trailers and cutscenes via the CometAPI Seedance backend.
+- Added Roblox-themed movie-style presets (Tycoon Trailer, Obby Showcase, Horror Teaser, Simulator Promo, RPG Cinematic, Racing Promo, Tower Defense, Anime Battle) that one-click fill the prompt.
+- Added an animated 3D rotating-reel preview that plays while the clip renders, plus a live progress bar with a percentage and an ETA countdown.
+- Added an in-page video player and a one-click Download button for finished clips.
+- Added optional image-to-video: upload a still image to animate instead of pure text-to-video.
+- Added length options from 4 to 15 seconds and 720p / 1080p quality.
+- Gated video generation to 1 per user per week (clearly labelled in the UI with a countdown to the next unlock) and priced it at 150 credits, with owners/staff bypassing both limits.
+- Surfaced the Video Generator in the Browse dropdown and the mobile navigation.
+
+### Navigation & Header Layout
+
+- Fixed the desktop header where navigation links overlapped the clock, Discord button, and account controls.
+- Hid the live header clock except on very wide screens and constrained the nav so it can no longer collide with the right-side controls.
+- Trimmed the inline primary links and kept the full set inside the Browse dropdown.
+
 ### VFX, Game Safety & Performance
 
 - Expanded BloxSmith AI build rules so Roblox effects are first-class: particles, trails, beams, lights, highlights, smoke/fire, reward bursts, hit sparks, weather, portal glows, auras, muzzle flashes, sound cues, and reusable `ReplicatedStorage/VFX` helpers.

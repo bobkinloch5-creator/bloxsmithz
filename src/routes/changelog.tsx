@@ -48,6 +48,55 @@ const tagStyles = {
 
 const changelogItems = [
   {
+    version: "v3.9.0",
+    date: "June 1, 2026",
+    title: "AI Roblox Video Generator",
+    description:
+      "Turn text prompts into cinematic Roblox trailers and cutscenes with the new AI Video Generator — movie-style presets, a 3D rendering preview, live progress, and one-click downloads.",
+    updates: [
+      {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Film,
+        title: "AI Video Generator",
+        detail:
+          "Generate cinematic Roblox game trailers and cutscenes from a text prompt using the CometAPI Seedance backend, with 720p/1080p quality and clips from 4 to 15 seconds.",
+      },
+      {
+        category: "Tools",
+        tagColor: tagStyles.tools,
+        icon: Sparkles,
+        title: "Roblox Movie Presets",
+        detail:
+          "One-click presets for Tycoon Trailer, Obby Showcase, Horror Teaser, Simulator Promo, RPG Cinematic, Racing Promo, Tower Defense, and Anime Battle styles fill the prompt with a strong starting point.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Play,
+        title: "3D Preview, Progress & Download",
+        detail:
+          "An animated 3D rotating-reel preview plays while the clip renders, with a live progress bar, percentage, and ETA. Finished videos play in-page and download with one click. Optional image-to-video lets you animate a still image.",
+      },
+      {
+        category: "Backend",
+        tagColor: tagStyles.backend,
+        icon: Clock,
+        title: "Once-A-Week, Premium Pricing",
+        detail:
+          "Video generation is limited to 1 per user per week (clearly labelled with a countdown to the next unlock) and costs 150 credits, keeping the premium Seedance backend sustainable. Owners and staff bypass both limits.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Menu,
+        title: "Header Layout Fix",
+        detail:
+          "Fixed the desktop header where nav links overlapped the clock, Discord button, and account controls. The live clock now only shows on very wide screens and the nav can no longer collide with the right-side controls.",
+      },
+    ],
+  },
+  {
     version: "v3.8.8",
     date: "May 31, 2026",
     title: "BloxSmith AI Gateway, Chat Images & Usage Protection",
