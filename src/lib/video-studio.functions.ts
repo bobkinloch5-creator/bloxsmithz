@@ -17,8 +17,11 @@ import {
 // ---------------------------------------------------------------------------
 const DEFAULT_COMET_VIDEO_TASKS_URL = "https://api.cometapi.com/volc/v3/contents/generations/tasks";
 
-// Comet's current public model page lists this exact API slug for Seedance 2.0.
-const DEFAULT_SEEDANCE_MODEL = "doubao-seedance-2-0";
+// CometAPI's working API examples use "doubao-seedance-2-pro" as the model
+// slug (the catalog *page* URL says "doubao-seedance-2-0", but that's not the
+// API id). Using the wrong slug makes CometAPI reject the request with a
+// misleading "Invalid URL" error. Override via COMET_VIDEO_MODEL if needed.
+const DEFAULT_SEEDANCE_MODEL = "doubao-seedance-2-pro";
 const REFERENCE_IMAGE_BUCKET = "generated-images";
 
 // Video is gated TWO ways: a hard 1-per-week cap AND a heavy credit cost.
@@ -379,7 +382,7 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
         `Couldn't start video generation (${res.status}).`;
       throw new Error(
         /invalid url/i.test(String(providerMessage))
-          ? `${providerMessage}. Check COMET_VIDEO_TASKS_URL is ${DEFAULT_COMET_VIDEO_TASKS_URL} and COMET_VIDEO_MODEL is ${DEFAULT_SEEDANCE_MODEL}.`
+          ? `${providerMessage}. This usually means the model slug is wrong — COMET_VIDEO_MODEL should be "${DEFAULT_SEEDANCE_MODEL}" (or "bytedance-seedance-1-0-pro"), and COMET_VIDEO_TASKS_URL should be ${DEFAULT_COMET_VIDEO_TASKS_URL}.`
           : providerMessage,
       );
     }

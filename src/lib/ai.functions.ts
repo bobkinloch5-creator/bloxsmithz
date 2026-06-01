@@ -1242,7 +1242,11 @@ export const generateWithAI = createServerFn({ method: "POST" })
       // shared account also lacks a channel for the primary fallback, the next
       // candidate is tried. Other providers fall through to the template
       // fallback below.
-      const fallbackCandidates: { provider: "neokens" | "comet"; model: string; envKey: string | undefined }[] =
+      const fallbackCandidates: {
+        provider: "neokens" | "comet";
+        model: string;
+        envKey: string | undefined;
+      }[] =
         resolved.provider === "neokens"
           ? resolved.modelName !== NEOKENS_SAFE_FALLBACK_MODEL
             ? [

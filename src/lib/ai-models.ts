@@ -7,28 +7,27 @@ export const SITE_PROVIDER_LABELS: Record<SiteProviderId, string> = {
 
 export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
   neokens: [
-    // Recommended defaults first: fast + budget-friendly active Neokens ids.
+    // Confirmed live by the model diagnostic: gemini-3-flash, gpt-5.2,
+    // claude-haiku. gpt-5.4/5.5 are commonly available — verify via the
+    // admin diagnostic and remove any that show Bad Request.
     "gemini-3-flash",
-    "gpt-5.3-codex",
-    "claude-haiku-4-5-20251001",
-    "gpt-5.1",
-    "gpt-5.1-codex",
     "gpt-5.2",
-    "gpt-5.2-codex",
-    "gpt-5.1-codex-max",
-    "gemini-3.1-pro",
-    "claude-sonnet-4-6-thinking",
-    "claude-sonnet-4-7-thinking",
     "gpt-5.4",
     "gpt-5.5",
-    "claude-opus-4-6-thinking",
-    "claude-opus-4-7-thinking",
+    "claude-haiku-4-5-20251001",
   ],
   comet: [
-    // Keep this list to routes currently available on the shared Comet group.
-    // Unavailable routes still exist in descriptions below, but should not be
-    // pinged by diagnostics or offered as site-available defaults.
+    // Verified exact slugs from cometapi.com/models (June 2026). Budget
+    // models first. If a model shows "no available channel" in diagnostics,
+    // that's a CometAPI plan/tier limit, not a wrong slug.
     "deepseek-v4-flash",
+    "gpt-5-4-mini",
+    "gpt-5-4-nano",
+    "minimax-m2-7",
+    "qwen3-7-max",
+    "grok-4-3",
+    "deepseek-v4",
+    "gemini-3-5-flash",
     "claude-sonnet-4-6",
     "claude-opus-4-7",
     "claude-opus-4-8",
@@ -112,9 +111,23 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
 // next to each model so users can pick by budget.
 // ─────────────────────────────────────────────────────────────────────────
 export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
-  // BloxSmith AI budget models
-  "gpt-5.4-nano": 0.35,
+  // BloxSmith AI budget models — hyphenated keys match the real Comet slugs.
+  "gpt-5-4-nano": 0.35,
   "deepseek-v4-flash": 0.5,
+  "minimax-m2-7": 0.65,
+  "gpt-5-4-mini": 0.8,
+  "gpt-5-4-pro": 6,
+  "gpt-5-5": 4,
+  "gpt-5-5-all": 12,
+  "qwen3-7-max": 1.5,
+  "gemini-3-5-flash": 2,
+  "gemini-3-1-pro-preview": 2.5,
+  "grok-4-3": 2,
+  "grok-4-2": 2,
+  "deepseek-v4": 2.5,
+  "minimax-m3": 1.5,
+  // Legacy dotted keys kept as harmless fallbacks for any old references.
+  "gpt-5.4-nano": 0.35,
   "minimax-m2.7": 0.65,
   "qwen3.6-plus": 0.75,
   "gpt-5.4-mini": 0.8,

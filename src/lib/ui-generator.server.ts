@@ -80,7 +80,11 @@ type UIElement = {
   cornerRadius?: number;
   strokeColor?: { r: number; g: number; b: number };
   strokeThickness?: number;
-  gradient?: { from: { r: number; g: number; b: number }; to: { r: number; g: number; b: number }; rotation: number };
+  gradient?: {
+    from: { r: number; g: number; b: number };
+    to: { r: number; g: number; b: number };
+    rotation: number;
+  };
   layout?: "List" | "Grid" | "None";
   layoutDirection?: "Vertical" | "Horizontal";
   layoutPadding?: number;
@@ -91,7 +95,14 @@ type UIElement = {
 // Use z.lazy for recursion so both AI output and deterministic templates validate.
 const UIElementSchema: z.ZodType<UIElement> = z.lazy(() =>
   z.object({
-    type: z.enum(["Frame", "TextLabel", "TextButton", "ImageButton", "ImageLabel", "ScrollingFrame"]),
+    type: z.enum([
+      "Frame",
+      "TextLabel",
+      "TextButton",
+      "ImageButton",
+      "ImageLabel",
+      "ScrollingFrame",
+    ]),
     ...ElementBase,
     text: z.string().max(200).optional(),
     textColor: Color.optional(),
@@ -164,11 +175,15 @@ const UI_AI_TIMEOUT_MS = 7_500;
 const UI_AI_OUTPUT_TOKENS = 4_500;
 
 const STYLE_HINTS: Record<UIStyle, string> = {
-  Modern: "Rounded corners (12-16px), drop shadows via UIStroke, balanced spacing, subtle gradients.",
+  Modern:
+    "Rounded corners (12-16px), drop shadows via UIStroke, balanced spacing, subtle gradients.",
   Neon: "Dark backgrounds, glowing neon accents on borders/text, strong gradients, vivid primary color.",
-  Minimal: "Flat colors, no gradients, thin strokes, generous whitespace, small corner radius (4-8px).",
-  Cartoon: "Thick borders (3-4px), bright saturated colors, large rounded corners (20-28px), playful fonts (FredokaOne/LuckiestGuy).",
-  Glass: "Semi-transparent backgrounds (0.3-0.5 transparency), subtle gradients, frosted look, thin white strokes.",
+  Minimal:
+    "Flat colors, no gradients, thin strokes, generous whitespace, small corner radius (4-8px).",
+  Cartoon:
+    "Thick borders (3-4px), bright saturated colors, large rounded corners (20-28px), playful fonts (FredokaOne/LuckiestGuy).",
+  Glass:
+    "Semi-transparent backgrounds (0.3-0.5 transparency), subtle gradients, frosted look, thin white strokes.",
   Anime: "Pastel/vivid gradients, sharp accents, decorative strokes, rounded but stylized.",
 };
 
@@ -278,7 +293,11 @@ function themedBackgroundLayers(opts: {
       position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
       size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
       backgroundColor: mixColor(opts.bg, themeColor, 0.18),
-      gradient: { from: mixColor(opts.bg, themeColor, 0.08), to: mixColor(opts.bg, secondary, 0.4), rotation: [25, 120, 60, 155][opts.variant % 4] ?? 35 },
+      gradient: {
+        from: mixColor(opts.bg, themeColor, 0.08),
+        to: mixColor(opts.bg, secondary, 0.4),
+        rotation: [25, 120, 60, 155][opts.variant % 4] ?? 35,
+      },
       zIndex: 1,
     },
     {
@@ -296,7 +315,12 @@ function themedBackgroundLayers(opts: {
       type: "Frame",
       id: "ThemeSilhouetteA",
       name: "ThemeSilhouetteA",
-      position: { xScale: isCity ? 0.05 : 0.08, xOffset: 0, yScale: isCity ? 0.42 : 0.22, yOffset: 0 },
+      position: {
+        xScale: isCity ? 0.05 : 0.08,
+        xOffset: 0,
+        yScale: isCity ? 0.42 : 0.22,
+        yOffset: 0,
+      },
       size: { xScale: 0, xOffset: isCity ? 96 : 240, yScale: 0, yOffset: isCity ? 280 : 240 },
       backgroundColor: mixColor(themeColor, opts.bg, isCity ? 0.25 : 0.1),
       backgroundTransparency: 0.5,
@@ -309,7 +333,12 @@ function themedBackgroundLayers(opts: {
       type: "Frame",
       id: "ThemeSilhouetteB",
       name: "ThemeSilhouetteB",
-      position: { xScale: isCity ? 0.72 : 0.68, xOffset: 0, yScale: isCity ? 0.36 : 0.14, yOffset: 0 },
+      position: {
+        xScale: isCity ? 0.72 : 0.68,
+        xOffset: 0,
+        yScale: isCity ? 0.36 : 0.14,
+        yOffset: 0,
+      },
       size: { xScale: 0, xOffset: isCity ? 124 : 300, yScale: 0, yOffset: isCity ? 330 : 300 },
       backgroundColor: secondary,
       backgroundTransparency: 0.62,
@@ -352,7 +381,11 @@ function listGateways(): GatewayChoice[] {
   }
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
-    out.push({ gw: createGroqProvider(groqKey), modelName: BLOXSMITH_THINK_MODEL, providerName: "groq" });
+    out.push({
+      gw: createGroqProvider(groqKey),
+      modelName: BLOXSMITH_THINK_MODEL,
+      providerName: "groq",
+    });
   }
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (lovableKey) {
@@ -362,8 +395,6 @@ function listGateways(): GatewayChoice[] {
   }
   return out;
 }
-
-
 
 function safeInstanceName(value: string | undefined, fallback: string) {
   const cleaned = String(value || fallback)
@@ -394,7 +425,9 @@ function normalizeElement(el: UIElement, fallbackName: string): UIElement {
     id: safeInstanceName(el.id || name, name),
     name,
     children: Array.isArray(el.children)
-      ? el.children.slice(0, 40).map((child, idx) => normalizeElement(child, `${name}Child${idx + 1}`))
+      ? el.children
+          .slice(0, 40)
+          .map((child, idx) => normalizeElement(child, `${name}Child${idx + 1}`))
       : undefined,
   };
   if (out.type === "TextLabel" || out.type === "TextButton") {
@@ -410,9 +443,7 @@ function applyVisibilityDefaults(el: UIElement, zIndex = 1): UIElement {
     ...el,
     zIndex: el.zIndex ?? zIndex,
     backgroundTransparency:
-      el.type === "TextLabel"
-        ? (el.backgroundTransparency ?? 1)
-        : el.backgroundTransparency,
+      el.type === "TextLabel" ? (el.backgroundTransparency ?? 1) : el.backgroundTransparency,
   };
   const childZ = Math.max(next.zIndex ?? zIndex, zIndex) + 1;
   next.children = next.children?.map((child, idx) => {
@@ -422,9 +453,15 @@ function applyVisibilityDefaults(el: UIElement, zIndex = 1): UIElement {
   return next;
 }
 
-function normalizeUISpec(spec: UISpec, opts: { category: UICategory; bgColor?: { r: number; g: number; b: number } }): UISpec {
+function normalizeUISpec(
+  spec: UISpec,
+  opts: { category: UICategory; bgColor?: { r: number; g: number; b: number } },
+): UISpec {
   const title = spec.title?.trim() || `${opts.category} UI`;
-  const screenGuiName = safeInstanceName(spec.screenGuiName, `${safeInstanceName(title, "BloxSmithUI")}Gui`);
+  const screenGuiName = safeInstanceName(
+    spec.screenGuiName,
+    `${safeInstanceName(title, "BloxSmithUI")}Gui`,
+  );
   const root = applyVisibilityDefaults(normalizeElement(spec.root, "RootFrame"), 1);
   root.type = "Frame";
   root.id ||= "RootFrame";
@@ -434,12 +471,19 @@ function normalizeUISpec(spec: UISpec, opts: { category: UICategory; bgColor?: {
   root.backgroundColor ??= opts.bgColor ?? { r: 15, g: 23, b: 42 };
   root.backgroundTransparency ??= 0;
   root.zIndex ??= 1;
-  return UISpecSchema.parse({ ...spec, title, screenGuiName, root, mobileFriendly: spec.mobileFriendly ?? true });
+  return UISpecSchema.parse({
+    ...spec,
+    title,
+    screenGuiName,
+    root,
+    mobileFriendly: spec.mobileFriendly ?? true,
+  });
 }
 
 function buttonTextForCategory(category: UICategory) {
   if (category.includes("Shop")) return ["VIP Pass", "2x Coins", "Starter Pack", "Ultra Bundle"];
-  if (category === "Inventory" || category === "Pet Inventory") return ["Equip", "Upgrade", "Favorite", "Delete"];
+  if (category === "Inventory" || category === "Pet Inventory")
+    return ["Equip", "Upgrade", "Favorite", "Delete"];
   if (category === "Trading") return ["Add Item", "Ready", "Accept", "Cancel"];
   if (category === "Daily Rewards") return ["Day 1", "Day 2", "Day 3", "Claim"];
   if (category === "Spin Wheel") return ["Spin", "Lucky Boost", "Rewards", "Close"];
@@ -482,26 +526,32 @@ function createFallbackUISpec(opts: {
   });
 
   if (wantsMainMenuBackground(opts)) {
-    const menuButtons = ["Play", "Settings", "Shop", "Credits"].map((label, idx): UIElement => ({
-      type: "TextButton",
-      id: `${label}Button`,
-      name: `${label}Button`,
-      text: label,
-      textColor: { r: 255, g: 255, b: 255 },
-      textSize: idx === 0 ? 28 : 22,
-      font: "GothamBlack",
-      size: { xScale: 1, xOffset: 0, yScale: 0, yOffset: idx === 0 ? 76 : 62 },
-      backgroundColor: idx === 0 ? primary : { r: 24, g: 34, b: 52 },
-      backgroundTransparency: idx === 0 ? 0 : 0.06,
-      strokeColor: idx === 0 ? { r: 255, g: 255, b: 255 } : accent,
-      strokeThickness: idx === 0 ? 3 : 2,
-      cornerRadius: opts.style === "Cartoon" ? 24 : 18,
-      gradient:
-        opts.style === "Minimal"
-          ? undefined
-          : { from: idx === 0 ? primary : { r: 30, g: 41, b: 59 }, to: idx === 0 ? accent : bg, rotation: 115 },
-      zIndex: 4,
-    }));
+    const menuButtons = ["Play", "Settings", "Shop", "Credits"].map(
+      (label, idx): UIElement => ({
+        type: "TextButton",
+        id: `${label}Button`,
+        name: `${label}Button`,
+        text: label,
+        textColor: { r: 255, g: 255, b: 255 },
+        textSize: idx === 0 ? 28 : 22,
+        font: "GothamBlack",
+        size: { xScale: 1, xOffset: 0, yScale: 0, yOffset: idx === 0 ? 76 : 62 },
+        backgroundColor: idx === 0 ? primary : { r: 24, g: 34, b: 52 },
+        backgroundTransparency: idx === 0 ? 0 : 0.06,
+        strokeColor: idx === 0 ? { r: 255, g: 255, b: 255 } : accent,
+        strokeThickness: idx === 0 ? 3 : 2,
+        cornerRadius: opts.style === "Cartoon" ? 24 : 18,
+        gradient:
+          opts.style === "Minimal"
+            ? undefined
+            : {
+                from: idx === 0 ? primary : { r: 30, g: 41, b: 59 },
+                to: idx === 0 ? accent : bg,
+                rotation: 115,
+              },
+        zIndex: 4,
+      }),
+    );
 
     const spec: UISpec = {
       title,
@@ -648,7 +698,10 @@ end`,
             cornerRadius: opts.style === "Cartoon" ? 30 : 20,
             strokeColor: accent,
             strokeThickness: opts.style === "Neon" ? 3 : 1.5,
-            gradient: opts.style === "Minimal" ? undefined : { from: bg, to: { r: 17, g: 24, b: 39 }, rotation: 135 },
+            gradient:
+              opts.style === "Minimal"
+                ? undefined
+                : { from: bg, to: { r: 17, g: 24, b: 39 }, rotation: 135 },
             children: [
               {
                 type: "TextLabel",
@@ -861,7 +914,10 @@ end`,
           cornerRadius: opts.style === "Cartoon" ? 32 : 22,
           strokeColor: accent,
           strokeThickness: opts.style === "Neon" ? 3 : 2,
-          gradient: opts.style === "Minimal" ? undefined : { from: bg, to: { r: 18, g: 24, b: 38 }, rotation: 135 },
+          gradient:
+            opts.style === "Minimal"
+              ? undefined
+              : { from: bg, to: { r: 18, g: 24, b: 38 }, rotation: 135 },
           zIndex: 3,
           children: [
             {
@@ -960,13 +1016,16 @@ end`,
               strokeColor: accent,
               strokeThickness: 2,
               cornerRadius: 18,
-              gradient: opts.style === "Minimal" ? undefined : { from: primary, to: accent, rotation: 90 },
+              gradient:
+                opts.style === "Minimal" ? undefined : { from: primary, to: accent, rotation: 90 },
             },
             {
               type: "TextLabel",
               id: "FooterNote",
               name: "FooterNote",
-              text: needsRemote ? "Server validated rewards and purchases" : "Responsive Roblox ScreenGui layout",
+              text: needsRemote
+                ? "Server validated rewards and purchases"
+                : "Responsive Roblox ScreenGui layout",
               textColor: { r: 148, g: 163, b: 184 },
               textSize: 13,
               font: "Gotham",
@@ -980,7 +1039,9 @@ end`,
     },
     remoteEvents: needsRemote ? [`${screenGuiName}Request`] : [],
     localScript: `local gui = script.Parent\nlocal panel = gui:FindFirstChild("RootFrame", true)\nlocal close = gui:FindFirstChild("CloseButton", true)\nif close and close:IsA("TextButton") then\n\tclose.MouseButton1Click:Connect(function()\n\t\tgui.Enabled = false\n\tend)\nend\nfor _, btn in ipairs(gui:GetDescendants()) do\n\tif btn:IsA("TextButton") and btn.Name ~= "CloseButton" then\n\t\tbtn.MouseButton1Click:Connect(function()\n\t\t\tprint("BloxSmith UI button clicked:", btn.Name)\n\t\tend)\n\tend\nend`,
-    serverScript: needsRemote ? `local ReplicatedStorage = game:GetService("ReplicatedStorage")\nlocal remote = ReplicatedStorage:FindFirstChild("${screenGuiName}Request") or Instance.new("RemoteEvent")\nremote.Name = "${screenGuiName}Request"\nremote.Parent = ReplicatedStorage\nremote.OnServerEvent:Connect(function(player, action)\n\tprint("BloxSmith UI request", player.Name, action)\n\t-- TODO: validate purchases/rewards on the server before granting anything.\nend)` : undefined,
+    serverScript: needsRemote
+      ? `local ReplicatedStorage = game:GetService("ReplicatedStorage")\nlocal remote = ReplicatedStorage:FindFirstChild("${screenGuiName}Request") or Instance.new("RemoteEvent")\nremote.Name = "${screenGuiName}Request"\nremote.Parent = ReplicatedStorage\nremote.OnServerEvent:Connect(function(player, action)\n\tprint("BloxSmith UI request", player.Name, action)\n\t-- TODO: validate purchases/rewards on the server before granting anything.\nend)`
+      : undefined,
   };
 
   return normalizeUISpec(spec, opts);
@@ -1017,13 +1078,18 @@ export async function generateUISpec(opts: {
   }
 
   const styleHint = STYLE_HINTS[opts.style];
-  const palette = [
-    opts.primaryColor ? `Primary RGB(${opts.primaryColor.r},${opts.primaryColor.g},${opts.primaryColor.b})` : null,
-    opts.accentColor ? `Accent  RGB(${opts.accentColor.r},${opts.accentColor.g},${opts.accentColor.b})` : null,
-    opts.bgColor ? `Background RGB(${opts.bgColor.r},${opts.bgColor.g},${opts.bgColor.b})` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ") || "use a tasteful palette appropriate to the category";
+  const palette =
+    [
+      opts.primaryColor
+        ? `Primary RGB(${opts.primaryColor.r},${opts.primaryColor.g},${opts.primaryColor.b})`
+        : null,
+      opts.accentColor
+        ? `Accent  RGB(${opts.accentColor.r},${opts.accentColor.g},${opts.accentColor.b})`
+        : null,
+      opts.bgColor ? `Background RGB(${opts.bgColor.r},${opts.bgColor.g},${opts.bgColor.b})` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "use a tasteful palette appropriate to the category";
 
   const userPrompt = `Category: ${opts.category}
 Style: ${opts.style} — ${styleHint}
@@ -1043,11 +1109,17 @@ ${wantsMainMenuBackground(opts) ? "Main menu background requirement: create the 
       return normalizeUISpec(spec, opts);
     } catch (err: any) {
       lastErr = err;
-      console.warn(`[ui-gen] ${gateway.providerName}/${gateway.modelName} JSON output failed; trying deterministic fallback:`, err?.message || err);
+      console.warn(
+        `[ui-gen] ${gateway.providerName}/${gateway.modelName} JSON output failed; trying deterministic fallback:`,
+        err?.message || err,
+      );
     }
   }
 
-  console.warn("[ui-gen] providers were slow/empty; returning deterministic UI:", lastErr?.message || lastErr);
+  console.warn(
+    "[ui-gen] providers were slow/empty; returning deterministic UI:",
+    lastErr?.message || lastErr,
+  );
   return instantSpec;
 }
 
@@ -1089,9 +1161,11 @@ function propsForElement(el: UIElement) {
   props.Visible = true;
   if (el.size) props.Size = udim2(el.size);
   if (el.position) props.Position = udim2(el.position);
-  if (el.anchorPoint) props.AnchorPoint = { __t: "Vector2", x: el.anchorPoint.x, y: el.anchorPoint.y };
+  if (el.anchorPoint)
+    props.AnchorPoint = { __t: "Vector2", x: el.anchorPoint.x, y: el.anchorPoint.y };
   if (el.backgroundColor) props.BackgroundColor3 = color3(el.backgroundColor);
-  if (typeof el.backgroundTransparency === "number") props.BackgroundTransparency = el.backgroundTransparency;
+  if (typeof el.backgroundTransparency === "number")
+    props.BackgroundTransparency = el.backgroundTransparency;
   if (typeof el.zIndex === "number") props.ZIndex = el.zIndex;
 
   if (el.type === "TextLabel" || el.type === "TextButton") {
@@ -1099,7 +1173,8 @@ function propsForElement(el: UIElement) {
     if (el.textColor) props.TextColor3 = color3(el.textColor);
     if (el.textSize) props.TextSize = el.textSize;
     if (el.font) props.Font = { __t: "Enum", enum: "Font", value: el.font };
-    if (el.textAlign) props.TextXAlignment = { __t: "Enum", enum: "TextXAlignment", value: el.textAlign };
+    if (el.textAlign)
+      props.TextXAlignment = { __t: "Enum", enum: "TextXAlignment", value: el.textAlign };
   }
   if (el.type === "TextButton" || el.type === "ImageButton") {
     props.Active = true;
@@ -1118,11 +1193,7 @@ function propsForElement(el: UIElement) {
   return props;
 }
 
-function pushElement(
-  el: UIElement,
-  parentPath: string,
-  actions: PluginAction[],
-) {
+function pushElement(el: UIElement, parentPath: string, actions: PluginAction[]) {
   const className =
     el.type === "Frame"
       ? "Frame"
@@ -1209,7 +1280,12 @@ function pushElement(
       parent: myPath,
       properties: {
         CellSize: udim2(el.cellSize ?? { xScale: 0, xOffset: 120, yScale: 0, yOffset: 120 }),
-        CellPadding: udim2({ xScale: 0, xOffset: el.layoutPadding ?? 8, yScale: 0, yOffset: el.layoutPadding ?? 8 }),
+        CellPadding: udim2({
+          xScale: 0,
+          xOffset: el.layoutPadding ?? 8,
+          yScale: 0,
+          yOffset: el.layoutPadding ?? 8,
+        }),
         SortOrder: { __t: "Enum", enum: "SortOrder", value: "LayoutOrder" },
       },
     });
@@ -1319,7 +1395,9 @@ export function specToPluginPayload(spec: UISpec): { actions: PluginAction[]; fi
 // Pretty Luau export (concatenated) for the Code tab.
 export function specToLuauPreview(spec: UISpec): string {
   const parts: string[] = [];
-  parts.push(`-- ${spec.title}\n-- ScreenGui: ${spec.screenGuiName}\n-- Place ScreenGui under StarterGui.`);
+  parts.push(
+    `-- ${spec.title}\n-- ScreenGui: ${spec.screenGuiName}\n-- Place ScreenGui under StarterGui.`,
+  );
   if (spec.remoteEvents?.length) {
     parts.push(
       `\n-- RemoteEvents (ReplicatedStorage):\n` +
@@ -1327,6 +1405,7 @@ export function specToLuauPreview(spec: UISpec): string {
     );
   }
   if (spec.localScript) parts.push(`\n-- LocalScript (inside ScreenGui):\n${spec.localScript}`);
-  if (spec.serverScript) parts.push(`\n-- ServerScript (ServerScriptService):\n${spec.serverScript}`);
+  if (spec.serverScript)
+    parts.push(`\n-- ServerScript (ServerScriptService):\n${spec.serverScript}`);
   return parts.join("\n");
 }

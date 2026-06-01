@@ -98,7 +98,8 @@ function safeAssetName(name: string, fallback = "ToolboxAsset") {
 }
 
 function hasUnsafeAssetTerms(item: any) {
-  const haystack = `${item?.name ?? ""} ${item?.description ?? ""} ${item?.creator ?? ""}`.toLowerCase();
+  const haystack =
+    `${item?.name ?? ""} ${item?.description ?? ""} ${item?.creator ?? ""}`.toLowerCase();
   return UNSAFE_ASSET_TERMS.some((term) => haystack.includes(term));
 }
 
@@ -107,7 +108,10 @@ function assetQualityScore(item: any, query: string, groupLabel = "") {
   const creator = String(item?.creator ?? "").toLowerCase();
   const queryTerms = cleanPromptTerms(`${query} ${groupLabel}`, 8);
   const relevance = queryTerms.reduce((sum, term) => sum + (name.includes(term) ? 18 : 0), 0);
-  const voteScore = Math.min(45, Number(item?.upVotePercent ?? 0) * Math.log10(Number(item?.voteCount ?? 0) + 1));
+  const voteScore = Math.min(
+    45,
+    Number(item?.upVotePercent ?? 0) * Math.log10(Number(item?.voteCount ?? 0) + 1),
+  );
   const favoriteScore = Math.min(25, Math.log10(Number(item?.favorites ?? 0) + 1) * 8);
   const trustScore = item?.verified || creator === "roblox" ? 25 : 0;
   const freeScore = (item?.price ?? 0) === 0 ? 20 : -100;
@@ -116,7 +120,13 @@ function assetQualityScore(item: any, query: string, groupLabel = "") {
   return relevance + voteScore + favoriteScore + trustScore + freeScore + saleScore + riskyPenalty;
 }
 
-function dedupeAndRankAssets(items: any[], query: string, limit: number, groupLabel = "", usedIds?: Set<number>) {
+function dedupeAndRankAssets(
+  items: any[],
+  query: string,
+  limit: number,
+  groupLabel = "",
+  usedIds?: Set<number>,
+) {
   const seenNames = new Set<string>();
   const ranked = items
     .filter((item) => Number.isFinite(Number(item?.assetId)))
@@ -157,45 +167,119 @@ function buildToolboxPlanGroups(prompt: string, requestedTypes: string[] = []): 
   const theme = terms.length ? terms.join(" ") : "roblox";
   const requested = new Set(requestedTypes.map((t) => t.toLowerCase()));
   const groups: ToolboxPlanGroup[] = [];
-  const add = (label: string, category: string, parent: string, count: number, queries: string[]) => {
-    if (requested.size && !requested.has(label.toLowerCase()) && !requested.has(category.toLowerCase())) return;
+  const add = (
+    label: string,
+    category: string,
+    parent: string,
+    count: number,
+    queries: string[],
+  ) => {
+    if (
+      requested.size &&
+      !requested.has(label.toLowerCase()) &&
+      !requested.has(category.toLowerCase())
+    )
+      return;
     groups.push({ label, category, parent, count, queries: uniqueQueries(queries) });
   };
 
   if (/\b(city|town|roleplay|rp|street|downtown)\b/.test(lower)) {
-    add("Roads", "Models", "Workspace/Map/Roads", 3, [`${theme} road kit`, "city road", "street road pack"]);
-    add("Buildings", "Models", "Workspace/Map/Buildings", 4, [`${theme} building`, "city building", "shop building"]);
-    add("Streetlights", "Models", "Workspace/Map/Decorations", 2, ["street light", "city lamp post"]);
+    add("Roads", "Models", "Workspace/Map/Roads", 3, [
+      `${theme} road kit`,
+      "city road",
+      "street road pack",
+    ]);
+    add("Buildings", "Models", "Workspace/Map/Buildings", 4, [
+      `${theme} building`,
+      "city building",
+      "shop building",
+    ]);
+    add("Streetlights", "Models", "Workspace/Map/Decorations", 2, [
+      "street light",
+      "city lamp post",
+    ]);
     add("Vehicles", "Models", "Workspace/Vehicles", 2, ["city car", "roblox vehicle car"]);
     add("Trees", "Models", "Workspace/Map/Nature", 2, ["city tree", "park tree"]);
     add("Signs", "Models", "Workspace/Map/Decorations", 2, ["street sign", "city sign"]);
   } else if (/\b(simulator|clicker|rebirth|coins|gems|pet sim)\b/.test(lower)) {
-    add("Pets", "Models", "ReplicatedStorage/Assets/Pets", 4, [`${theme} pet`, "simulator pet", "cute pet"]);
-    add("Coins", "Models", "Workspace/Interactables/Currency", 3, ["coin pickup", "gem pickup", "simulator coin"]);
-    add("Zones", "Models", "Workspace/Map/Zones", 3, [`${theme} zone`, "simulator zone", "portal gate"]);
-    add("Upgrades", "Models", "Workspace/Interactables/Upgrades", 2, ["upgrade station", "shop stand"]);
+    add("Pets", "Models", "ReplicatedStorage/Assets/Pets", 4, [
+      `${theme} pet`,
+      "simulator pet",
+      "cute pet",
+    ]);
+    add("Coins", "Models", "Workspace/Interactables/Currency", 3, [
+      "coin pickup",
+      "gem pickup",
+      "simulator coin",
+    ]);
+    add("Zones", "Models", "Workspace/Map/Zones", 3, [
+      `${theme} zone`,
+      "simulator zone",
+      "portal gate",
+    ]);
+    add("Upgrades", "Models", "Workspace/Interactables/Upgrades", 2, [
+      "upgrade station",
+      "shop stand",
+    ]);
     add("Tools", "Models", "StarterPack/Tools", 2, [`${theme} tool`, "simulator tool"]);
   } else if (/\b(obby|parkour|tower|lava)\b/.test(lower)) {
-    add("Obby Kits", "Models", "Workspace/Map/Obby", 4, [`${theme} obby kit`, "obby obstacle", "parkour kit"]);
-    add("Checkpoints", "Models", "Workspace/Map/Checkpoints", 2, ["obby checkpoint", "checkpoint pad"]);
+    add("Obby Kits", "Models", "Workspace/Map/Obby", 4, [
+      `${theme} obby kit`,
+      "obby obstacle",
+      "parkour kit",
+    ]);
+    add("Checkpoints", "Models", "Workspace/Map/Checkpoints", 2, [
+      "obby checkpoint",
+      "checkpoint pad",
+    ]);
     add("Hazards", "Models", "Workspace/Map/Hazards", 2, ["lava obstacle", "kill brick obstacle"]);
   } else if (/\b(tycoon|factory|dropper|conveyor)\b/.test(lower)) {
-    add("Tycoon Kits", "Models", "Workspace/Map/Tycoon", 3, [`${theme} tycoon kit`, "tycoon dropper", "factory tycoon"]);
-    add("Droppers", "Models", "ServerStorage/Templates/Tycoon", 2, ["tycoon dropper", "ore dropper"]);
-    add("Buttons", "Models", "Workspace/Interactables/TycoonButtons", 2, ["tycoon button", "buy button"]);
+    add("Tycoon Kits", "Models", "Workspace/Map/Tycoon", 3, [
+      `${theme} tycoon kit`,
+      "tycoon dropper",
+      "factory tycoon",
+    ]);
+    add("Droppers", "Models", "ServerStorage/Templates/Tycoon", 2, [
+      "tycoon dropper",
+      "ore dropper",
+    ]);
+    add("Buttons", "Models", "Workspace/Interactables/TycoonButtons", 2, [
+      "tycoon button",
+      "buy button",
+    ]);
   } else if (/\b(horror|scary|monster|haunted)\b/.test(lower)) {
-    add("Horror Map", "Models", "Workspace/Map", 2, [`${theme} horror map`, "haunted house", "abandoned school"]);
-    add("Props", "Models", "Workspace/Map/Decorations", 4, ["horror props", "creepy furniture", "broken lamp"]);
+    add("Horror Map", "Models", "Workspace/Map", 2, [
+      `${theme} horror map`,
+      "haunted house",
+      "abandoned school",
+    ]);
+    add("Props", "Models", "Workspace/Map/Decorations", 4, [
+      "horror props",
+      "creepy furniture",
+      "broken lamp",
+    ]);
     add("NPCs", "Models", "Workspace/NPCs", 2, ["monster npc", "zombie npc"]);
   } else {
-    add("Map Pieces", "Models", "Workspace/Map", 3, [`${theme} map`, `${theme} build kit`, `${theme} environment`]);
-    add("Props", "Models", "Workspace/Map/Props", 4, [`${theme} props`, `${theme} decoration`, "roblox props"]);
+    add("Map Pieces", "Models", "Workspace/Map", 3, [
+      `${theme} map`,
+      `${theme} build kit`,
+      `${theme} environment`,
+    ]);
+    add("Props", "Models", "Workspace/Map/Props", 4, [
+      `${theme} props`,
+      `${theme} decoration`,
+      "roblox props",
+    ]);
     add("Tools", "Models", "StarterPack/Tools", 2, [`${theme} tool`, `${theme} weapon`]);
     add("NPCs", "Models", "Workspace/NPCs", 2, [`${theme} npc`, `${theme} character`]);
   }
 
   add("Ambient Audio", "Audio", "SoundService/Music", 1, [`${theme} music`, "ambient loop"]);
-  add("UI Icons", "Decals", "ReplicatedStorage/Assets/Icons", 2, [`${theme} icon`, "coin icon", "button icon"]);
+  add("UI Icons", "Decals", "ReplicatedStorage/Assets/Icons", 2, [
+    `${theme} icon`,
+    "coin icon",
+    "button icon",
+  ]);
 
   return groups.slice(0, 10);
 }
@@ -221,7 +305,13 @@ export async function planRobloxToolboxAssets(opts: {
       });
       candidates.push(...found.map((item) => ({ ...item, sourceQuery: query })));
     }
-    const items = dedupeAndRankAssets(candidates, group.queries.join(" "), wanted, group.label, usedIds);
+    const items = dedupeAndRankAssets(
+      candidates,
+      group.queries.join(" "),
+      wanted,
+      group.label,
+      usedIds,
+    );
     for (const item of items) usedIds.add(Number(item.assetId));
 
     const offset = (items.length - 1) * 11;
@@ -585,7 +675,9 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
         .string()
         .min(3)
         .max(800)
-        .describe("The user's full Roblox build request, e.g. 'build a city map' or 'make a coin simulator'."),
+        .describe(
+          "The user's full Roblox build request, e.g. 'build a city map' or 'make a coin simulator'.",
+        ),
       assetTypes: z
         .array(z.string().min(2).max(40))
         .max(12)
@@ -942,9 +1034,7 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
       const { checkTextSafeFor3D } = await import("./content-safety.server");
       const safety = checkTextSafeFor3D(prompt);
       if (!safety.safe) return { error: safety.reason };
-      const { enforceAiUsageLimit, userBypassesAiLimit } = await import(
-        "./ai-usage-limits.server"
-      );
+      const { enforceAiUsageLimit, userBypassesAiLimit } = await import("./ai-usage-limits.server");
       const bypassesLimit = await userBypassesAiLimit(ctx.userId, supabaseAdmin);
       if (!bypassesLimit) {
         try {
@@ -1019,7 +1109,7 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
           const r = await fetch(getNeokensChatCompletionsUrl(), {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${neokensKey}`,
+              Authorization: `Bearer ${neokensKey}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -1181,9 +1271,7 @@ export const buildBloxSmithTools = (ctx: BloxSmithToolCtx = {}) => ({
     }),
     execute: async ({ kind, style }) => {
       if (!ctx.userId) return { error: "Please sign in to generate clothing." };
-      const { checkImageHourlyLimit, generateImageFromPrompt } = await import(
-        "./image-gen.server"
-      );
+      const { checkImageHourlyLimit, generateImageFromPrompt } = await import("./image-gen.server");
       const limitErr = await checkImageHourlyLimit(ctx.userId);
       if (limitErr) return { error: limitErr };
 
