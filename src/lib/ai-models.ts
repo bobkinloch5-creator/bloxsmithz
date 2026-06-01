@@ -15,31 +15,31 @@ export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
     "claude-haiku-4-5-20251001",
   ],
   comet: [
-    // Budget-first defaults to protect the shared site key. Keep the first
-    // entry on a stable Comet route; nano can be unavailable on shared groups.
-    "gpt-5.4-mini",
-    "qwen3.6-plus",
+    // Verified against cometapi.com/models (June 2026). These are the exact
+    // catalog slugs. Budget-first ordering protects the shared site key.
+    "gpt-5-4-mini",
+    "gpt-5-4-nano",
     "deepseek-v4-flash",
-    "minimax-m2.7",
-    "gpt-5.4-nano",
-    "gpt-5.5-all",
-    "qwen3.7-max",
-    "gemini-3-flash",
-    "gemini-3.5-flash",
-    "gemini-3.1-pro",
-    "grok-4.3",
-    "deepseek-v4-pro",
-    // Premium picks are available, but intentionally later in the list.
-    "claude-haiku-4-5",
-    "claude-sonnet-4-6-thinking",
-    "claude-opus-4-7-thinking",
-    "claude-opus-4-8-thinking",
+    "deepseek-v4",
+    "minimax-m2-7",
+    "minimax-m3",
+    "qwen3-7-max",
+    "gpt-5-5",
+    "gpt-5-5-all",
+    "grok-4-3",
+    "grok-4-2",
+    "gemini-3-5-flash",
+    "gemini-3-1-pro-preview",
+    // Premium picks — available, intentionally later in the list.
+    "claude-sonnet-4-6",
+    "claude-opus-4-7",
+    "claude-opus-4-8",
   ],
 };
 
 export const SITE_PROVIDER_DEFAULT_MODEL: Record<SiteProviderId, string> = {
   neokens: "gemini-3-flash",
-  comet: "gpt-5.4-mini",
+  comet: "gpt-5-4-mini",
 };
 
 export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {

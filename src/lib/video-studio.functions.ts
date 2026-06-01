@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { getCometApiKey } from "./comet-config.server";
+import { getCometApiKey, getCometBaseUrl } from "./comet-config.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   ensureCreditsAvailable,
@@ -15,7 +15,13 @@ import {
 // CometAPI's published docs (volc/v3 contents/generations/tasks).
 // The model slug + paths are isolated here in case CometAPI shifts them.
 // ---------------------------------------------------------------------------
-const COMET_BASE = "https://api.cometapi.com";
+// Resolve the CometAPI host the SAME way the working text models do, then
+// strip the trailing "/v1" — the video task endpoint lives at the ROOT
+// (/volc/...), not under /v1. Building from the shared helper avoids the
+// "Invalid URL" failure that happened with a hardcoded constant.
+function cometHost() {
+  return getCometBaseUrl().replace(/\/v1\/?$/, "");
+}
 const CREATE_PATH = "/volc/v3/contents/generations/tasks";
 const GET_PATH = "/volc/v3/contents/generations/tasks"; // + /{taskId}
 
@@ -106,7 +112,7 @@ function parseStatus(json: any, fallbackId: string): VideoJob {
 }
 
 async function fetchTask(taskId: string): Promise<VideoJob> {
-  const res = await fetch(`${COMET_BASE}${GET_PATH}/${encodeURIComponent(taskId)}`, {
+  const res = await fetch(`${cometHost()}${GET_PATH}/${encodeURIComponent(taskId)}`, {
     method: "GET",
     headers: authHeaders(),
   });
@@ -209,7 +215,7 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
     }
 
     // Submit the task.
-    const res = await fetch(`${COMET_BASE}${CREATE_PATH}`, {
+    const res = await fetch(`${cometHost()}${CREATE_PATH}`, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({
