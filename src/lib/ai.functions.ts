@@ -925,7 +925,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const { SYSTEM_PROMPT, SLIM_SYSTEM_PROMPT } = await import("./ai-gateway.server");
     const { getModelProfile, resolveAiGateway, createProvider, resolveBuiltInGateway } =
       await import("./ai-providers.server");
-    const { NEOKENS_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
+    const { NEOKENS_SAFE_FALLBACK_MODEL, COMET_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
 
