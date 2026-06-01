@@ -21,6 +21,7 @@
 - Added `gemini-3.1-flash-lite-preview` to the Google provider model list.
 - Added a Global Chat collaboration invite button so users can post structured team-up requests for builders, scripters, UI designers, animators, testers, or partners.
 - Added “How to earn credits” guidance to the Browse menu and community page so users can quickly see daily claims, Discord, referrals, chat rewards, badges, promo codes, promo videos, and credit packs.
+- Added mobile nav shortcuts for earning credits so phone users can jump straight to daily claims, free signup credits, and credit info from the horizontal nav bar.
 
 ### MCP & Provider Secret Vault Migration
 

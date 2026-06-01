@@ -135,6 +135,14 @@ const changelogItems = [
         detail:
           "Added credit-earning guidance to the Browse menu and community page covering daily claims, Discord, referrals, chat rewards, badges, promo codes, promo videos, and credit packs.",
       },
+      {
+        category: "Mobile",
+        tagColor: tagStyles.ui,
+        icon: Smartphone,
+        title: "Mobile Credit Shortcuts",
+        detail:
+          "Added Earn Credits and Free Credits shortcuts to the mobile nav bar so phone users can quickly reach daily claims, signup credits, and credit info.",
+      },
     ],
   },
   {

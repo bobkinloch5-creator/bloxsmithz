@@ -86,6 +86,8 @@ const MOBILE_NAV_ITEMS: readonly NavItem[] = [
   { to: "/account", label: "Profile", icon: User, authOnly: true },
   { to: "/login", label: "Login", icon: User, guestOnly: true },
   { to: "/pricing", label: "Credits", icon: BadgeDollarSign },
+  { to: "/account", label: "Earn Credits", icon: Gift, authOnly: true },
+  { to: "/signup", label: "Free Credits", icon: Gift, guestOnly: true },
   { to: "/templates", label: "Templates", icon: Sparkles },
   { to: "/clothing", label: "Clothing", icon: Shirt },
   { to: "/image-generator", label: "Images", icon: ImageIcon },
@@ -416,7 +418,7 @@ export function Header() {
             const isProfile = item.to === "/account" && user;
             return (
               <Link
-                key={item.to}
+                key={`${item.to}:${item.label}`}
                 to={item.to as any}
                 className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface/60 px-3 py-2 text-xs font-semibold text-foreground active:scale-[0.98] hover:bg-surface-elevated"
               >
