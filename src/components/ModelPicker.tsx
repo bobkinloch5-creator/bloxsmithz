@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown, Cpu, Check } from "lucide-react";
+import { toast } from "sonner";
 import { getSiteModelHealth } from "@/lib/ai-model-health.functions";
 import { saveProjectAiSettings } from "@/lib/project-ai.functions";
 import {
@@ -61,12 +62,29 @@ export function ModelPicker({
 
   const pick = async (p: ProviderId, m: string) => {
     const modelHealth = getHealth(p, m);
-    if (modelHealth?.disabled) return;
+    // Only block a pick when we have a loaded health record that explicitly
+    // says the model is down. If health hasn't loaded yet (undefined) or the
+    // query errored, allow selection — a transient/empty health response must
+    // never make every model unclickable.
+    if (health.isSuccess && modelHealth?.disabled) return;
+    // Apply the selection in the UI immediately so picking always works
+    // visually, even if the server-side persistence is slow or fails. The
+    // chat/generation calls read this selection regardless of whether the
+    // per-project row was saved.
+    onChange(p, m);
+    setOpen(false);
     setSaving(true);
     try {
       await save({ data: { projectId, mode: "api_key", provider: p, model: m } });
-      onChange(p, m);
-      setOpen(false);
+    } catch (err: any) {
+      // Don't revert the selection — just let the user know it won't persist
+      // across reloads. Selecting still works for the current session.
+      console.error("[ModelPicker] failed to save selection", err);
+      toast.error(
+        err?.message
+          ? `Model selected, but couldn't be saved: ${err.message}`
+          : "Model selected for now, but couldn't be saved to this project.",
+      );
     } finally {
       setSaving(false);
     }
@@ -139,7 +157,9 @@ export function ModelPicker({
                 const mult = getModelCreditMultiplier(m);
                 const caps = getModelToolCapabilities(m);
                 const modelHealth = getHealth(p, m);
-                const disabled = saving || Boolean(modelHealth?.disabled);
+                // Only block genuinely-down models, and only once health has
+                // actually loaded. While loading or on error, keep selectable.
+                const disabled = Boolean(health.isSuccess && modelHealth?.disabled);
                 const tone =
                   mult >= 4
                     ? "bg-destructive/20 text-destructive"

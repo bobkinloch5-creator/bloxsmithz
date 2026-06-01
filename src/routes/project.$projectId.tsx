@@ -1536,6 +1536,14 @@ function ProjectEditor() {
       toast.error(`Daily AI timer used up. Try again at ${aiUsageResetLabel}.`);
       return;
     }
+    // Immediate acknowledgement so the tap visibly does something.
+    if (!isStudioConnected) {
+      toast.warning(
+        "Studio isn't connected — open the BloxSmith plugin in Roblox Studio so the test scene appears there. Setting it up now anyway.",
+      );
+    } else {
+      toast.info("Setting up your playtest scene in Studio…");
+    }
     setThinking(true);
     setWebSearch(true);
     setPlanMode(false);
@@ -1543,14 +1551,17 @@ function ProjectEditor() {
     await runGenerate(
       `[AI PLAYTEST MODE]
 [WEB SEARCH ENABLED] Use web_search / fetch_url only when current Roblox API docs or safety guidance are needed.
-Act like a careful Roblox QA playtester for this project. Use the current project files and any live Studio/plugin snapshot available.
+You are setting up a LIVE, runnable playtest inside the user's Roblox Studio via the connected plugin, then they will press Play (F5) and watch it.
 
-Do not pretend you physically pressed Play if the plugin cannot run Play Solo. Instead, simulate the playtest from code and structure, inspect likely runtime blockers, and queue safe fixes when obvious.
+Goal: make the requested scenario actually runnable and observable in Studio, not just a written report.
 
-Check:
-- spawn flow, player join flow, UI opening/closing, mobile controls, remotes, server validation, DataStore/save flow, economy abuse, missing instances, broken paths, animation/tool setup, performance risks, and publish readiness.
-- Give a short playtest report with Pass / Needs Fix / Fix Queued sections.
-- If a blocker can be fixed safely, generate the exact files/actions needed and keep changes focused.`,
+Do this in order:
+1. Read the current project files and any live Studio/plugin snapshot.
+2. Set up the test scenario the user asked for by QUEUEING REAL ACTIONS (create/create_part/spawn/script/insertAsset/set/select etc.) — e.g. a spawn point, the player's starting tools/items, any props, and any temporary test scripts needed to observe the behavior. Keep changes focused and clearly named (e.g. put test-only objects under a "Workspace/PlaytestSetup" folder so they're easy to remove).
+3. Add small, safe instrumentation if helpful (e.g. a Script that prints clear [PLAYTEST] markers to Output for the things the user wants to verify).
+4. As the FINAL action, emit a single "playtest_ready" action with: focus = the path to the main thing to watch, note = one short line on what you set up, and checklist = the concrete things the user should look for when they press Play.
+
+After the actions, write a SHORT message: what you set up, then "Press Play (F5) in Studio to run it" and the checklist. Do NOT claim you pressed Play — Roblox doesn't allow the plugin to start Play Solo, so the user presses it. When they report what happened (or paste Output), follow up with Pass / Needs Fix and queue focused fixes.`,
       { forceThinking: true },
     );
   };
