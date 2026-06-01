@@ -925,7 +925,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const { SYSTEM_PROMPT, SLIM_SYSTEM_PROMPT } = await import("./ai-gateway.server");
     const { getModelProfile, resolveAiGateway, createProvider, resolveBuiltInGateway } =
       await import("./ai-providers.server");
-    const { NEOKENS_SAFE_FALLBACK_MODEL, COMET_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
+    const { NEOKENS_SAFE_FALLBACK_MODEL, COMET_SAFE_FALLBACK_MODELS, applyModelCreditMultiplier } = await import("./ai-models");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
 
@@ -1215,37 +1215,40 @@ export const generateWithAI = createServerFn({ method: "POST" })
           msg,
         ) && !/429|rate.?limit|too many requests|402|credits/i.test(msg);
 
-      // Pick a safe fallback model for the current provider. Neokens and Comet
-      // each have their own "known-good" recovery model. Other providers fall
-      // through to the template fallback below.
-      const fallbackPlan: {
-        provider: "neokens" | "comet";
-        model: string;
-        envKey: string | undefined;
-      } | null =
-        resolved.provider === "neokens" && resolved.modelName !== NEOKENS_SAFE_FALLBACK_MODEL
-          ? {
-              provider: "neokens",
-              model: NEOKENS_SAFE_FALLBACK_MODEL,
-              envKey: process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY,
-            }
-          : resolved.provider === "comet" && resolved.modelName !== COMET_SAFE_FALLBACK_MODEL
-            ? {
-                provider: "comet",
-                model: COMET_SAFE_FALLBACK_MODEL,
+      // Pick safe fallback candidates for the current provider. Neokens has a
+      // single known-good model; Comet uses an ordered chain so that if the
+      // shared account also lacks a channel for the primary fallback, the next
+      // candidate is tried. Other providers fall through to the template
+      // fallback below.
+      const fallbackCandidates: { provider: "neokens" | "comet"; model: string; envKey: string | undefined }[] =
+        resolved.provider === "neokens"
+          ? resolved.modelName !== NEOKENS_SAFE_FALLBACK_MODEL
+            ? [
+                {
+                  provider: "neokens",
+                  model: NEOKENS_SAFE_FALLBACK_MODEL,
+                  envKey: process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY,
+                },
+              ]
+            : []
+          : resolved.provider === "comet"
+            ? COMET_SAFE_FALLBACK_MODELS.filter((m) => m !== resolved.modelName).map((model) => ({
+                provider: "comet" as const,
+                model,
                 envKey: process.env.COMETAPI_KEY || process.env.COMET_API_KEY,
-              }
-            : null;
+              }))
+            : [];
 
-      if (looksLikeModelError && fallbackPlan) {
-        try {
-          console.warn(
-            `[generateWithAI] model "${resolved.modelName}" failed (${msg.slice(
-              0,
-              120,
-            )}). Retrying on "${fallbackPlan.model}" via ${fallbackPlan.provider}.`,
-          );
-          if (fallbackPlan.envKey) {
+      if (looksLikeModelError && fallbackCandidates.length > 0) {
+        for (const fallbackPlan of fallbackCandidates) {
+          if (!fallbackPlan.envKey) break;
+          try {
+            console.warn(
+              `[generateWithAI] model "${resolved.modelName}" failed (${msg.slice(
+                0,
+                120,
+              )}). Retrying on "${fallbackPlan.model}" via ${fallbackPlan.provider}.`,
+            );
             const fallbackProvider = createProvider(fallbackPlan.provider, fallbackPlan.envKey);
             const { generateTextWithToolFallback: retryGen } = await import("./ai-retry.server");
             // Recovery call: slim prompt, no tools, tight timeout — just get a
@@ -1281,13 +1284,14 @@ export const generateWithAI = createServerFn({ method: "POST" })
             result.files = result.files ?? [];
             result.actions = result.actions ?? [];
             recovered = true;
+            break;
+          } catch (err2) {
+            console.warn(
+              `[generateWithAI] fallback model "${fallbackPlan.model}" also failed:`,
+              err2 instanceof Error ? err2.message : err2,
+            );
+            // try next candidate
           }
-        } catch (err2) {
-          console.warn(
-            "[generateWithAI] fallback model also failed:",
-            err2 instanceof Error ? err2.message : err2,
-          );
-          // fall through to the template fallback below
         }
       }
 

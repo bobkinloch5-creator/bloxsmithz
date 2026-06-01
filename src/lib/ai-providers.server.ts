@@ -236,7 +236,11 @@ const NEOKENS_MODEL_BY_KIND: Record<ModelKind, string> = {
 
 const COMET_MODEL_BY_KIND: Record<ModelKind, string> = {
   chat: "gpt-5.4-nano",
-  build: "deepseek-v4-flash",
+  // Build default uses gpt-5.4-mini instead of deepseek-v4-flash because some
+  // shared CometAPI accounts have no channel allocated for DeepSeek models
+  // ("no available channel for group default and model deepseek-v4..."),
+  // while gpt-5.4-mini is consistently available.
+  build: "gpt-5.4-mini",
   fast: "gpt-5.4-nano",
   large: "qwen3.7-max",
 };
