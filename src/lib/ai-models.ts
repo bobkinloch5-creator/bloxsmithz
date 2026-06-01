@@ -7,19 +7,11 @@ export const SITE_PROVIDER_LABELS: Record<SiteProviderId, string> = {
 
 export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
   neokens: [
-    // Recommended defaults first: fast + currently valid ids.
+    // Recommended defaults first: fast + currently valid ids. Keep this list
+    // to Neokens models that reliably answer health checks; unstable premium
+    // models live under the Comet/BloxSmith AI provider instead.
     "gemini-3-flash",
     "gpt-5.2",
-    "gpt-5.2-codex",
-    "gpt-5.1",
-    "gpt-5.1-codex",
-    "gpt-5.1-codex-max",
-    "gemini-3.1-pro",
-    // Claude
-    "claude-opus-4-7-thinking",
-    "claude-opus-4-6-thinking",
-    "claude-sonnet-4-7-thinking",
-    "claude-sonnet-4-6-thinking",
     "claude-haiku-4-5-20251001",
   ],
   comet: [
@@ -342,32 +334,32 @@ export const COMET_SAFE_FALLBACK_MODELS = [
 // Backwards-compat: single id consumers still import.
 export const COMET_SAFE_FALLBACK_MODEL = COMET_SAFE_FALLBACK_MODELS[0];
 
-// Maps the app's UI model ids to the REAL CometAPI model slugs.
-// CometAPI uses dash-separated slugs (e.g. "gpt-5-4-nano", "qwen3-7-max"),
-// not the dotted display names the UI shows ("gpt-5.4-nano"). Sending the
-// dotted form makes CometAPI return model_not_found, which the UI then shows
-// as "Temporarily down". Verified against https://www.cometapi.com/models.
+// Maps the app's UI model ids to the REAL CometAPI model ids.
+// Comet's public model page URLs are dash-separated, but the API examples and
+// version tables use dotted ids such as "gpt-5.4-mini", "qwen3.7-max", and
+// "gemini-3.5-flash". Sending URL slugs like "gpt-5-4-mini" makes CometAPI
+// return model_not_found.
 export const COMET_MODEL_MAP: Record<string, { comet: string; thinking?: boolean }> = {
   // OpenAI
-  "gpt-5.4-nano": { comet: "gpt-5-4-nano" },
-  "gpt-5.4-mini": { comet: "gpt-5-4-mini" },
-  "gpt-5.5-all": { comet: "gpt-5-5-all" },
+  "gpt-5.4-nano": { comet: "gpt-5.4-nano" },
+  "gpt-5.4-mini": { comet: "gpt-5.4-mini" },
+  "gpt-5.5-all": { comet: "gpt-5.5-all" },
   // DeepSeek
   "deepseek-v4-flash": { comet: "deepseek-v4-flash" },
-  "deepseek-v4-pro": { comet: "deepseek-v4" },
+  "deepseek-v4-pro": { comet: "deepseek-v4-pro" },
   // MiniMax
-  "minimax-m2.7": { comet: "minimax-m2-7" },
+  "minimax-m2.7": { comet: "minimax-m2.7" },
   // Qwen / Aliyun
-  "qwen3.6-plus": { comet: "qwen3-6-plus" },
-  "qwen3.7-max": { comet: "qwen3-7-max" },
+  "qwen3.6-plus": { comet: "qwen3.6-plus" },
+  "qwen3.7-max": { comet: "qwen3.7-max" },
   // Google Gemini
   "gemini-3-flash": { comet: "gemini-3-flash-preview" },
-  "gemini-3.5-flash": { comet: "gemini-3-5-flash" },
-  "gemini-3.1-pro": { comet: "gemini-3-1-pro-preview" },
+  "gemini-3.5-flash": { comet: "gemini-3.5-flash" },
+  "gemini-3.1-pro": { comet: "gemini-3.1-pro-preview" },
   // xAI Grok
-  "grok-4.3": { comet: "grok-4-3" },
+  "grok-4.3": { comet: "grok-4.3" },
   // Anthropic Claude (thinking variants enable extended thinking)
-  "claude-haiku-4-5": { comet: "claude-haiku-4-5" },
+  "claude-haiku-4-5": { comet: "claude-haiku-4-5-20251001" },
   "claude-sonnet-4-6-thinking": { comet: "claude-sonnet-4-6", thinking: true },
   "claude-opus-4-7-thinking": { comet: "claude-opus-4-7", thinking: true },
   "claude-opus-4-8-thinking": { comet: "claude-opus-4-8", thinking: true },

@@ -232,7 +232,7 @@ const NEOKENS_MODEL_BY_KIND: Record<ModelKind, string> = {
   chat: "gemini-3-flash",
   build: "gemini-3-flash",
   fast: "gemini-3-flash",
-  large: "gemini-3.1-pro",
+  large: "gpt-5.2",
 };
 
 const COMET_MODEL_BY_KIND: Record<ModelKind, string> = {
@@ -445,7 +445,11 @@ export async function resolveAiGateway(opts: {
     return { source: "api_key", provider, modelName, model: gw(modelName) };
   }
 
-  const { data: apiKey } = await supabaseAdmin.rpc("get_provider_api_key" as any, {
+  const getProviderApiKey = supabaseAdmin.rpc as unknown as (
+    fn: "get_provider_api_key",
+    args: { _user_id: string; _provider: ProviderId },
+  ) => Promise<{ data: unknown }>;
+  const { data: apiKey } = await getProviderApiKey("get_provider_api_key", {
     _user_id: opts.userId,
     _provider: provider,
   });
