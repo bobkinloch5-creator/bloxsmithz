@@ -46,6 +46,171 @@ export type StudioError = { file_path: string | null; error_message: string };
 let counter = 0;
 const nid = (p: string) => `${p}_${Date.now().toString(36)}_${(counter++).toString(36)}`;
 
+function cleanStudioName(value: string | undefined, fallback: string) {
+  const cleaned = String(value || fallback)
+    .split("/")
+    .pop()
+    ?.replace(/[^A-Za-z0-9_ ]+/g, " ")
+    .trim()
+    .replace(/\s+/g, "") || fallback;
+  return cleaned || fallback;
+}
+
+function uniqueActions(actions: any[]) {
+  const seen = new Set<string>();
+  return actions.filter((action) => {
+    if (!action || typeof action.type !== "string") return false;
+    const key = JSON.stringify({
+      type: action.type,
+      path: action.path,
+      parent: action.parent,
+      name: action.name,
+      property: action.property,
+      to: action.to,
+    });
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function nearestGuiRoot(target: string) {
+  const parts = String(target || "").split("/").filter(Boolean);
+  const starterGuiIndex = parts.findIndex((p) => p === "StarterGui");
+  if (starterGuiIndex >= 0 && parts[starterGuiIndex + 1]) {
+    return parts.slice(0, starterGuiIndex + 2).join("/");
+  }
+  return "StarterGui/BloxSmithUI";
+}
+
+function inferMoveDestination(step: PlanStep) {
+  const text = `${step.title} ${step.detail} ${step.target}`.toLowerCase();
+  if (/localplayer|mouse|userinputservice|playergui|camera|button|screen|gui/.test(text)) return "StarterGui";
+  if (/datastore|leaderstats|serverstorage|serverscript|bindtoclose|marketplaceservice/.test(text)) return "ServerScriptService";
+  if (/remote|shared|module|replicatedstorage/.test(text)) return "ReplicatedStorage";
+  return "ServerScriptService";
+}
+
+function inferCreateAction(step: PlanStep) {
+  const parts = String(step.target || "ReplicatedStorage/BloxSmithRemote").split("/").filter(Boolean);
+  const name = cleanStudioName(parts.pop(), "BloxSmithRemote");
+  const parent = parts.join("/") || "ReplicatedStorage";
+  const text = `${step.title} ${step.detail} ${step.target}`.toLowerCase();
+  const className =
+    /folder|directory|container/.test(text)
+      ? "Folder"
+      : /function|invoke/.test(text)
+        ? "RemoteFunction"
+        : "RemoteEvent";
+  return { type: "create", className, name, parent };
+}
+
+function buildButtonWiringSource(steps: PlanStep[]) {
+  const names = Array.from(
+    new Set(
+      steps
+        .map((step) => cleanStudioName(step.target, "ActionButton"))
+        .filter((name) => /button/i.test(name)),
+    ),
+  );
+  const buttonNames = names.length > 0 ? names : ["PlayButton", "SettingsButton", "ShopButton", "CloseButton", "ActionButton"];
+  return `-- BloxSmith Playtest repair
+-- Wires common UI buttons so generated menus/dialogues respond during testing.
+local TweenService = game:GetService("TweenService")
+local gui = script.Parent
+local buttonNames = { ${buttonNames.map((name) => JSON.stringify(name)).join(", ")} }
+
+local function connectButton(button)
+\tif not (button:IsA("TextButton") or button:IsA("ImageButton")) then return end
+\tif button:GetAttribute("BloxSmithWired") then return end
+\tbutton:SetAttribute("BloxSmithWired", true)
+\tlocal normalSize = button.Size
+\tbutton.MouseEnter:Connect(function()
+\t\tTweenService:Create(button, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+\t\t\tSize = normalSize + UDim2.fromOffset(4, 2)
+\t\t}):Play()
+\tend)
+\tbutton.MouseLeave:Connect(function()
+\t\tTweenService:Create(button, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = normalSize }):Play()
+\tend)
+\tbutton.Activated:Connect(function()
+\t\tprint("[BloxSmith Playtest] clicked", button:GetFullName())
+\t\tif button.Name == "CloseButton" then
+\t\t\tlocal root = button:FindFirstAncestorOfClass("ScreenGui") or gui
+\t\t\tif root:IsA("ScreenGui") then root.Enabled = false end
+\t\tend
+\tend)
+end
+
+for _, name in ipairs(buttonNames) do
+\tlocal button = gui:FindFirstChild(name, true)
+\tif button then connectButton(button) end
+end
+
+for _, item in ipairs(gui:GetDescendants()) do
+\tif item:IsA("TextButton") or item:IsA("ImageButton") then
+\t\tconnectButton(item)
+\tend
+end`;
+}
+
+function buildDiagnosticsSource(opts: { request: string; steps: PlanStep[] }) {
+  const stepLines = opts.steps
+    .slice(0, 12)
+    .map((step, index) => `-- ${index + 1}. ${step.title} (${step.actionType}) @ ${step.target}\n--    ${step.detail.replace(/\s+/g, " ").slice(0, 220)}`)
+    .join("\n");
+  return `-- BloxSmith Playtest diagnostic script
+-- Created because the automatic action converter needed a safe fallback.
+-- Request: ${opts.request.replace(/\s+/g, " ").slice(0, 240)}
+${stepLines}
+
+print("[BloxSmith Playtest] Diagnostic fixes were applied. Review the listed issues, then run Playtest again.")`;
+}
+
+function deterministicActionsForSteps(opts: {
+  request: string;
+  steps: PlanStep[];
+  files: ProjectFile[];
+}) {
+  const actions: any[] = [];
+  const buttonSteps: PlanStep[] = [];
+
+  actions.push({ type: "create", className: "Folder", name: "BloxSmithPlaytest", parent: "ReplicatedStorage" });
+
+  for (const step of opts.steps.slice(0, 12)) {
+    const text = `${step.actionType} ${step.title} ${step.detail} ${step.target}`.toLowerCase();
+    if (step.actionType === "create" || /missing remote|remoteevent|remotefunction|missing folder/.test(text)) {
+      actions.push(inferCreateAction(step));
+    }
+    if (step.actionType === "move" || /wrong place|placement|local script|localscript|server script|serverscript/.test(text)) {
+      actions.push({ type: "move", path: step.target, to: inferMoveDestination(step) });
+    }
+    if (step.actionType === "set" && step.target) {
+      actions.push({ type: "set", path: step.target, property: "Visible", value: true });
+    }
+    if (/button|activated|mousebutton|clickable|clicking it does nothing/.test(text)) {
+      buttonSteps.push(step);
+    }
+  }
+
+  if (buttonSteps.length > 0) {
+    const guiRoot = nearestGuiRoot(buttonSteps[0].target);
+    actions.push({
+      type: "script",
+      path: `${guiRoot}/BloxSmithButtonWiring`,
+      source: buildButtonWiringSource(buttonSteps),
+    });
+  }
+
+  actions.push({
+    type: "script",
+    path: "ServerScriptService/BloxSmithPlaytestDiagnostics",
+    source: buildDiagnosticsSource(opts),
+  });
+
+  return uniqueActions(actions).slice(0, 40);
+}
+
 /**
  * Fast, deterministic heuristics over the synced project files + captured
  * Studio Output errors. These run with zero AI cost and catch the most common
@@ -241,25 +406,15 @@ export async function buildActionsForSteps(opts: {
     const clean = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed
+      const actions = parsed
         .filter((a) => a && typeof a.type === "string")
         .slice(0, 40);
+      if (actions.length > 0) return actions;
     }
   } catch {
     // fall through to deterministic minimal actions
   }
-  // Deterministic fallback: create missing remotes / folders named in targets.
-  return opts.steps
-    .map((s) => {
-      if (s.actionType === "create" && s.target) {
-        const parts = s.target.split("/");
-        const name = parts.pop() || "New";
-        const parent = parts.join("/") || "ReplicatedStorage";
-        return { type: "create", className: "RemoteEvent", name, parent };
-      }
-      return null;
-    })
-    .filter(Boolean) as any[];
+  return deterministicActionsForSteps(opts);
 }
 
 /**

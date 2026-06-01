@@ -2,6 +2,14 @@
 
 ## Latest Updates
 
+### Playtest Apply Fixes & Premium UI Variety
+
+- Fixed Playtest mode so approved QA findings no longer fail with "Couldn't turn the plan into Studio actions" when the AI action converter returns empty output.
+- Added deterministic Playtest repair actions for missing remotes/folders, script-placement moves, unwired UI buttons, and safe diagnostic notes so Roblox Studio receives useful actions even during provider failures.
+- Expanded the Roblox UI generator with more UI types including title screens, pause menus, crafting, skill trees, battle passes, map voting, dialogue, and notification UIs.
+- Added prompt-specific 2D background layers and layout variation to deterministic UI generation so menu/HUD/shop/dialogue requests do not all reuse the same centered panel.
+- Improved UI generation instructions so Roblox menu backgrounds stay inside ScreenGui layers and can vary across space, city, fantasy, lava, icy, cyber, simulator, obby, tycoon, and premium themes.
+
 ### BloxSmith AI Gateway, Budget Models & AI Timer
 
 - Added BloxSmith AI as a protected site-wide gateway with budget-first model routing and Neokens kept as a fallback.

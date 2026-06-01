@@ -127,10 +127,18 @@ export const UI_CATEGORIES = [
   "Coin Shop",
   "Gem Shop",
   "Main Menu",
+  "Title Screen",
+  "Pause Menu",
   "Loading Screen",
   "Settings Menu",
   "Inventory",
   "Pet Inventory",
+  "Crafting UI",
+  "Skill Tree",
+  "Battle Pass",
+  "Map Vote UI",
+  "Dialogue UI",
+  "Notification UI",
   "Trading",
   "Daily Rewards",
   "Spin Wheel",
@@ -179,6 +187,8 @@ LAYOUT RULES
 - Root Frame should fill the screen or center a modal. Use Scale (not Offset) so it scales on all devices.
 - Use anchorPoint {x:0.5, y:0.5} + position {xScale:0.5, yScale:0.5} for centered modals.
 - Make the UI look premium: layered panels, clear hierarchy, vivid accent borders, gradients, decorative badges, status rows, and strong Roblox game readability.
+- Vary the composition to fit the request. Do not reuse the same panel every time. Choose from full-screen title screens, side navigation dashboards, bottom action bars, card grids, radial/action menus, modal dialogs, HUD overlays, quest dialogue, map voting, crafting, battle pass, skill tree, and notification/toast systems.
+- Backgrounds must fit the prompt theme: space, city, fantasy, obby, tycoon, horror, cute, simulator, premium, forest, ocean, lava, icy, cyber, and Roblox lobby styles should each look distinct through layered 2D Frames/ImageLabels, gradients, skyline/silhouette strips, clouds/stars, glass panels, or themed icon cards.
 - For Main Menu, title screen, loading screen, or any request mentioning a background: build a full-screen 2D background INSIDE the ScreenGui. Use an ImageLabel or Frame named BackgroundImage/BackgroundLayer with size {1,0,1,0}, position {0,0,0,0}, zIndex 1, ScaleType Crop if image, plus a dark overlay if needed. Put title/buttons above it at zIndex 3+. Never represent UI backgrounds with Workspace parts, 3D models, terrain, or giant blocks.
 - Buttons: cornerRadius 10-18, strokeThickness 1-3, hover-friendly sizes (min 44px height), bold labels.
 - Circular widgets such as spin wheels, profile rings, or meters may use high cornerRadius values matching half their pixel size.
@@ -200,10 +210,125 @@ DO NOT include markdown, prose, or explanations — JSON only.`;
 function wantsMainMenuBackground(opts: { category: UICategory; prompt: string }) {
   return (
     opts.category === "Main Menu" ||
+    opts.category === "Title Screen" ||
+    opts.category === "Loading Screen" ||
     /\b(main\s*menu|title\s*screen|start\s*screen|play\s*button|menu\s+background|background\s+menu)\b/i.test(
       opts.prompt,
     )
   );
+}
+
+function stableHash(value: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash >>> 0);
+}
+
+function clampColor(value: number) {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function mixColor(
+  a: { r: number; g: number; b: number },
+  b: { r: number; g: number; b: number },
+  amount: number,
+) {
+  return {
+    r: clampColor(a.r + (b.r - a.r) * amount),
+    g: clampColor(a.g + (b.g - a.g) * amount),
+    b: clampColor(a.b + (b.b - a.b) * amount),
+  };
+}
+
+function themedBackgroundLayers(opts: {
+  prompt: string;
+  primary: { r: number; g: number; b: number };
+  accent: { r: number; g: number; b: number };
+  bg: { r: number; g: number; b: number };
+  variant: number;
+}): UIElement[] {
+  const text = opts.prompt.toLowerCase();
+  const isSpace = /space|galaxy|planet|star|cosmic/.test(text);
+  const isCity = /city|street|tower|skyscraper|urban/.test(text);
+  const isFantasy = /fantasy|magic|castle|medieval|dragon|forest/.test(text);
+  const isLava = /lava|fire|volcano|inferno/.test(text);
+  const isIce = /ice|snow|frost|winter/.test(text);
+  const themeColor = isLava
+    ? { r: 236, g: 76, b: 32 }
+    : isIce
+      ? { r: 96, g: 210, b: 255 }
+      : isFantasy
+        ? { r: 80, g: 220, b: 140 }
+        : isCity
+          ? { r: 55, g: 142, b: 255 }
+          : isSpace
+            ? { r: 154, g: 101, b: 255 }
+            : opts.primary;
+  const secondary = mixColor(opts.accent, themeColor, 0.45);
+  const horizonY = [0.72, 0.62, 0.78, 0.56][opts.variant % 4] ?? 0.7;
+  const layers: UIElement[] = [
+    {
+      type: "Frame",
+      id: "BackgroundLayer",
+      name: "BackgroundLayer",
+      position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
+      size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
+      backgroundColor: mixColor(opts.bg, themeColor, 0.18),
+      gradient: { from: mixColor(opts.bg, themeColor, 0.08), to: mixColor(opts.bg, secondary, 0.4), rotation: [25, 120, 60, 155][opts.variant % 4] ?? 35 },
+      zIndex: 1,
+    },
+    {
+      type: "Frame",
+      id: "HorizonBand",
+      name: "HorizonBand",
+      position: { xScale: 0, xOffset: 0, yScale: horizonY, yOffset: 0 },
+      size: { xScale: 1, xOffset: 0, yScale: 0.12, yOffset: 0 },
+      backgroundColor: themeColor,
+      backgroundTransparency: 0.56,
+      gradient: { from: themeColor, to: secondary, rotation: 0 },
+      zIndex: 1,
+    },
+    {
+      type: "Frame",
+      id: "ThemeSilhouetteA",
+      name: "ThemeSilhouetteA",
+      position: { xScale: isCity ? 0.05 : 0.08, xOffset: 0, yScale: isCity ? 0.42 : 0.22, yOffset: 0 },
+      size: { xScale: 0, xOffset: isCity ? 96 : 240, yScale: 0, yOffset: isCity ? 280 : 240 },
+      backgroundColor: mixColor(themeColor, opts.bg, isCity ? 0.25 : 0.1),
+      backgroundTransparency: 0.5,
+      cornerRadius: isCity ? 8 : 120,
+      strokeColor: secondary,
+      strokeThickness: 1,
+      zIndex: 1,
+    },
+    {
+      type: "Frame",
+      id: "ThemeSilhouetteB",
+      name: "ThemeSilhouetteB",
+      position: { xScale: isCity ? 0.72 : 0.68, xOffset: 0, yScale: isCity ? 0.36 : 0.14, yOffset: 0 },
+      size: { xScale: 0, xOffset: isCity ? 124 : 300, yScale: 0, yOffset: isCity ? 330 : 300 },
+      backgroundColor: secondary,
+      backgroundTransparency: 0.62,
+      cornerRadius: isCity ? 10 : 150,
+      strokeColor: themeColor,
+      strokeThickness: 1,
+      zIndex: 1,
+    },
+    {
+      type: "Frame",
+      id: "DarkOverlay",
+      name: "DarkOverlay",
+      position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
+      size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
+      backgroundColor: { r: 0, g: 0, b: 0 },
+      backgroundTransparency: 0.38,
+      zIndex: 2,
+    },
+  ];
+  return layers;
 }
 
 // ---------------- AI gateway pick (mirrors help-chat) ----------------
@@ -301,6 +426,14 @@ function buttonTextForCategory(category: UICategory) {
   if (category === "Spin Wheel") return ["Spin", "Lucky Boost", "Rewards", "Close"];
   if (category === "Settings Menu") return ["Music", "SFX", "Graphics", "Controls"];
   if (category === "Admin Panel") return ["Kick", "Ban", "Give Coins", "Teleport"];
+  if (category === "Pause Menu") return ["Resume", "Settings", "Respawn", "Leave"];
+  if (category === "Title Screen") return ["Play", "Servers", "Shop", "Settings"];
+  if (category === "Crafting UI") return ["Craft", "Recipe", "Materials", "Upgrade"];
+  if (category === "Skill Tree") return ["Unlock", "Equip", "Reset", "Details"];
+  if (category === "Battle Pass") return ["Claim", "Premium", "Missions", "Rewards"];
+  if (category === "Map Vote UI") return ["Vote Map 1", "Vote Map 2", "Vote Map 3", "Ready"];
+  if (category === "Dialogue UI") return ["Continue", "Quest", "Accept", "Close"];
+  if (category === "Notification UI") return ["Claim", "View", "Dismiss", "Next"];
   return ["Play", "Shop", "Settings", "Close"];
 }
 
@@ -320,6 +453,14 @@ function createFallbackUISpec(opts: {
   const screenGuiName = safeInstanceName(`${title}Gui`, "BloxSmithGeneratedGui");
   const buttons = buttonTextForCategory(opts.category);
   const needsRemote = /Shop|Rewards|Spin|Codes|Trading|Admin/.test(opts.category);
+  const variant = stableHash(`${opts.category}|${opts.style}|${opts.prompt}|${title}`) % 4;
+  const backgroundLayers = themedBackgroundLayers({
+    prompt: `${opts.category} ${opts.prompt}`,
+    primary,
+    accent,
+    bg,
+    variant,
+  });
 
   if (wantsMainMenuBackground(opts)) {
     const menuButtons = ["Play", "Settings", "Shop", "Credits"].map((label, idx): UIElement => ({
@@ -357,49 +498,7 @@ function createFallbackUISpec(opts: {
         size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
         backgroundColor: bg,
         children: [
-          {
-            type: "Frame",
-            id: "BackgroundLayer",
-            name: "BackgroundLayer",
-            position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
-            size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
-            backgroundColor: bg,
-            backgroundTransparency: 0,
-            gradient: { from: bg, to: { r: Math.max(0, primary.r - 40), g: Math.max(0, primary.g - 35), b: Math.max(0, primary.b - 30) }, rotation: 35 },
-            zIndex: 1,
-          },
-          {
-            type: "Frame",
-            id: "BackgroundGlowLeft",
-            name: "BackgroundGlowLeft",
-            position: { xScale: -0.08, xOffset: 0, yScale: 0.12, yOffset: 0 },
-            size: { xScale: 0, xOffset: 420, yScale: 0, yOffset: 420 },
-            backgroundColor: primary,
-            backgroundTransparency: 0.72,
-            cornerRadius: 210,
-            zIndex: 1,
-          },
-          {
-            type: "Frame",
-            id: "BackgroundGlowRight",
-            name: "BackgroundGlowRight",
-            position: { xScale: 0.72, xOffset: 0, yScale: 0.56, yOffset: 0 },
-            size: { xScale: 0, xOffset: 520, yScale: 0, yOffset: 520 },
-            backgroundColor: accent,
-            backgroundTransparency: 0.76,
-            cornerRadius: 260,
-            zIndex: 1,
-          },
-          {
-            type: "Frame",
-            id: "DarkOverlay",
-            name: "DarkOverlay",
-            position: { xScale: 0, xOffset: 0, yScale: 0, yOffset: 0 },
-            size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
-            backgroundColor: { r: 0, g: 0, b: 0 },
-            backgroundTransparency: 0.42,
-            zIndex: 2,
-          },
+          ...backgroundLayers,
           {
             type: "TextLabel",
             id: "TitleLabel",
@@ -695,6 +794,28 @@ end`,
           },
   }));
 
+  const panelLayouts = [
+    {
+      position: { xScale: 0.5, xOffset: 0, yScale: 0.5, yOffset: 0 },
+      size: { xScale: 0.56, xOffset: 0, yScale: 0.66, yOffset: 0 },
+    },
+    {
+      position: { xScale: 0.34, xOffset: 0, yScale: 0.52, yOffset: 0 },
+      size: { xScale: 0.46, xOffset: 0, yScale: 0.72, yOffset: 0 },
+    },
+    {
+      position: { xScale: 0.5, xOffset: 0, yScale: 0.62, yOffset: 0 },
+      size: { xScale: 0.78, xOffset: 0, yScale: 0.56, yOffset: 0 },
+    },
+    {
+      position: { xScale: 0.66, xOffset: 0, yScale: 0.52, yOffset: 0 },
+      size: { xScale: 0.46, xOffset: 0, yScale: 0.72, yOffset: 0 },
+    },
+  ] as const;
+  const panelLayout = panelLayouts[variant] ?? panelLayouts[0];
+  const contentY = variant === 2 ? 0.26 : 0.28;
+  const contentHeight = variant === 2 ? 0.42 : 0.5;
+
   const spec: UISpec = {
     title,
     screenGuiName,
@@ -708,19 +829,21 @@ end`,
       size: { xScale: 1, xOffset: 0, yScale: 1, yOffset: 0 },
       backgroundColor: bg,
       children: [
+        ...backgroundLayers,
         {
           type: "Frame",
           id: "MainPanel",
           name: "MainPanel",
           anchorPoint: { x: 0.5, y: 0.5 },
-          position: { xScale: 0.5, xOffset: 0, yScale: 0.5, yOffset: 0 },
-          size: { xScale: 0.56, xOffset: 0, yScale: 0.66, yOffset: 0 },
+          position: panelLayout.position,
+          size: panelLayout.size,
           backgroundColor: { r: 10, g: 14, b: 24 },
           backgroundTransparency: opts.style === "Glass" ? 0.18 : 0,
           cornerRadius: opts.style === "Cartoon" ? 32 : 22,
           strokeColor: accent,
           strokeThickness: opts.style === "Neon" ? 3 : 2,
           gradient: opts.style === "Minimal" ? undefined : { from: bg, to: { r: 18, g: 24, b: 38 }, rotation: 135 },
+          zIndex: 3,
           children: [
             {
               type: "Frame",
@@ -792,8 +915,8 @@ end`,
               type: "Frame",
               id: "ContentGrid",
               name: "ContentGrid",
-              position: { xScale: 0.06, xOffset: 0, yScale: 0.28, yOffset: 0 },
-              size: { xScale: 0.88, xOffset: 0, yScale: 0.5, yOffset: 0 },
+              position: { xScale: 0.06, xOffset: 0, yScale: contentY, yOffset: 0 },
+              size: { xScale: 0.88, xOffset: 0, yScale: contentHeight, yOffset: 0 },
               backgroundColor: { r: 15, g: 23, b: 42 },
               backgroundTransparency: 0.16,
               cornerRadius: 18,
@@ -886,10 +1009,12 @@ export async function generateUISpec(opts: {
   const userPrompt = `Category: ${opts.category}
 Style: ${opts.style} — ${styleHint}
 Palette: ${palette}
+Variation seed: ${stableHash(`${opts.category}|${opts.style}|${opts.prompt}|${opts.title || ""}`) % 997}
 ${opts.title ? `Preferred title text: "${opts.title}"\n` : ""}User request:
 ${opts.prompt}
 
 Produce a polished, fully populated UISpec for this Roblox UI. Include working LocalScript and (where it makes sense) a ServerScript with RemoteEvents for purchase/reward validation. Keep the hierarchy concise and complete.
+Make this layout feel specific to the request. Use a different composition/background treatment than a generic centered card whenever the prompt asks for a menu, HUD, dialogue, shop, lobby, or themed background.
 ${wantsMainMenuBackground(opts) ? "Main menu background requirement: create the background as ScreenGui children only. Use BackgroundLayer/BackgroundImage plus overlay behind the buttons; do not create or imply Workspace parts, 3D blocks, terrain, or camera-selected objects." : ""}`;
 
   let lastErr: any = null;

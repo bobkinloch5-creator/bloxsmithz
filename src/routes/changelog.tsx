@@ -86,6 +86,14 @@ const changelogItems = [
           "Added a visible project AI Memory panel plus an AI Playtest shortcut that performs deeper Roblox QA and queues safe fixes when possible.",
       },
       {
+        category: "Playtest",
+        tagColor: tagStyles.tools,
+        icon: Play,
+        title: "Playtest Apply Fixes Repair",
+        detail:
+          "Playtest mode now has deterministic repair actions for missing remotes, missing folders, script-placement moves, unwired UI buttons, and diagnostic notes, so approved findings still apply when the AI action converter returns empty output.",
+      },
+      {
         category: "Animation",
         tagColor: tagStyles.ui,
         icon: Film,
@@ -100,6 +108,14 @@ const changelogItems = [
         title: "Main Menu Background Fix",
         detail:
           "Main-menu generation now treats backgrounds as full-screen ScreenGui layers behind the title and buttons, preventing accidental Workspace parts or giant selected blocks from being used as the menu background.",
+      },
+      {
+        category: "UI",
+        tagColor: tagStyles.ui,
+        icon: Palette,
+        title: "More Roblox UI Types & Background Variety",
+        detail:
+          "The UI generator now supports more categories like title screens, pause menus, crafting, skill trees, battle passes, map voting, dialogue, and notifications, with prompt-specific 2D background layers and varied fallback layouts instead of repeating the same panel.",
       },
       {
         category: "Config",
