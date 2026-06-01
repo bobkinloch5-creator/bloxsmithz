@@ -271,7 +271,7 @@ function ProjectEditor() {
     // or working through a long batch — we should NOT throw a scary error
     // just because Studio hasn't checked in yet. We downgrade to a soft
     // "queued" state instead, and let the user resume by opening Studio.
-    const MAX_ATTEMPTS = 600; // 10 minutes
+    const MAX_ATTEMPTS = 200; // ~10 minutes at 3s/poll
     const interval = setInterval(async () => {
       attempts++;
 
@@ -344,7 +344,7 @@ function ProjectEditor() {
           };
         });
       }
-    }, 1000);
+    }, 3000);
   };
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -755,14 +755,20 @@ function ProjectEditor() {
           .select("id,role,content,actions")
           .eq("conversation_id", cid)
           .order("created_at", { ascending: true });
-        setMessages(
-          (msgs ?? []).map((m: any) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            actions: m.actions,
-          })),
+        const loaded = (msgs ?? []).map((m: any) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          actions: m.actions,
+        }));
+        // Collapse accidental duplicate messages (same role + identical content
+        // back-to-back) so a double-write greeting only renders once.
+        const deduped = loaded.filter(
+          (m, i) =>
+            i === 0 ||
+            !(m.role === loaded[i - 1].role && m.content === loaded[i - 1].content),
         );
+        setMessages(deduped);
       }
     })();
   }, [user, projectId]);
