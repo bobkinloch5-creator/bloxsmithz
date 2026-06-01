@@ -7,27 +7,35 @@ export const SITE_PROVIDER_LABELS: Record<SiteProviderId, string> = {
 
 export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
   neokens: [
-    // Confirmed live by the model diagnostic: gemini-3-flash, gpt-5.2,
-    // claude-haiku. gpt-5.4/5.5 are commonly available — verify via the
-    // admin diagnostic and remove any that show Bad Request.
+    // All models from the Neokens dashboard. Ordered working-first per the
+    // June 2026 diagnostic so users default to models that actually respond.
+    // Confirmed working:
     "gemini-3-flash",
+    "claude-haiku-4-5-20251001",
     "gpt-5.2",
     "gpt-5.4",
     "gpt-5.5",
-    "claude-haiku-4-5-20251001",
+    // Also listed on the dashboard. NOTE: these returned errors in the last
+    // diagnostic (Bad Request / Bad Gateway / Timeout) — included per request,
+    // but they may show red until Neokens fixes their upstream routing.
+    "gpt-5.3-codex",
+    "gpt-5.1",
+    "gpt-5.1-codex",
+    "gpt-5.1-codex-max",
+    "gpt-5.2-codex",
+    "gemini-3.1-pro",
+    "claude-sonnet-4-6-thinking",
+    "claude-sonnet-4-7-thinking",
+    "claude-opus-4-6-thinking",
+    "claude-opus-4-7-thinking",
   ],
   comet: [
-    // Verified exact slugs from cometapi.com/models (June 2026). Budget
-    // models first. If a model shows "no available channel" in diagnostics,
-    // that's a CometAPI plan/tier limit, not a wrong slug.
+    // Only models confirmed working on this CometAPI account (June 2026
+    // diagnostic). The others (gpt-5-4-mini/nano, minimax-m2-7, qwen3-7-max,
+    // grok-4-3, deepseek-v4, gemini-3-5-flash) returned "no available channel
+    // for group default" — that's a CometAPI plan/balance limit, NOT a wrong
+    // slug. Re-add them here once they're enabled on the CometAPI account.
     "deepseek-v4-flash",
-    "gpt-5-4-mini",
-    "gpt-5-4-nano",
-    "minimax-m2-7",
-    "qwen3-7-max",
-    "grok-4-3",
-    "deepseek-v4",
-    "gemini-3-5-flash",
     "claude-sonnet-4-6",
     "claude-opus-4-7",
     "claude-opus-4-8",
