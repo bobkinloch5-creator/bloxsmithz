@@ -1,4 +1,5 @@
 -- BloxSmith Roblox Studio Plugin
+-- Copyright (c) 2026 BloxSmith Corporations. All rights reserved.
 -- Full game-building agent: syncs scripts AND executes build actions
 -- (parts, models, terrain, lighting, services) sent from bloxsmith.pro.
 -- Also reports full workspace context back to the AI so it has awareness.
@@ -533,7 +534,7 @@ footer.Size = UDim2.new(1,0,0,32)
 footer.Font = Enum.Font.BuilderSans; footer.TextSize = 10
 footer.TextColor3 = C.textMute
 register(footer, "textMute")
-footer.Text = "bloxsmith.pro · sends script source + workspace snapshot to BloxSmith's AI. You can pause or disconnect at any time. All changes are undoable (Ctrl+Z)."
+footer.Text = "bloxsmith.pro · Copyright (c) 2026 BloxSmith Corporations · sends script source + workspace snapshot to BloxSmith's AI. You can pause or disconnect at any time. All changes are undoable (Ctrl+Z)."
 footer.TextWrapped = true
 footer.TextXAlignment = Enum.TextXAlignment.Left
 footer.TextYAlignment = Enum.TextYAlignment.Top

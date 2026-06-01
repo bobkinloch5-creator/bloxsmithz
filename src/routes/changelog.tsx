@@ -121,6 +121,14 @@ const changelogItems = [
           "Added a Voice / NPC studio mode with browser text-to-voice previews, selectable speaking styles, rate/pitch/volume controls, and Roblox dialogue trigger settings.",
       },
       {
+        category: "Safety",
+        tagColor: tagStyles.security,
+        icon: ShieldCheck,
+        title: "Friendly NPC Voice Safety",
+        detail:
+          "NPC voice lines now run a friendly-only check before preview, video prompt insertion, voice-command updates, or Roblox script download.",
+      },
+      {
         category: "Tools",
         tagColor: tagStyles.integrations,
         icon: FileCode,
@@ -135,6 +143,14 @@ const changelogItems = [
         title: "Voice-Controlled Studio Commands",
         detail:
           "Added browser voice commands for switching studio modes, setting video and music prompts, updating NPC dialogue, previewing voices, and adding voice direction into video prompts.",
+      },
+      {
+        category: "Plugin",
+        tagColor: tagStyles.plugin,
+        icon: FileCode,
+        title: "BloxSmith Corporations Copyright",
+        detail:
+          "Added BloxSmith Corporations copyright text to the Roblox Studio plugin source and visible plugin footer.",
       },
       {
         category: "Backend",

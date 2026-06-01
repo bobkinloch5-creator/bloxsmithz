@@ -129,6 +129,31 @@ const npcVoiceStyles = [
 ];
 const npcAnimations = ["wave", "point", "cheer", "idle bounce", "quest marker", "none"];
 const npcTriggerModes = ["proximity prompt", "auto on spawn", "click detector"] as const;
+const rudeVoiceTerms = [
+  "stupid",
+  "idiot",
+  "dumb",
+  "loser",
+  "shut up",
+  "hate you",
+  "get lost",
+  "trash",
+  "kill",
+  "die",
+  "ugly",
+  "noob",
+  "sucks",
+  "screw you",
+  "curse",
+  "slur",
+  "racist",
+  "nsfw",
+  "sexual",
+  "gore",
+  "blood",
+  "drug",
+  "terror",
+];
 
 type SpeechRecognitionConstructor = new () => {
   continuous: boolean;
@@ -166,6 +191,17 @@ function readFileAsDataUrl(file: File, maxBytes: number, allowed: RegExp) {
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+function friendlyVoiceIssue(text: string) {
+  const clean = text.trim();
+  if (!clean) return "Add friendly NPC dialogue first.";
+  if (clean.length > 1400) return "Keep NPC dialogue under 1,400 characters.";
+  const lower = clean.toLowerCase();
+  const found = rudeVoiceTerms.find((term) => lower.includes(term));
+  if (found) return `NPC voice lines must stay friendly. Remove "${found}" and try again.`;
+  if (/[*!?]{4,}/.test(clean)) return "Tone it down a little so the NPC sounds friendly.";
+  return "";
 }
 
 function eta(iso: string | null, now: number) {
@@ -220,14 +256,20 @@ function robloxNpcVoiceScript(opts: {
   typewriter: boolean;
 }) {
   const npcName = opts.npcName.replace(/[^A-Za-z0-9_ ]/g, "").trim() || "BloxSmithGuide";
+  const issue = friendlyVoiceIssue(opts.dialogue);
   const lines = opts.dialogue
     .split(/\n+/)
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 12);
-  const safeLines = lines.length ? lines : ["Welcome to the game!"];
+  const safeLines = issue
+    ? ["Welcome builder! Have fun and enjoy the game."]
+    : lines.length
+      ? lines
+      : ["Welcome to the game!"];
   const triggerMode = opts.triggerMode;
   return `-- BloxSmith NPC voice/dialogue controller
+-- Friendly voice safety: rude, unsafe, or inappropriate NPC lines are not allowed.
 -- Put this Script inside your NPC Model. The model should have a Head part.
 -- Browser text-to-speech previews the voice on BloxSmith; Roblox displays these lines in-game.
 
@@ -436,6 +478,7 @@ function VideoGeneratorPage() {
     return parts;
   }, [durationSeconds]);
   const previewPreset = videoPresets.find((item) => item.id === preset);
+  const npcVoiceIssue = friendlyVoiceIssue(npcDialogue);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -666,8 +709,9 @@ function VideoGeneratorPage() {
       return;
     }
     const text = npcDialogue.trim();
-    if (!text) {
-      toast.error("Add NPC dialogue first.");
+    const issue = friendlyVoiceIssue(text);
+    if (issue) {
+      toast.error(issue);
       return;
     }
     window.speechSynthesis.cancel();
@@ -688,7 +732,8 @@ function VideoGeneratorPage() {
 
   const addNpcVoiceToVideoPrompt = () => {
     const line = npcDialogue.trim();
-    if (!line) return toast.error("Add NPC dialogue first.");
+    const issue = friendlyVoiceIssue(line);
+    if (issue) return toast.error(issue);
     setPrompt((current) =>
       `${current.trim()}\nInclude a clean ${npcVoiceStyle} NPC voiceover line: "${line}"`.trim(),
     );
@@ -744,6 +789,11 @@ function VideoGeneratorPage() {
     }
     const npcLine = after(["npc says ", "npc say ", "voice line ", "dialogue "]);
     if (npcLine) {
+      const issue = friendlyVoiceIssue(npcLine);
+      if (issue) {
+        toast.error(issue);
+        return;
+      }
       setNpcDialogue(npcLine);
       setMode("voice");
       toast.success("NPC dialogue updated.");
@@ -1438,6 +1488,16 @@ function VideoGeneratorPage() {
                   className="w-full resize-none rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary/50"
                 />
               </Field>
+              <div
+                className={`mt-2 rounded-xl border px-3 py-2 text-xs ${
+                  npcVoiceIssue
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+                    : "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
+                }`}
+              >
+                {npcVoiceIssue ||
+                  "Friendly voice check passed. You can preview this NPC voice before downloading the Roblox script."}
+              </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <SelectField
                   label="Roblox trigger"
@@ -1512,20 +1572,22 @@ function VideoGeneratorPage() {
                   <button
                     type="button"
                     onClick={previewNpcVoice}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                    disabled={Boolean(npcVoiceIssue)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-45"
                   >
                     <Play className="h-4 w-4" /> Preview voice
                   </button>
                   <button
                     type="button"
                     onClick={stopNpcVoice}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2.5 text-xs font-semibold transition hover:bg-surface"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2.5 text-xs font-semibold transition hover:bg-surface disabled:opacity-45"
                   >
                     <Square className="h-4 w-4" /> Stop
                   </button>
                   <button
                     type="button"
                     onClick={addNpcVoiceToVideoPrompt}
+                    disabled={Boolean(npcVoiceIssue)}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2.5 text-xs font-semibold transition hover:bg-surface"
                   >
                     <Film className="h-4 w-4" /> Add to video
@@ -1594,22 +1656,32 @@ function VideoGeneratorPage() {
                     {npcDialogue || "Add NPC dialogue."}
                   </p>
                 </div>
-                <a
-                  href={luaDataUrl(
-                    robloxNpcVoiceScript({
-                      npcName,
-                      dialogue: npcDialogue,
-                      voiceStyle: npcVoiceStyle,
-                      animation: npcAnimation,
-                      triggerMode: npcTriggerMode,
-                      typewriter: npcTypewriter,
-                    }),
-                  )}
-                  download="BloxSmithNPCVoiceController.lua"
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-                >
-                  <Download className="h-4 w-4" /> Download NPC voice script
-                </a>
+                {npcVoiceIssue ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground opacity-45"
+                  >
+                    <Download className="h-4 w-4" /> Fix friendly voice check first
+                  </button>
+                ) : (
+                  <a
+                    href={luaDataUrl(
+                      robloxNpcVoiceScript({
+                        npcName,
+                        dialogue: npcDialogue,
+                        voiceStyle: npcVoiceStyle,
+                        animation: npcAnimation,
+                        triggerMode: npcTriggerMode,
+                        typewriter: npcTypewriter,
+                      }),
+                    )}
+                    download="BloxSmithNPCVoiceController.lua"
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                  >
+                    <Download className="h-4 w-4" /> Download NPC voice script
+                  </a>
+                )}
               </div>
             </div>
           </section>
