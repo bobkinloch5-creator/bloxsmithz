@@ -53,7 +53,7 @@ function classifyError(err: unknown): { kind: ModelTestResult["errorKind"]; mess
   }
   if (
     status === 404 ||
-    /not found|does not exist|unknown model|invalid model|no such model/i.test(lower)
+    /not found|does not exist|unknown model|invalid model|no such model|no available channel|channel.*(not|un)available/i.test(lower)
   ) {
     return { kind: "model_not_found", message };
   }

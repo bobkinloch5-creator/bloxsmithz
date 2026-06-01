@@ -324,6 +324,13 @@ export const NEOKENS_MODEL_MAP: Record<string, { neokens: string; thinking?: boo
 // a selected model errors at the gateway. Set this to your most reliable id.
 export const NEOKENS_SAFE_FALLBACK_MODEL = "gemini-3-flash";
 
+// A CometAPI model id that is known to work, used as a last-resort fallback
+// when a selected model errors at the gateway (e.g. "no available channel for
+// group default and model X" — that means the shared CometAPI account has no
+// channel allocated for that model). Keep this as the cheapest/most-stable
+// CometAPI model so the build always recovers.
+export const COMET_SAFE_FALLBACK_MODEL = "gpt-5.4-nano";
+
 // Maps the app's UI model ids to the REAL CometAPI model slugs.
 // CometAPI uses dash-separated slugs (e.g. "gpt-5-4-nano", "qwen3-7-max"),
 // not the dotted display names the UI shows ("gpt-5.4-nano"). Sending the

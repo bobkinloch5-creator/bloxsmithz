@@ -925,7 +925,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const { SYSTEM_PROMPT, SLIM_SYSTEM_PROMPT } = await import("./ai-gateway.server");
     const { getModelProfile, resolveAiGateway, createProvider, resolveBuiltInGateway } =
       await import("./ai-providers.server");
-    const { NEOKENS_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
+    const { NEOKENS_SAFE_FALLBACK_MODEL, COMET_SAFE_FALLBACK_MODEL, applyModelCreditMultiplier } = await import("./ai-models");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
 
@@ -1211,31 +1211,49 @@ export const generateWithAI = createServerFn({ method: "POST" })
       // or a slow model doesn't brick the build. Rate-limit/credits errors are
       // not model problems, so we don't retry those.
       const looksLikeModelError =
-        /502|503|bad gateway|not found|404|unknown model|unsupported model|no such model|model_not_found|invalid model|aborted|timeout|timed out|ETIMEDOUT|ECONNRESET/i.test(
+        /502|503|bad gateway|not found|404|unknown model|unsupported model|no such model|model_not_found|invalid model|no available channel|channel.*(not|un)available|aborted|timeout|timed out|ETIMEDOUT|ECONNRESET/i.test(
           msg,
         ) && !/429|rate.?limit|too many requests|402|credits/i.test(msg);
-      if (
-        looksLikeModelError &&
-        resolved.provider === "neokens" &&
-        resolved.modelName !== NEOKENS_SAFE_FALLBACK_MODEL
-      ) {
+
+      // Pick a safe fallback model for the current provider. Neokens and Comet
+      // each have their own "known-good" recovery model. Other providers fall
+      // through to the template fallback below.
+      const fallbackPlan: {
+        provider: "neokens" | "comet";
+        model: string;
+        envKey: string | undefined;
+      } | null =
+        resolved.provider === "neokens" && resolved.modelName !== NEOKENS_SAFE_FALLBACK_MODEL
+          ? {
+              provider: "neokens",
+              model: NEOKENS_SAFE_FALLBACK_MODEL,
+              envKey: process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY,
+            }
+          : resolved.provider === "comet" && resolved.modelName !== COMET_SAFE_FALLBACK_MODEL
+            ? {
+                provider: "comet",
+                model: COMET_SAFE_FALLBACK_MODEL,
+                envKey: process.env.COMETAPI_KEY || process.env.COMET_API_KEY,
+              }
+            : null;
+
+      if (looksLikeModelError && fallbackPlan) {
         try {
           console.warn(
             `[generateWithAI] model "${resolved.modelName}" failed (${msg.slice(
               0,
               120,
-            )}). Retrying on "${NEOKENS_SAFE_FALLBACK_MODEL}".`,
+            )}). Retrying on "${fallbackPlan.model}" via ${fallbackPlan.provider}.`,
           );
-          const neoKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
-          if (neoKey) {
-            const fallbackModel = createProvider("neokens", NEOKENS_SAFE_FALLBACK_MODEL);
+          if (fallbackPlan.envKey) {
+            const fallbackProvider = createProvider(fallbackPlan.provider, fallbackPlan.envKey);
             const { generateTextWithToolFallback: retryGen } = await import("./ai-retry.server");
             // Recovery call: slim prompt, no tools, tight timeout — just get a
             // build out of a fast model.
             const { text: retryText } = await retryGen(
               generateText,
               {
-                model: fallbackModel(NEOKENS_SAFE_FALLBACK_MODEL),
+                model: fallbackProvider(fallbackPlan.model),
                 system: SLIM_SYSTEM_PROMPT,
                 ...(imageDataUrl
                   ? {
