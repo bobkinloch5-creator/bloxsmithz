@@ -10,6 +10,7 @@ import {
   sanitizingFetch,
 } from "./ai-gateway.server";
 import {
+  COMET_SAFE_FALLBACK_MODELS,
   SITE_PROVIDER_DEFAULT_MODEL,
   SITE_PROVIDER_MODELS,
   getModelToolCapabilities,
@@ -235,15 +236,30 @@ const NEOKENS_MODEL_BY_KIND: Record<ModelKind, string> = {
 };
 
 const COMET_MODEL_BY_KIND: Record<ModelKind, string> = {
-  chat: "gpt-5.4-nano",
+  chat: "gpt-5.4-mini",
   // Build default uses gpt-5.4-mini instead of deepseek-v4-flash because some
   // shared CometAPI accounts have no channel allocated for DeepSeek models
   // ("no available channel for group default and model deepseek-v4..."),
   // while gpt-5.4-mini is consistently available.
   build: "gpt-5.4-mini",
-  fast: "gpt-5.4-nano",
+  fast: "gpt-5.4-mini",
   large: "qwen3.7-max",
 };
+
+const COMET_STABLE_FALLBACK_MODELS = COMET_SAFE_FALLBACK_MODELS.filter(
+  (model) => model !== "gpt-5.4-nano",
+);
+
+const COMET_MODEL_CANDIDATES_BY_KIND: Record<ModelKind, readonly string[]> = {
+  chat: ["gpt-5.4-mini", "qwen3.6-plus", ...COMET_STABLE_FALLBACK_MODELS],
+  fast: ["gpt-5.4-mini", "qwen3.6-plus", ...COMET_STABLE_FALLBACK_MODELS],
+  build: ["gpt-5.4-mini", "qwen3.6-plus", ...COMET_STABLE_FALLBACK_MODELS],
+  large: ["qwen3.7-max", "gemini-3-flash", "claude-haiku-4-5", ...COMET_STABLE_FALLBACK_MODELS],
+};
+
+function uniqueModelNames(models: readonly string[]): string[] {
+  return [...new Set(models.filter(Boolean))];
+}
 
 /*
 const oldSanitizingFetch: typeof fetch = async (input, init) => {
@@ -312,41 +328,59 @@ export type ResolvedGateway = {
   model: LanguageModel;
 };
 
-export function resolveBuiltInGateway(opts: {
+export function resolveBuiltInGatewayCandidates(opts: {
   kind: ModelKind;
   thinking?: boolean;
-}): ResolvedGateway {
+}): ResolvedGateway[] {
+  const candidates: ResolvedGateway[] = [];
   const cometKey = getCometApiKey();
   if (cometKey) {
-    const uiModelName = COMET_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.comet;
-    const { model: modelName, thinking: implicitThinking } = resolveCometModel(uiModelName);
-    if (implicitThinking) opts.thinking = true;
     const gw = createProvider("comet", cometKey);
-    return { source: "mcp", provider: "comet", modelName, model: gw(modelName) };
+    const cometCandidates = uniqueModelNames([
+      COMET_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.comet,
+      ...(COMET_MODEL_CANDIDATES_BY_KIND[opts.kind] ?? COMET_SAFE_FALLBACK_MODELS),
+    ]);
+    for (const uiModelName of cometCandidates) {
+      const { model: modelName } = resolveCometModel(uiModelName);
+      candidates.push({ source: "mcp", provider: "comet", modelName, model: gw(modelName) });
+    }
   }
 
   const neokensKey = process.env.NEOKENS_API_KEY || process.env.NEOKENS_KEY;
   if (neokensKey) {
     const modelName = NEOKENS_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.neokens;
     const gw = createProvider("neokens", neokensKey);
-    return { source: "mcp", provider: "neokens", modelName, model: gw(modelName) };
+    candidates.push({ source: "mcp", provider: "neokens", modelName, model: gw(modelName) });
   }
 
   const groqKey = process.env.GROQ_API_KEY;
-  if (!groqKey)
+  if (groqKey) {
+    const gw = createGroqProvider(groqKey);
+    const modelName =
+      opts.kind === "large"
+        ? BLOXSMITH_LARGE_MODEL
+        : opts.kind === "fast"
+          ? BLOXSMITH_FAST_MODEL
+          : opts.thinking
+            ? BLOXSMITH_THINK_MODEL
+            : BLOXSMITH_MODEL;
+    candidates.push({ source: "mcp", provider: "groq", modelName, model: gw(modelName) });
+  }
+
+  if (!candidates.length) {
     throw new Error(
       "AI gateway not configured — COMETAPI_KEY/COMET_API_KEY, NEOKENS_API_KEY, or GROQ_API_KEY missing.",
     );
-  const gw = createGroqProvider(groqKey);
-  const modelName =
-    opts.kind === "large"
-      ? BLOXSMITH_LARGE_MODEL
-      : opts.kind === "fast"
-        ? BLOXSMITH_FAST_MODEL
-        : opts.thinking
-          ? BLOXSMITH_THINK_MODEL
-          : BLOXSMITH_MODEL;
-  return { source: "mcp", provider: "groq", modelName, model: gw(modelName) };
+  }
+
+  return candidates;
+}
+
+export function resolveBuiltInGateway(opts: {
+  kind: ModelKind;
+  thinking?: boolean;
+}): ResolvedGateway {
+  return resolveBuiltInGatewayCandidates(opts)[0];
 }
 
 /**

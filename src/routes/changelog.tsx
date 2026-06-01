@@ -93,6 +93,14 @@ const changelogItems = [
           "The server now accepts Comet's `COMETAPI_KEY` name, keeps `COMET_API_KEY` as a backwards-compatible alias, and routes Comet-compatible text and image requests through `https://api.cometapi.com/v1`.",
       },
       {
+        category: "AI",
+        tagColor: tagStyles.ai,
+        icon: Zap,
+        title: "Model Route Failover",
+        detail:
+          "BloxSmith AI no longer defaults to the unavailable `gpt-5.4-nano` channel. Chat and prompt improve now fail over through stable BloxSmith AI routes, then Neokens or Groq when configured.",
+      },
+      {
         category: "Chat",
         tagColor: tagStyles.ui,
         icon: MessageSquare,

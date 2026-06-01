@@ -23,12 +23,13 @@ export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
     "claude-haiku-4-5-20251001",
   ],
   comet: [
-    // Budget-first defaults to protect the shared site key.
-    "gpt-5.4-nano",
+    // Budget-first defaults to protect the shared site key. Keep the first
+    // entry on a stable Comet route; nano can be unavailable on shared groups.
+    "gpt-5.4-mini",
+    "qwen3.6-plus",
     "deepseek-v4-flash",
     "minimax-m2.7",
-    "qwen3.6-plus",
-    "gpt-5.4-mini",
+    "gpt-5.4-nano",
     "gpt-5.5-all",
     "qwen3.7-max",
     "gemini-3-flash",
@@ -46,7 +47,7 @@ export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
 
 export const SITE_PROVIDER_DEFAULT_MODEL: Record<SiteProviderId, string> = {
   neokens: "gemini-3-flash",
-  comet: "gpt-5.4-nano",
+  comet: "gpt-5.4-mini",
 };
 
 export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
@@ -330,10 +331,13 @@ export const NEOKENS_SAFE_FALLBACK_MODEL = "gemini-3-flash";
 // channel allocated for that model). Order from cheapest/most-stable to
 // progressively heavier so builds always recover.
 export const COMET_SAFE_FALLBACK_MODELS = [
-  "gpt-5.4-nano",
   "gpt-5.4-mini",
+  "qwen3.6-plus",
   "gemini-3-flash",
   "claude-haiku-4-5",
+  "minimax-m2.7",
+  "deepseek-v4-flash",
+  "gpt-5.4-nano",
 ] as const;
 // Backwards-compat: single id consumers still import.
 export const COMET_SAFE_FALLBACK_MODEL = COMET_SAFE_FALLBACK_MODELS[0];

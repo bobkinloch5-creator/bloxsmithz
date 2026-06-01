@@ -792,9 +792,16 @@ function isTransientAIError(err: unknown): boolean {
     status === 409 ||
     status === 429 ||
     (typeof status === "number" && status >= 500 && status < 600) ||
+    isUnavailableModelError(err) ||
     /\b429\b|rate.?limit|too many requests|temporar|timeout|timed out|bad gateway|service unavailable|overloaded|ECONNRESET|ETIMEDOUT/i.test(
       msg,
     )
+  );
+}
+
+function isUnavailableModelError(err: unknown): boolean {
+  return /no available channel|channel.*(?:unavailable|not available)|model[_ -]?not[_ -]?found|model not found|unknown model|invalid model|unsupported model|no such model|distributor/i.test(
+    getAIErrorMessage(err),
   );
 }
 
@@ -815,12 +822,21 @@ function isToolAIError(err: unknown): boolean {
 
 function classifyAIError(
   err: unknown,
-): "timeout" | "context" | "rate_limit" | "tool" | "json" | "provider" | "unknown" {
+):
+  | "timeout"
+  | "context"
+  | "rate_limit"
+  | "tool"
+  | "json"
+  | "model_not_found"
+  | "provider"
+  | "unknown" {
   const msg = getAIErrorMessage(err);
   const status = getAIStatus(err);
   if (isAbortError(err) || /aborted|abort|timeout|timed out/i.test(msg)) return "timeout";
   if (isContextAIError(err)) return "context";
   if (status === 429 || /rate.?limit|too many requests/i.test(msg)) return "rate_limit";
+  if (isUnavailableModelError(err)) return "model_not_found";
   if (isToolAIError(err)) return "tool";
   if (/json|no json object|unexpected end|unterminated|truncated/i.test(msg)) return "json";
   if (typeof status === "number" && status >= 500) return "provider";
@@ -1851,8 +1867,12 @@ export const chatWithAI = createServerFn({ method: "POST" })
       if (spendErr) throw new Error("Not enough credits. Buy more on the Pricing page.");
     }
 
-    const { getModelProfile, recordProviderHealth, resolveAiGateway, resolveBuiltInGateway } =
-      await import("./ai-providers.server");
+    const {
+      getModelProfile,
+      recordProviderHealth,
+      resolveAiGateway,
+      resolveBuiltInGatewayCandidates,
+    } = await import("./ai-providers.server");
     const { ROBLOX_KNOWLEDGE_PROMPT } = await import("./roblox-knowledge");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
@@ -2046,8 +2066,14 @@ ${ROBLOX_KNOWLEDGE_PROMPT}${includeProject && memoryBlock ? `\n\n${memoryBlock}`
     ];
 
     try {
-      const builtIn = resolveBuiltInGateway({ kind: thinking ? "large" : "fast", thinking });
-      if (builtIn.modelName !== resolved.modelName || builtIn.provider !== resolved.provider) {
+      const builtInCandidates = resolveBuiltInGatewayCandidates({
+        kind: thinking ? "large" : "fast",
+        thinking,
+      });
+      for (const builtIn of builtInCandidates) {
+        if (builtIn.modelName === resolved.modelName && builtIn.provider === resolved.provider) {
+          continue;
+        }
         const builtInProfile = getModelProfile(builtIn.provider, builtIn.modelName, { thinking });
         attempts.push({
           label: "built-in-fallback",
@@ -2159,6 +2185,10 @@ ${ROBLOX_KNOWLEDGE_PROMPT}${includeProject && memoryBlock ? `\n\n${memoryBlock}`
         throw new Error(
           "That chat has too much context to send at once. I refunded the credit; start a fresh chat or shorten the pasted text.",
         );
+      if (isUnavailableModelError(err))
+        throw new Error(
+          "All configured BloxSmith AI model routes are unavailable right now. I refunded the credit; try again in a minute or switch models.",
+        );
       throw new Error("Chat failed after retrying: " + msg);
     }
 
@@ -2195,8 +2225,8 @@ export const improvePrompt = createServerFn({ method: "POST" })
     }
 
     const { generateText } = await import("ai");
-    const { resolveBuiltInGateway } = await import("./ai-providers.server");
-    const model = resolveBuiltInGateway({ kind: "fast" }).model;
+    const { getModelProfile, recordProviderHealth, resolveBuiltInGatewayCandidates } =
+      await import("./ai-providers.server");
 
     const system = `You tighten short Roblox Studio build prompts for BloxSmith. Make them clearer, not longer.
 
@@ -2207,17 +2237,50 @@ Rules:
 - No services, no RemoteEvent names, no implementation details — that's the builder's job.
 - PLAIN TEXT only — no markdown, no quotes, no preamble like "Here is...". Just the rewritten prompt.`;
 
+    let lastErr: unknown = null;
     try {
-      const { text } = await generateText({
-        model,
-        system,
-        prompt: `Original:\n${data.prompt}\n\nRewrite as one short, clear sentence.`,
-        maxOutputTokens: 120,
-        maxRetries: 0,
-        timeout: { totalMs: 8_000 },
-      });
-      const cleaned = text.trim().replace(/^["']|["']$/g, "");
-      return { prompt: cleaned || data.prompt, creditsCharged: isOwner ? 0 : COST };
+      const candidates = resolveBuiltInGatewayCandidates({ kind: "fast" });
+      for (const candidate of candidates) {
+        const profile = getModelProfile(candidate.provider, candidate.modelName, { retry: true });
+        try {
+          const started = Date.now();
+          const { text } = await generateText({
+            model: candidate.model,
+            system,
+            prompt: `Original:\n${data.prompt}\n\nRewrite as one short, clear sentence.`,
+            maxOutputTokens: 120,
+            maxRetries: 0,
+            timeout: { totalMs: Math.min(profile.chatTimeoutMs, 10_000) },
+          });
+          await recordProviderHealth({
+            feature: "other",
+            provider: candidate.provider,
+            model: candidate.modelName,
+            source: candidate.source,
+            ok: true,
+            durationMs: Date.now() - started,
+            userId,
+          });
+          const cleaned = text.trim().replace(/^["']|["']$/g, "");
+          return { prompt: cleaned || data.prompt, creditsCharged: isOwner ? 0 : COST };
+        } catch (err: unknown) {
+          lastErr = err;
+          await recordProviderHealth({
+            feature: "other",
+            provider: candidate.provider,
+            model: candidate.modelName,
+            source: candidate.source,
+            ok: false,
+            errorKind: classifyAIError(err),
+            userId,
+          });
+          if (!isTransientAIError(err) && !isUnavailableModelError(err)) break;
+          console.warn(
+            `[improvePrompt] ${candidate.provider}/${candidate.modelName} failed, trying next route: ${getAIErrorMessage(err).slice(0, 220)}`,
+          );
+        }
+      }
+      throw lastErr ?? new Error("No AI routes are configured.");
     } catch (err: any) {
       if (!isOwner) {
         try {
@@ -2226,6 +2289,11 @@ Rules:
       }
       const msg = String(err?.message ?? err);
       if (msg.includes("429")) throw new Error("AI rate limit. Try again in a moment.");
+      if (isUnavailableModelError(err)) {
+        throw new Error(
+          "Improve failed: all configured BloxSmith AI model routes are unavailable right now. I refunded the credit; try again in a minute or pick another model.",
+        );
+      }
       throw new Error("Improve failed: " + msg);
     }
   });
