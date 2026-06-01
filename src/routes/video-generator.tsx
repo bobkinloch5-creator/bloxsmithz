@@ -227,7 +227,7 @@ function VideoGeneratorPage() {
     ? formatCountdown(new Date(limit!.nextAvailableAt!).getTime() - now)
     : null;
 
-  // Progress + ETA while rendering. Seedance typically finishes in ~90–180s,
+  // Progress + ETA while rendering. Sora/Comet video typically takes several minutes,
   // so we estimate against a 150s baseline and cap visual progress at 95%
   // until the real video URL lands (so it never shows 100% prematurely).
   const ETA_TOTAL_MS = 150_000;
