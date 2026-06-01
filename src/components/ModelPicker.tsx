@@ -10,7 +10,9 @@ import {
   SITE_PROVIDER_LABELS,
   SITE_PROVIDER_MODELS,
   getModelCreditMultiplier,
+  getModelTokenPricing,
   getModelToolCapabilities,
+  type ModelTokenPricing,
   type SiteProviderId,
 } from "@/lib/ai-models";
 
@@ -20,6 +22,22 @@ function statusDotClass(disabled?: boolean) {
   return disabled
     ? "bg-destructive shadow-[0_0_8px_var(--destructive)]"
     : "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.75)]";
+}
+
+function formatUsd(value: number) {
+  return Number.isInteger(value)
+    ? String(value)
+    : String(value).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function compactTokenPrice(pricing: ModelTokenPricing | null) {
+  if (!pricing) return null;
+  return `$${formatUsd(pricing.input)}/$${formatUsd(pricing.output)}/M`;
+}
+
+function tokenPriceTitle(pricing: ModelTokenPricing | null) {
+  if (!pricing) return "";
+  return `Provider price: $${formatUsd(pricing.input)} input, $${formatUsd(pricing.output)} output, $${formatUsd(pricing.cachedInput)} cached input per 1M tokens`;
 }
 
 export function ModelPicker({
@@ -94,6 +112,8 @@ export function ModelPicker({
 
   const currentMult = getModelCreditMultiplier(currentModel);
   const currentCaps = getModelToolCapabilities(currentModel);
+  const currentPricing = getModelTokenPricing(currentModel);
+  const currentPriceBadge = compactTokenPrice(currentPricing);
   const currentStatusLabel = currentHealth?.label ?? "Available";
 
   return (
@@ -102,7 +122,7 @@ export function ModelPicker({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 rounded-full bg-surface-elevated/60 border border-border/40 px-2.5 py-0.5 text-[10px] hover:border-primary/60 transition"
-        title={`Choose AI provider and model — ${currentStatusLabel}; current model costs ${currentMult}× credits per generation`}
+        title={`Choose AI provider and model — ${currentStatusLabel}; current model costs ${currentMult}× credits per generation${currentPricing ? `; ${tokenPriceTitle(currentPricing)}` : ""}`}
       >
         <Cpu className="h-3 w-3 text-primary" />
         <span
@@ -139,6 +159,14 @@ export function ModelPicker({
         >
           {currentMult}× cr
         </span>
+        {currentPriceBadge && (
+          <span
+            className="rounded-full bg-muted/70 px-1.5 py-px text-[9px] font-semibold text-muted-foreground"
+            title={tokenPriceTitle(currentPricing)}
+          >
+            {currentPriceBadge}
+          </span>
+        )}
         <ChevronDown className="h-3 w-3 text-muted-foreground" />
       </button>
       {open && (
@@ -156,6 +184,8 @@ export function ModelPicker({
                 const desc = SITE_MODEL_DESCRIPTIONS[m];
                 const mult = getModelCreditMultiplier(m);
                 const caps = getModelToolCapabilities(m);
+                const pricing = getModelTokenPricing(m);
+                const priceBadge = compactTokenPrice(pricing);
                 const modelHealth = getHealth(p, m);
                 // Only block genuinely-down models, and only once health has
                 // actually loaded. While loading or on error, keep selectable.
@@ -240,6 +270,14 @@ export function ModelPicker({
                         >
                           {mult}× cr
                         </span>
+                        {priceBadge && (
+                          <span
+                            className="rounded-full bg-muted/70 px-1.5 py-px text-[9px] font-semibold text-muted-foreground"
+                            title={tokenPriceTitle(pricing)}
+                          >
+                            {priceBadge}
+                          </span>
+                        )}
                         {active && <Check className="h-3 w-3 text-primary" />}
                       </div>
                     </div>
@@ -273,6 +311,10 @@ export function ModelPicker({
             </div>
             <div className="text-muted-foreground/70">
               Base: chat 1 · plan 1 · fix 2 · build 3 · autopilot 10. Owners pay 0.
+            </div>
+            <div className="text-muted-foreground/70">
+              Price badges show input/output USD per 1M provider tokens. Hover for cached-input
+              price when Neokens lists one.
             </div>
           </div>
         </div>

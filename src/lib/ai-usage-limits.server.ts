@@ -20,7 +20,7 @@ const EXPENSIVE_MODEL_LIMITS = [
     limit: Number(process.env.AI_CLAUDE_OPUS_DAILY_LIMIT || "1"),
   },
   {
-    pattern: /gpt-5\.[45]-pro|gpt-5\.5/i,
+    pattern: /gpt-5\.[45]-pro|(?:^|\/)gpt-5\.4$|(?:^|\/)gpt-5\.5(?:$|-)/i,
     label: "premium GPT",
     limit: Number(process.env.AI_PREMIUM_MODEL_DAILY_LIMIT || "1"),
   },

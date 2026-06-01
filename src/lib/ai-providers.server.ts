@@ -115,8 +115,8 @@ export const PROVIDER_MODELS: Record<ProviderId, string[]> = {
   google: ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview"],
   groq: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
   // Neokens proxies many models behind a single key — see neokens.com/docs.
-  // We list whichever Neokens has working on their side at the moment;
-  // Claude Sonnet 4.6/4.7 were tried and removed (Bad Gateway from Neokens).
+  // The active catalog is centralized in ai-models.ts so the picker, health
+  // checks, and generation calls stay in sync.
   neokens: [...SITE_PROVIDER_MODELS.neokens],
   comet: [...SITE_PROVIDER_MODELS.comet],
 };
@@ -134,9 +134,6 @@ export const PROVIDER_DEFAULT_MODEL: Record<ProviderId, string> = {
 // model plus a request-time flag. The "-thinking" variants reuse the same
 // underlying model with adaptive thinking enabled at call time.
 //
-// Note: previous claude-sonnet-4-6/4-7 thinking aliases were removed after
-// Neokens returned Bad Gateway on both. Restore those entries here if/when
-// Neokens supports the underlying models.
 const VIRTUAL_MODEL_ALIASES: Record<string, { realModel: string; thinking?: boolean }> = {};
 
 /**
@@ -167,8 +164,7 @@ export function getModelProfile(
     id.includes("gemini-2.5-pro") ||
     id.includes("claude-opus") ||
     id.includes("gpt-5-codex") ||
-    id.includes("gpt-5.1") ||
-    id.includes("gpt-5.2") ||
+    /^gpt-5\.[1-5](?:$|-codex|-codex-max)/.test(id) ||
     id.includes("70b") ||
     id.includes("sonnet");
   const isGemini = provider === "google" || id.includes("gemini");

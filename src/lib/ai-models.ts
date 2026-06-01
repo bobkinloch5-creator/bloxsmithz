@@ -7,12 +7,22 @@ export const SITE_PROVIDER_LABELS: Record<SiteProviderId, string> = {
 
 export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
   neokens: [
-    // Recommended defaults first: fast + currently valid ids. Keep this list
-    // to Neokens models that reliably answer health checks; unstable premium
-    // models live under the Comet/BloxSmith AI provider instead.
+    // Recommended defaults first: fast + budget-friendly active Neokens ids.
     "gemini-3-flash",
-    "gpt-5.2",
+    "gpt-5.3-codex",
     "claude-haiku-4-5-20251001",
+    "gpt-5.1",
+    "gpt-5.1-codex",
+    "gpt-5.2",
+    "gpt-5.2-codex",
+    "gpt-5.1-codex-max",
+    "gemini-3.1-pro",
+    "claude-sonnet-4-6-thinking",
+    "claude-sonnet-4-7-thinking",
+    "gpt-5.4",
+    "gpt-5.5",
+    "claude-opus-4-6-thinking",
+    "claude-opus-4-7-thinking",
   ],
   comet: [
     // Budget-first defaults to protect the shared site key. Keep the first
@@ -81,6 +91,12 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
     "OpenAI flagship for general Roblox building and refactors. What it does for your game: handles full systems, UI, and scripts with solid all-round quality.",
   "gpt-5.2-codex":
     "Code-tuned 5.2 for heavier Luau work. What it does for your game: long ModuleScripts, OOP class systems, and math-heavy gameplay code.",
+  "gpt-5.3-codex":
+    "Budget code-tuned GPT for clean Luau, refactors, and fast implementation passes. What it does for your game: writes ModuleScripts, fixes tools, and keeps Roblox systems tidy without premium-model cost.",
+  "gpt-5.4":
+    "Premium GPT reasoning for harder Roblox architecture, debugging, and multi-step builds. What it does for your game: plans complex systems, reviews edge cases, and handles larger scripted features.",
+  "gpt-5.5":
+    "Top-tier GPT for the hardest builds and deep debugging. What it does for your game: tackles large game systems, tricky race conditions, and high-care refactors when cheaper models are not enough.",
   "gpt-5.1":
     "Reliable general-purpose model for everyday builds and edits. What it does for your game: scripts, GUIs, RemoteEvents, and mid-size systems.",
   "gpt-5.1-codex":
@@ -117,7 +133,7 @@ export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
   // Claude
   "claude-opus-4-8-thinking": 20,
   "claude-opus-4-7-thinking": 7,
-  "claude-opus-4-6-thinking": 5,
+  "claude-opus-4-6-thinking": 7,
   "claude-sonnet-4-7-thinking": 3,
   "claude-sonnet-4-6-thinking": 3,
   "claude-haiku-4-5-20251001": 1,
@@ -127,12 +143,40 @@ export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
   "gpt-5.1": 1,
   "gpt-5.1-codex": 1,
   "gpt-5.1-codex-max": 2,
+  "gpt-5.3-codex": 1,
+  "gpt-5.4": 3,
+  "gpt-5.5": 5,
   // Gemini
   "gemini-3.1-pro": 2,
   "gemini-3-flash": 1,
 };
 
 export const DEFAULT_MODEL_CREDIT_MULTIPLIER = 1;
+
+export type ModelTokenPricing = {
+  input: number;
+  output: number;
+  cachedInput: number;
+};
+
+// USD per 1M tokens from the active Neokens catalog. Omitted models have no
+// confirmed price in the source list and should not display a price badge.
+export const MODEL_TOKEN_PRICING_USD_PER_MILLION: Record<string, ModelTokenPricing> = {
+  "claude-haiku-4-5-20251001": { input: 0.8, output: 4, cachedInput: 0.08 },
+  "claude-opus-4-6-thinking": { input: 15, output: 75, cachedInput: 1.5 },
+  "claude-opus-4-7-thinking": { input: 15, output: 75, cachedInput: 1.5 },
+  "claude-sonnet-4-6-thinking": { input: 3, output: 15, cachedInput: 0.3 },
+  "claude-sonnet-4-7-thinking": { input: 3, output: 15, cachedInput: 0.3 },
+  "gpt-5.1": { input: 2.5, output: 10, cachedInput: 0.25 },
+  "gpt-5.1-codex": { input: 2.5, output: 10, cachedInput: 0.25 },
+  "gpt-5.1-codex-max": { input: 5, output: 20, cachedInput: 0.5 },
+  "gpt-5.2": { input: 3, output: 12, cachedInput: 0.3 },
+  "gpt-5.2-codex": { input: 3, output: 12, cachedInput: 0.3 },
+  "gpt-5.3-codex": { input: 1.5, output: 6, cachedInput: 0.15 },
+  "gpt-5.4": { input: 5, output: 20, cachedInput: 0.5 },
+  "gpt-5.5": { input: 10, output: 40, cachedInput: 1 },
+  "gemini-3-flash": { input: 0.075, output: 0.3, cachedInput: 0.01 },
+};
 
 export const MODEL_TOOL_CAPABILITIES: Record<
   string,
@@ -216,11 +260,29 @@ export const MODEL_TOOL_CAPABILITIES: Record<
     thinking: false,
     label: "Careful tools",
   },
+  "claude-haiku-4-5-20251001": {
+    tools: true,
+    webSearch: false,
+    thinking: false,
+    label: "Careful tools",
+  },
   "claude-sonnet-4-6-thinking": {
     tools: true,
     webSearch: true,
     thinking: true,
     label: "Web + reasoning",
+  },
+  "claude-sonnet-4-7-thinking": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + reasoning",
+  },
+  "claude-opus-4-6-thinking": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + premium",
   },
   "claude-opus-4-7-thinking": {
     tools: true,
@@ -233,6 +295,54 @@ export const MODEL_TOOL_CAPABILITIES: Record<
     webSearch: true,
     thinking: true,
     label: "Web + elite",
+  },
+  "gpt-5.1": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + coding",
+  },
+  "gpt-5.1-codex": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + coding",
+  },
+  "gpt-5.1-codex-max": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + deep coding",
+  },
+  "gpt-5.2": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + coding",
+  },
+  "gpt-5.2-codex": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + coding",
+  },
+  "gpt-5.3-codex": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + coding",
+  },
+  "gpt-5.4": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + reasoning",
+  },
+  "gpt-5.5": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + premium reasoning",
   },
 };
 
@@ -270,6 +380,19 @@ export function getModelCreditMultiplier(modelName: string | null | undefined): 
   return DEFAULT_MODEL_CREDIT_MULTIPLIER;
 }
 
+export function getModelTokenPricing(
+  modelName: string | null | undefined,
+): ModelTokenPricing | null {
+  if (!modelName) return null;
+  const direct = MODEL_TOKEN_PRICING_USD_PER_MILLION[modelName];
+  if (direct) return direct;
+  if (modelName.endsWith("-thinking")) {
+    const base = modelName.slice(0, -"-thinking".length);
+    return MODEL_TOKEN_PRICING_USD_PER_MILLION[base] ?? null;
+  }
+  return null;
+}
+
 /**
  * Apply the multiplier to a base credit cost. Rounds up so partial credits
  * always favor the platform (a 0.5x model still costs at least 1 credit).
@@ -286,27 +409,14 @@ export function applyModelCreditMultiplier(baseCost: number, modelName: string |
 // the EXACT model id Neokens accepts at api.quatarly.cloud, plus whether this
 // UI id implies "thinking" mode.
 //
-// ⚠️ EDIT THIS to match your Neokens dashboard. If a UI id already equals the
-// real Neokens id, you can omit it (unmapped ids pass through unchanged). The
-// only entries that MUST be here are aliases whose UI name differs from the
-// real id — especially the "-thinking" variant, which must map to a base model
-// id plus thinking:true (Neokens does not accept "...-thinking" as a literal
-// model name).
+// EDIT THIS to match your Neokens dashboard. If a UI id already equals the
+// real Neokens id, you can omit it (unmapped ids pass through unchanged).
+// Neokens currently lists Claude "-thinking" variants as literal model ids, so
+// do not alias them to the non-thinking base ids here.
 //
 // Format:  "ui-id": { neokens: "real-neokens-id", thinking?: true }
 // ─────────────────────────────────────────────────────────────────────────
 export const NEOKENS_MODEL_MAP: Record<string, { neokens: string; thinking?: boolean }> = {
-  // Claude "-thinking" UI ids must resolve to a real base model id + the flag.
-  // Neokens does not accept a literal "...-thinking" model name.
-  "claude-opus-4-7-thinking": { neokens: "claude-opus-4-7", thinking: true },
-  "claude-opus-4-6-thinking": { neokens: "claude-opus-4-6", thinking: true },
-  "claude-sonnet-4-7-thinking": { neokens: "claude-sonnet-4-7", thinking: true },
-  "claude-sonnet-4-6-thinking": { neokens: "claude-sonnet-4-6", thinking: true },
-  // Backwards compatibility for projects saved while these experimental UI ids existed.
-  "gpt-5.5": { neokens: "gpt-5.2" },
-  "gpt-5.4": { neokens: "gpt-5.2" },
-  "gpt-5.3-codex": { neokens: "gpt-5.2-codex" },
-
   // Everything else (gpt-*, gemini-*, claude-haiku-*) passes through unchanged
   // because the UI id already equals the real Neokens id. Add an entry here
   // only if your dashboard later uses a different id, e.g.:
@@ -373,10 +483,8 @@ export const COMET_MODEL_MAP: Record<string, { comet: string; thinking?: boolean
 export function resolveNeokensModel(uiModelId: string): { model: string; thinking: boolean } {
   const mapped = NEOKENS_MODEL_MAP[uiModelId];
   if (mapped) return { model: mapped.neokens, thinking: !!mapped.thinking };
-  // Safety net: if a "-thinking" id wasn't explicitly mapped, strip the suffix
-  // and turn on thinking rather than sending an invalid "...-thinking" string.
   if (uiModelId.endsWith("-thinking")) {
-    return { model: uiModelId.slice(0, -"-thinking".length), thinking: true };
+    return { model: uiModelId, thinking: true };
   }
   return { model: uiModelId, thinking: false };
 }
