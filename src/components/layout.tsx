@@ -58,6 +58,16 @@ type NavItem = {
   guestOnly?: boolean;
 };
 
+// Surfaced as visible top-level links on desktop (lg+). The full list stays in the Browse dropdown.
+const PRIMARY_NAV_ITEMS: readonly NavItem[] = [
+  { to: "/dashboard", label: "Dashboard", authOnly: true },
+  { to: "/templates", label: "Templates" },
+  { to: "/generate-3d", label: "3D" },
+  { to: "/ui-generator", label: "UI" },
+  { to: "/showcase", label: "Showcase" },
+  { to: "/pricing", label: "Pricing" },
+];
+
 const NAV_ITEMS: readonly NavItem[] = [
   { to: "/dashboard", label: "Dashboard", authOnly: true },
   { to: "/templates", label: "Templates" },
@@ -230,6 +240,16 @@ export function Header() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {PRIMARY_NAV_ITEMS.filter((item) => !item.authOnly || user).map((item) => (
+            <Link
+              key={item.to}
+              to={item.to as any}
+              className="rounded-md px-2.5 py-1.5 font-medium text-foreground/80 hover:text-foreground hover:bg-muted/50 transition-colors whitespace-nowrap [&.active]:text-foreground [&.active]:bg-muted/60"
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 lg:gap-2.5">
@@ -375,11 +395,12 @@ export function Header() {
       </div>
 
       <nav
-        className="md:hidden border-t border-border/70 bg-background/95 px-2 py-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="md:hidden flex items-center gap-2 border-t border-border/70 bg-background/95 px-2 py-2"
         aria-label="Mobile navigation"
       >
-        <div className="flex w-max min-w-full items-center gap-2">
-          <LiveHeaderClock className="inline-flex md:hidden" />
+        <LiveHeaderClock className="inline-flex md:hidden" />
+        <div className="flex-1 min-w-0 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max min-w-full items-center gap-2">
           {mobileItems.map((item) => {
             const Icon = item.icon;
             const isProfile = item.to === "/account" && user;
@@ -427,6 +448,7 @@ export function Header() {
             </>
           )}
         </div>
+        </div>
       </nav>
     </header>
   );
@@ -453,7 +475,7 @@ function LiveHeaderClock({ className = "" }: { className?: string }) {
 
   return (
     <div
-      className={`${className} h-9 shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-surface/70 px-3 text-xs font-semibold text-foreground/90 shadow-sm tabular-nums`}
+      className={`${className} h-9 shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-surface/70 px-3 text-xs font-semibold text-foreground/90 shadow-sm tabular-nums`}
       title="Local 12-hour time"
       aria-label={`Local time ${time}`}
       suppressHydrationWarning
