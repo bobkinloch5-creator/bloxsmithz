@@ -87,6 +87,14 @@ const changelogItems = [
           "Browse now includes a lightweight Music Gen preview marked Coming soon. Roblox-ready music generation is planned but remains disabled for now.",
       },
       {
+        category: "Clothing",
+        tagColor: tagStyles.ui,
+        icon: Shirt,
+        title: "Full-Surface Clothing Preview Drag",
+        detail:
+          "The 3D clothing preview can now be dragged from the whole preview panel, including the top overlay area, while keeping preview controls and buttons responsive.",
+      },
+      {
         category: "Projects",
         tagColor: tagStyles.tools,
         icon: Users,

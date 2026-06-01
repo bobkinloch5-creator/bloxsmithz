@@ -37,6 +37,15 @@ export function ClothingPreview3D({
     useThree: any;
   }>(null);
   const [failed, setFailed] = useState(false);
+  const [viewMode, setViewMode] = useState<"torso" | "full">("torso");
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [resetCounter, setResetCounter] = useState(0);
+  const controlsRef = useRef<any>(null);
+  const dragRef = useRef<{ active: boolean; x: number; y: number }>({
+    active: false,
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     let alive = true;
@@ -72,11 +81,6 @@ export function ClothingPreview3D({
     );
   }
 
-  const [viewMode, setViewMode] = useState<"torso" | "full">("torso");
-  const [autoRotate, setAutoRotate] = useState(true);
-  const [resetCounter, setResetCounter] = useState(0);
-  const controlsRef = useRef<any>(null);
-
   if (!mod) {
     return (
       <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
@@ -87,13 +91,56 @@ export function ClothingPreview3D({
 
   const { Canvas, OrbitControls, ContactShadows, THREE, useThree } = mod;
 
+  const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("button,input,select,textarea,a")) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragRef.current = { active: true, x: e.clientX, y: e.clientY };
+    setAutoRotate(false);
+  };
+
+  const moveDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active) return;
+    const dx = e.clientX - dragRef.current.x;
+    const dy = e.clientY - dragRef.current.y;
+    dragRef.current.x = e.clientX;
+    dragRef.current.y = e.clientY;
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.rotateLeft(dx * 0.006);
+    controls.rotateUp(dy * 0.006);
+    controls.update();
+  };
+
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active) return;
+    dragRef.current.active = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // Pointer capture may already be released by the browser.
+    }
+  };
+
   return (
-    <div className="relative w-full h-full group/preview rounded-2xl overflow-hidden border border-border/40">
+    <div
+      className="relative w-full h-full group/preview rounded-2xl overflow-hidden border border-border/40 cursor-grab active:cursor-grabbing touch-none select-none"
+      onPointerDown={startDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onLostPointerCapture={() => {
+        dragRef.current.active = false;
+      }}
+    >
       <Canvas
         camera={{ position: [0, 0.92, 2.6], fov: 32 }}
         dpr={[1, 2]}
         shadows
         gl={{ antialias: true }}
+        className="!h-full !w-full"
       >
         {/* Soft gradient backdrop */}
         <color attach="background" args={["#0b0d14"]} />
@@ -125,6 +172,7 @@ export function ClothingPreview3D({
         <OrbitControls
           ref={controlsRef}
           enablePan={false}
+          enableRotate={false}
           enableZoom={true}
           autoRotate={autoRotate}
           autoRotateSpeed={1.2}

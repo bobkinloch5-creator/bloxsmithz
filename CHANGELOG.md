@@ -8,6 +8,7 @@
 - Hardened Studio sync validation so AI-generated broad deletes and terrain clears are blocked before they can remove useful work from a project.
 - Improved site responsiveness by lazy-loading Global Chat bundles, delaying the floating chat on non-chat pages, disabling the ripple layer on heavier workspaces, and reducing initial chat payload sizes.
 - Added a lightweight Music Gen card to Browse marked as Coming soon; music generation is announced but not enabled yet.
+- Improved clothing 3D previews so users can drag from the full preview surface, including the top overlay area, while keeping toolbar buttons clickable.
 
 ### Project Collaboration & Private Team Chat
 
