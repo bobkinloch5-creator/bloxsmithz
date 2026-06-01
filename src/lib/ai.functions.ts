@@ -876,7 +876,7 @@ function pickGenerationTools(
     add("fetch_url");
   }
   if (
-    /\b(toolbox|creator store|free model|asset|model id|insert model|use a model|marketplace|skybox|music|sound|decal|image id|thumbnail|icon|logo|banner|loading screen|map|world|city|town|village|lobby|arena|castle|tower|building|house|shop|weapon|sword|npc|enemy|vehicle|pet|tree|forest|props?)\b/i.test(
+    /\b(toolbox|creator store|free model|asset|model id|insert model|use a model|marketplace|skybox|music|sound|decal|image id|thumbnail|icon|logo|banner|loading screen|map|world|city|town|village|lobby|arena|castle|tower|building|house|weapon|sword|npc|enemy|vehicle|pet|tree|forest|props?)\b/i.test(
       lower,
     )
   ) {

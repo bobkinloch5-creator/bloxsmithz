@@ -232,6 +232,27 @@ const NEOKENS_MODEL_BY_KIND: Record<ModelKind, string> = {
   large: "gemini-3.1-pro",
 };
 
+const NEOKENS_MODEL_CANDIDATES_BY_KIND: Record<ModelKind, readonly string[]> = {
+  chat: ["gemini-3-flash", "gpt-5.3-codex", "claude-haiku-4-5-20251001"],
+  fast: ["gemini-3-flash", "gpt-5.3-codex", "gpt-5.1-codex"],
+  build: [
+    "gpt-5.2-codex",
+    "claude-sonnet-4-6-thinking",
+    "gpt-5.3-codex",
+    "gemini-3.1-pro",
+    "gpt-5.2",
+    "gemini-3-flash",
+  ],
+  large: [
+    "gemini-3.1-pro",
+    "claude-sonnet-4-6-thinking",
+    "gpt-5.2-codex",
+    "claude-opus-4-7-thinking",
+    "gpt-5.5",
+    "gemini-3-flash",
+  ],
+};
+
 const COMET_MODEL_BY_KIND: Record<ModelKind, string> = {
   chat: "deepseek-v4-flash",
   build: "claude-sonnet-4-6",
@@ -339,9 +360,15 @@ export function resolveBuiltInGatewayCandidates(opts: {
 
   const neokensKey = getNeokensApiKey();
   if (neokensKey) {
-    const modelName = NEOKENS_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.neokens;
     const gw = createProvider("neokens", neokensKey);
-    candidates.push({ source: "mcp", provider: "neokens", modelName, model: gw(modelName) });
+    const neokensCandidates = uniqueModelNames([
+      NEOKENS_MODEL_BY_KIND[opts.kind] ?? SITE_PROVIDER_DEFAULT_MODEL.neokens,
+      ...(NEOKENS_MODEL_CANDIDATES_BY_KIND[opts.kind] ?? [SITE_PROVIDER_DEFAULT_MODEL.neokens]),
+    ]);
+    for (const uiModelName of neokensCandidates) {
+      const { model: modelName } = resolveNeokensModel(uiModelName);
+      candidates.push({ source: "mcp", provider: "neokens", modelName, model: gw(modelName) });
+    }
   }
 
   const groqKey = process.env.GROQ_API_KEY;

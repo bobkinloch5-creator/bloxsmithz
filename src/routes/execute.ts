@@ -16,10 +16,7 @@ import {
 import { getModelProfile, recordProviderHealth, resolveAiGateway } from "@/lib/ai-providers.server";
 import { buildBloxSmithTools } from "@/lib/ai-tools.server";
 import { buildProjectMemoryBlock, rememberProjectInteraction } from "@/lib/ai-memory.server";
-import {
-  buildSmartContextBlock,
-  isSmartFullPromptRequest,
-} from "@/lib/ai-smartest-builder-core";
+import { buildSmartContextBlock, isSmartFullPromptRequest } from "@/lib/ai-smartest-builder-core";
 
 // ---------- Prompt-size protection helpers ----------
 // Rough token estimate: 1 token ≈ 4 chars of English. Good enough for budgeting.
@@ -1419,10 +1416,14 @@ function pickFastTools(prompt: string, ctx: { projectId: string; userId: string 
   const add = (name: string) => {
     if (allTools[name]) picked[name] = allTools[name];
   };
-  if (
-    /\[web search enabled\]|search the web|look up|current|docs|documentation|api/i.test(prompt)
-  ) {
+  if (/\b(docs|documentation|api|creator hub|api reference)\b/i.test(prompt)) {
     add("roblox_docs_search");
+  }
+  if (
+    /\[web search enabled\]|search the web|web search|look up|current|latest|today|internet|url|https?:\/\//i.test(
+      prompt,
+    )
+  ) {
     add("web_search");
     add("fetch_url");
   }
@@ -1500,7 +1501,9 @@ async function resolveSearchQueries(actions: any[]): Promise<any[]> {
           );
           continue;
         } else {
-          console.warn(`[Execute API] No unused free toolbox results for "${a.searchQuery}" — skipping`);
+          console.warn(
+            `[Execute API] No unused free toolbox results for "${a.searchQuery}" — skipping`,
+          );
         }
       } catch (err) {
         console.error("Error resolving searchQuery for insert_toolbox_asset:", err);
@@ -1752,13 +1755,8 @@ function tryParseJSON(raw: string): any {
       //    (raw tabs/newlines inside a JSON string are illegal and a very
       //    common failure for script-heavy builds).
       try {
-        const sanitized = repaired.replace(
-          /"(?:[^"\\]|\\.)*"/g,
-          (m) =>
-            m
-              .replace(/\n/g, "\\n")
-              .replace(/\r/g, "\\r")
-              .replace(/\t/g, "\\t"),
+        const sanitized = repaired.replace(/"(?:[^"\\]|\\.)*"/g, (m) =>
+          m.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t"),
         );
         return JSON.parse(sanitized);
       } catch {
@@ -2048,7 +2046,7 @@ export const Route = createFileRoute("/execute")({
             // path (which needs gpt-oss-120b). External-key sources don't get
             // the fallback — they use the user's chosen model directly.
             const apiKey = process.env.GROQ_API_KEY;
-          let docsCitations: import("@/lib/roblox-docs.server").DocsCitation[] = [];
+            let docsCitations: import("@/lib/roblox-docs.server").DocsCitation[] = [];
             if (true) {
               try {
                 const gateway = apiKey ? createGroqProvider(apiKey) : null;
@@ -2133,9 +2131,8 @@ export const Route = createFileRoute("/execute")({
                 docsCitations = [];
                 let docsBlock = "";
                 try {
-                  const { searchRobloxDocs, formatDocsForPrompt } = await import(
-                    "@/lib/roblox-docs.server"
-                  );
+                  const { searchRobloxDocs, formatDocsForPrompt } =
+                    await import("@/lib/roblox-docs.server");
                   docsCitations = await searchRobloxDocs(prompt, 4);
                   docsBlock = formatDocsForPrompt(docsCitations);
                 } catch (e) {
@@ -2612,7 +2609,9 @@ export const Route = createFileRoute("/execute")({
                 maxPerGroup: wantsMap ? 3 : 2,
                 verifiedOnly: false,
               });
-              const plannedActions = plan.groups.flatMap((group: any) => group.insertionActions ?? []);
+              const plannedActions = plan.groups.flatMap(
+                (group: any) => group.insertionActions ?? [],
+              );
               if (plannedActions.length > 0) {
                 console.log(
                   `[Execute API] Safety net: injected ${plannedActions.length} varied toolbox assets for "${prompt.slice(0, 80)}"`,
@@ -2763,11 +2762,15 @@ export const Route = createFileRoute("/execute")({
 
           // Append Roblox Docs citations to the user-facing message (best-effort)
           let finalMessage = studioSafeMessage(result.message, queued.length, shouldAuto);
-          let docsUsedOut: Array<{ title: string; section: string | null; url: string; similarity: number }> = [];
+          let docsUsedOut: Array<{
+            title: string;
+            section: string | null;
+            url: string;
+            similarity: number;
+          }> = [];
           try {
-            const { searchRobloxDocs, formatDocsForCitation } = await import(
-              "@/lib/roblox-docs.server"
-            );
+            const { searchRobloxDocs, formatDocsForCitation } =
+              await import("@/lib/roblox-docs.server");
             const cites = await searchRobloxDocs(prompt, 4);
             if (cites.length) {
               finalMessage = finalMessage + formatDocsForCitation(cites);
