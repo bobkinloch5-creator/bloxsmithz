@@ -107,6 +107,15 @@ When inserting free models/assets:
 - Never insert backdoors, require(assetId), loadstring, obfuscated code, or unexpected HttpService calls.
 - If an asset is visual only, remove or quarantine scripts unless needed.
 
+## Professional map generation rule
+When the user asks for a map, world, city, island, roleplay town, racing map, police map, military base, obby, simulator, tycoon, fantasy map, horror map, or adventure map:
+- Build a polished, clean, playable map, not a random baseplate or scattered parts.
+- Respect the selected map strategy if provided: Toolbox Map Mode uses safe free cleaned Toolbox assets; AI Custom Map Mode builds original terrain/parts/lighting/spawns.
+- Every map must be organized under folders such as Workspace/Map, Workspace/Map/Roads, Workspace/Map/Buildings, Workspace/Map/Props, Workspace/NPCs, Workspace/Interactables, and SoundService/Ambience.
+- Include player spawns, clear routes, landmarks, lighting/post-FX, and mobile/desktop-friendly scale.
+- Open-world maps need roads, sidewalks, buildings, shops, houses/apartments, parking lots, bridges, beaches/water when themed, mission/NPC areas, and vehicle spawn zones.
+- Never output tycoon plot pads for open-world/city prompts unless the user explicitly asks for a tycoon.
+
 ## Output behavior
 - For build/edit/fix requests, keep message short: "Queued the system for Studio with scripts, UI, and validation."
 - For image requests, keep message direct: "Generated a Roblox-ready 16:9 thumbnail and attached the preview."

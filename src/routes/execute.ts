@@ -2262,8 +2262,16 @@ export const Route = createFileRoute("/execute")({
           }
 
           const body = await request.json().catch(() => ({}));
-          const { projectId, prompt, autoExecute, studioConnected, thinking, aiMode, attachments } =
-            body;
+          const {
+            projectId,
+            prompt,
+            autoExecute,
+            studioConnected,
+            thinking,
+            aiMode,
+            mapStrategy,
+            attachments,
+          } = body;
           // Vision: optional list of data URLs (data:image/...;base64,...) sent
           // from the chat composer's attach-image button. Cap to 4 images so we
           // don't blow the context window.
@@ -2283,8 +2291,15 @@ export const Route = createFileRoute("/execute")({
           }
 
           // Resolve optional AI mode addendum (Build/Fix/Debug/Polish/UI/etc.)
-          const { getAiModeAddendum } = await import("@/lib/ai-modes");
+          const { getAiModeAddendum, buildMapGenerationDirective } = await import("@/lib/ai-modes");
           const modeAddendum = getAiModeAddendum(typeof aiMode === "string" ? aiMode : null);
+          const selectedMapStrategy =
+            mapStrategy === "custom" || mapStrategy === "toolbox" ? mapStrategy : null;
+          const mapDirective = buildMapGenerationDirective(selectedMapStrategy);
+          const isMapRequest =
+            /\b(map|maps|world|city|town|island|road|roads|street|streets|terrain|environment|obby|simulator|tycoon|racing|police|military|base|horror|adventure|roleplay|rp)\b/i.test(
+              String(prompt ?? ""),
+            );
 
           // Projects are private: only the owning user can run AI against them.
           const { data: project, error: projectErr } = await supabaseUser
@@ -2678,7 +2693,8 @@ export const Route = createFileRoute("/execute")({
                         ? `${baseSystem}\n\n=== PROJECT-SPECIFIC RULES (override defaults) ===\n${projectRules}`
                         : baseSystem) +
                       "\n\nUse PROJECT MEMORY for persistent preferences, game name, style, genre, and recent context. If it conflicts with live project files or the latest user request, obey the latest request and live state." +
-                      (modeAddendum ? `\n\n${modeAddendum}` : "");
+                      (modeAddendum ? `\n\n${modeAddendum}` : "") +
+                      (isMapRequest && mapDirective ? `\n\n${mapDirective}` : "");
                     const { generateTextWithToolFallback, extractToolActivity } =
                       await import("@/lib/ai-retry.server");
                     // Per-model output-token cap. Each provider/model family has a
@@ -2970,7 +2986,9 @@ export const Route = createFileRoute("/execute")({
               });
             }
           }
-          if (wantsVisualAssets && !hasInsert) {
+          const shouldAutoPlanToolbox =
+            wantsVisualAssets && !hasInsert && !(selectedMapStrategy === "custom" && wantsMap);
+          if (shouldAutoPlanToolbox) {
             try {
               const { planRobloxToolboxAssets } = await import("@/lib/ai-tools.server");
               const plan = await planRobloxToolboxAssets({

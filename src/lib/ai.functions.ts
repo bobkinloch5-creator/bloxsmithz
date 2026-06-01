@@ -9,6 +9,7 @@ const InputSchema = z.object({
   mode: z.enum(["chat", "generate"]).default("generate"),
   preview: z.boolean().default(true),
   thinking: z.boolean().default(false),
+  mapStrategy: z.enum(["toolbox", "custom"]).default("toolbox"),
   imageDataUrl: z
     .string()
     .regex(/^data:image\/(png|jpeg|jpg|webp|gif);base64,/, "Must be a data:image base64 URL")
@@ -1122,7 +1123,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { projectId, prompt, mode, preview, imageDataUrl, thinking } = data;
+    const { projectId, prompt, mode, preview, imageDataUrl, thinking, mapStrategy } = data;
     await assertProjectOwner(supabase, projectId, userId);
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -1159,6 +1160,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
       await import("./ai-memory.server");
     const { buildSmartContextBlock, isSmartFullPromptRequest } =
       await import("./ai-smartest-builder-core");
+    const { buildMapGenerationDirective } = await import("./ai-modes");
 
     const { buildBloxSmithTools } = await import("./ai-tools.server");
 
@@ -1170,9 +1172,16 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const wantsReplica = isBuildingReplicaPrompt(prompt);
     const isVisionBuild = !!imageDataUrl && mode === "generate";
     const smartFull = isSmartFullPromptRequest(prompt, mode);
+    const mapRequest =
+      mode === "generate" &&
+      /\b(map|maps|world|city|town|island|road|roads|street|streets|terrain|environment|obby|simulator|tycoon|racing|police|military|base|horror|adventure|roleplay|rp)\b/i.test(
+        prompt,
+      );
+    const mapDirective = buildMapGenerationDirective(mapStrategy);
     const isComplex =
       mode === "generate" &&
       (smartFull ||
+        mapRequest ||
         promptLen > 400 ||
         complexKeywords.test(prompt) ||
         wantsReplica ||
@@ -1355,7 +1364,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
       ? `\n\nREFERENCE BUILDING REPLICA MODE:\n- A reference image may be attached. Analyze the visible architecture before emitting actions: silhouette, floor count, roof shape, facade colors, materials, windows, door placement, trim, stairs, balconies, pillars, signs, lights, and landscaping.\n- Return a complete Roblox-scale Model under Workspace/Map/Buildings/<DescriptiveName>, not a single block and not an empty folder.\n- Minimum action quality: create Workspace/Map and Workspace/Map/Buildings, one Model, ground/spawn/path, 20+ anchored visible Part/WedgePart/MeshPart details, glass windows, door, trim, roof, and a select action on the Model.\n- Prefer procedural parts for the reference structure so it resembles the image; only use toolbox assets for supporting props/landscaping.\n- If some image details are unclear, infer a polished matching building and say what you inferred in the message.\n`
       : "";
     try {
-      fullPrompt = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${studioErrorBlock ? `${studioErrorBlock}\n\n` : ""}${liveBlock}\n\n${smartBlock}\n\nFULL PROJECT FILE MAP (${(allFiles ?? []).length} files - every file your project has, by location):\n${projectMap || "  (no files yet)"}\n\nRelevant project files (with content preview):\n${filesBlock || "(none indexed)"}\n\nUser request:\n${prompt}\n\nRules:\n- You have FULL AWARENESS of the project above. Reference real files by path. NEVER duplicate something that already exists - MODIFY it.\n- Interpret short, typo-heavy, or broad requests by using the SMART BUILD ROUTER above. Preserve the latest user request exactly, then infer practical Roblox defaults.
+      fullPrompt = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${studioErrorBlock ? `${studioErrorBlock}\n\n` : ""}${liveBlock}\n\n${smartBlock}${mapRequest && mapDirective ? `\n\n${mapDirective}` : ""}\n\nFULL PROJECT FILE MAP (${(allFiles ?? []).length} files - every file your project has, by location):\n${projectMap || "  (no files yet)"}\n\nRelevant project files (with content preview):\n${filesBlock || "(none indexed)"}\n\nUser request:\n${prompt}\n\nRules:\n- You have FULL AWARENESS of the project above. Reference real files by path. NEVER duplicate something that already exists - MODIFY it.\n- Interpret short, typo-heavy, or broad requests by using the SMART BUILD ROUTER above. Preserve the latest user request exactly, then infer practical Roblox defaults.
 - Use PROJECT MEMORY for durable preferences, naming, genre, and recent context. If memory conflicts with live files or the user's latest request, obey the latest request and live project state.
 - Organize new files into clean subfolders by feature (e.g. ServerScriptService/Combat/HitService, ReplicatedStorage/Modules/Config, StarterPlayerScripts/UI/Hud). Do NOT dump everything at the root of a service.\n- Place server Scripts in ServerScriptService, LocalScripts in StarterPlayerScripts or StarterGui, GUIs in StarterGui, RemoteEvents/RemoteFunctions in ReplicatedStorage/Remotes, ModuleScripts in ReplicatedStorage/Modules (shared) or ServerStorage/Modules (server-only), Tools in StarterPack, physical/world objects in Workspace.\n- For ground/landscape requests (grass, sand, snow, water, hills, islands), use real Roblox Terrain via the \`terrainFill\` action. NEVER spawn hundreds of thin Parts.\n- Do NOT claim success - phrase as "Queued for Studio...".\n- If the request is a casual question (no code changes), reply naturally in 'message' with empty 'files' and 'actions'.\n- Use tools (web_search, roblox_asset_*, fetch_url) ONLY when you genuinely need fresh info - every tool call slows you down.\n\nReturn the JSON object as specified.`;
       fullPrompt += replicaInstruction;
@@ -1389,7 +1398,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
         generateText,
         {
           model,
-          system: activeSystemPrompt,
+          system: activeSystemPrompt + (mapRequest && mapDirective ? `\n\n${mapDirective}` : ""),
           ...(imageDataUrl && profile.supportsVision
             ? {
                 messages: [
@@ -1507,7 +1516,8 @@ export const generateWithAI = createServerFn({ method: "POST" })
               generateText,
               {
                 model: fallbackProvider(fallbackPlan.model),
-                system: SLIM_SYSTEM_PROMPT,
+                system:
+                  SLIM_SYSTEM_PROMPT + (mapRequest && mapDirective ? `\n\n${mapDirective}` : ""),
                 ...(imageDataUrl
                   ? {
                       messages: [

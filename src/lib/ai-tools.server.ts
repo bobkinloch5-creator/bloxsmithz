@@ -183,7 +183,16 @@ function buildToolboxPlanGroups(prompt: string, requestedTypes: string[] = []): 
     groups.push({ label, category, parent, count, queries: uniqueQueries(queries) });
   };
 
-  if (/\b(city|town|roleplay|rp|street|downtown)\b/.test(lower)) {
+  if (
+    /\b(open[-\s]?world|city|town|roleplay|rp|street|downtown|police|wanted|apartment|garage|miami|beach)\b/.test(
+      lower,
+    )
+  ) {
+    add("Complete Map", "Models", "Workspace/Map/ToolboxMap", 2, [
+      `${theme} city map`,
+      "roleplay city map",
+      "open world city map",
+    ]);
     add("Roads", "Models", "Workspace/Map/Roads", 3, [
       `${theme} road kit`,
       "city road",
@@ -201,6 +210,76 @@ function buildToolboxPlanGroups(prompt: string, requestedTypes: string[] = []): 
     add("Vehicles", "Models", "Workspace/Vehicles", 2, ["city car", "roblox vehicle car"]);
     add("Trees", "Models", "Workspace/Map/Nature", 2, ["city tree", "park tree"]);
     add("Signs", "Models", "Workspace/Map/Decorations", 2, ["street sign", "city sign"]);
+    if (/\b(beach|miami|island|water|ocean|coast)\b/.test(lower)) {
+      add("Beach", "Models", "Workspace/Map/Beach", 2, [
+        "beach map kit",
+        "ocean beach props",
+        "palm tree beach",
+      ]);
+    }
+    if (/\b(police|wanted|chase|crime)\b/.test(lower)) {
+      add("Police", "Models", "Workspace/Map/Police", 2, [
+        "police station",
+        "police car",
+        "police checkpoint",
+      ]);
+    }
+  } else if (/\b(island|beach|ocean|coast|tropical)\b/.test(lower)) {
+    add("Island Map", "Models", "Workspace/Map/ToolboxMap", 2, [
+      `${theme} island map`,
+      "tropical island map",
+      "beach island",
+    ]);
+    add("Beach Props", "Models", "Workspace/Map/Beach", 3, [
+      "palm tree beach",
+      "beach props",
+      "dock pier",
+    ]);
+    add("Nature", "Models", "Workspace/Map/Nature", 3, [
+      "tropical tree pack",
+      "rock pack",
+      "waterfall",
+    ]);
+  } else if (/\b(racing|race|track|cars?|drift)\b/.test(lower)) {
+    add("Race Track", "Models", "Workspace/Map/Track", 3, [
+      `${theme} race track`,
+      "racing track map",
+      "road track kit",
+    ]);
+    add("Vehicles", "Models", "Workspace/Vehicles", 3, ["race car", "sports car", "go kart"]);
+    add("Track Props", "Models", "Workspace/Map/Props", 3, [
+      "race checkpoint",
+      "finish line",
+      "traffic cone",
+    ]);
+  } else if (/\b(military|army|base|bunker|fort|soldier)\b/.test(lower)) {
+    add("Military Base", "Models", "Workspace/Map/ToolboxMap", 2, [
+      `${theme} military base`,
+      "army base map",
+      "military bunker",
+    ]);
+    add("Base Props", "Models", "Workspace/Map/Props", 4, [
+      "military crate",
+      "watch tower",
+      "barrier",
+    ]);
+    add("Vehicles", "Models", "Workspace/Vehicles", 2, ["military vehicle", "jeep"]);
+  } else if (/\b(fantasy|rpg|castle|magic|medieval|adventure)\b/.test(lower)) {
+    add("Fantasy Map", "Models", "Workspace/Map/ToolboxMap", 2, [
+      `${theme} fantasy map`,
+      "medieval village map",
+      "castle map",
+    ]);
+    add("Landmarks", "Models", "Workspace/Map/Landmarks", 3, [
+      "castle",
+      "fantasy house",
+      "medieval shop",
+    ]);
+    add("Nature", "Models", "Workspace/Map/Nature", 3, [
+      "fantasy tree",
+      "rock pack",
+      "mushroom props",
+    ]);
   } else if (/\b(simulator|clicker|rebirth|coins|gems|pet sim)\b/.test(lower)) {
     add("Pets", "Models", "ReplicatedStorage/Assets/Pets", 4, [
       `${theme} pet`,
