@@ -20,6 +20,7 @@
 - Enabled text-to-image generation directly inside project AI chat, with inline preview cards, one-click PNG downloads, server-side prompt safety, and a strict normal-user image hourly cap.
 - Configured BloxSmith AI to accept Comet's `COMETAPI_KEY` env var name, keep `COMET_API_KEY` as an alias, and route Comet-compatible text/image requests through `https://api.cometapi.com/v1`.
 - Changed the default BloxSmith AI route away from the unavailable `gpt-5.4-nano` channel and added automatic failover across stable BloxSmith AI, Neokens, and Groq routes when a model channel is down.
+- Fixed build-generation fallback requests so BloxSmith AI sends Comet's real dashed model IDs instead of UI display names, preventing 400 errors during fallback retries.
 - Fixed Global Chat refresh loading so the newest messages stay visible after reloading instead of falling back to the oldest 200 saved messages.
 - Added BloxSmith AI image model choices for the image generator, including Nano Banana 2 and GPT Image 2 options.
 - Added a 24-hour AI usage timer and server-side request limit for normal users, with owner/admin/moderator bypass.

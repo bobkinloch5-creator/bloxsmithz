@@ -98,7 +98,7 @@ const changelogItems = [
         icon: Zap,
         title: "Model Route Failover",
         detail:
-          "BloxSmith AI no longer defaults to the unavailable `gpt-5.4-nano` channel. Chat and prompt improve now fail over through stable BloxSmith AI routes, then Neokens or Groq when configured.",
+          "BloxSmith AI no longer defaults to the unavailable `gpt-5.4-nano` channel. Chat, prompt improve, and build retries now fail over through stable BloxSmith AI routes using Comet's real model IDs, then Neokens or Groq when configured.",
       },
       {
         category: "Chat",

@@ -941,7 +941,12 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const { SYSTEM_PROMPT, SLIM_SYSTEM_PROMPT } = await import("./ai-gateway.server");
     const { getModelProfile, resolveAiGateway, createProvider, resolveBuiltInGateway } =
       await import("./ai-providers.server");
-    const { NEOKENS_SAFE_FALLBACK_MODEL, COMET_SAFE_FALLBACK_MODELS, applyModelCreditMultiplier } = await import("./ai-models");
+    const {
+      NEOKENS_SAFE_FALLBACK_MODEL,
+      COMET_SAFE_FALLBACK_MODELS,
+      applyModelCreditMultiplier,
+      resolveCometModel,
+    } = await import("./ai-models");
     const { buildProjectMemoryBlock, rememberProjectInteraction } =
       await import("./ai-memory.server");
 
@@ -1248,11 +1253,13 @@ export const generateWithAI = createServerFn({ method: "POST" })
               ]
             : []
           : resolved.provider === "comet"
-            ? COMET_SAFE_FALLBACK_MODELS.filter((m) => m !== resolved.modelName).map((model) => ({
-                provider: "comet" as const,
-                model,
-                envKey: process.env.COMETAPI_KEY || process.env.COMET_API_KEY,
-              }))
+            ? COMET_SAFE_FALLBACK_MODELS.map((uiModel) => resolveCometModel(uiModel).model)
+                .filter((model) => model !== resolved.modelName)
+                .map((model) => ({
+                  provider: "comet" as const,
+                  model,
+                  envKey: process.env.COMETAPI_KEY || process.env.COMET_API_KEY,
+                }))
             : [];
 
       if (looksLikeModelError && fallbackCandidates.length > 0) {
