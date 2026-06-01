@@ -20,7 +20,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { soundsEnabled, setSoundsEnabled } from "@/hooks/useSounds";
+import { sfx, soundsEnabled, setSoundsEnabled } from "@/hooks/useSounds";
 
 type Props = {
   thinking: boolean;
@@ -503,6 +503,7 @@ export function ChatSettings(props: Props) {
                   onChange={(v) => {
                     setSounds(v);
                     setSoundsEnabled(v);
+                    if (v) window.setTimeout(() => sfx.tick(), 0);
                   }}
                 />
               </div>

@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Header, Footer } from "@/components/layout";
 import { useAuth } from "@/lib/auth-context";
@@ -101,9 +100,9 @@ const PRESETS: Array<{ label: string; emoji: string; prompt: string }> = [
 
 function VideoGeneratorPage() {
   const { user } = useAuth();
-  const start = useServerFn(startVideoGeneration);
-  const check = useServerFn(checkVideoGeneration);
-  const getLimit = useServerFn(getVideoRateLimit);
+  const start = startVideoGeneration;
+  const check = checkVideoGeneration;
+  const getLimit = getVideoRateLimit;
 
   const [prompt, setPrompt] = useState("");
   const [durationS, setDurationS] = useState<4 | 6 | 8 | 10 | 12 | 15>(6);

@@ -231,6 +231,7 @@ QUALITY BAR
 - Use depth: background layer, overlay layer, panel/card layer, text/action layer. Keep ZIndex ordered.
 - Use names that make scripts reliable: PlayButton, SettingsButton, ShopButton, CloseButton, MainPanel, ButtonStack, NewsCard, RewardCard, HudBar, ContentGrid.
 - Prefer complete working behavior over decorative-only UI. If the UI has buttons, the LocalScript must wire them.
+- Add a small UI click Sound in the LocalScript (SoundId rbxassetid://6895079853, Volume 0.35) and play it on button clicks unless the user explicitly asks for silent UI.
 
 DO NOT include markdown, prose, or explanations — JSON only.`;
 
@@ -847,6 +848,14 @@ local stack = gui:FindFirstChild("ButtonStack", true)
 local rightPanel = gui:FindFirstChild("RightInfoPanel", true)
 local playerName = gui:FindFirstChild("PlayerNameLabel", true)
 local player = game:GetService("Players").LocalPlayer
+local clickSound = gui:FindFirstChild("UIClickSound")
+if not clickSound then
+\tclickSound = Instance.new("Sound")
+\tclickSound.Name = "UIClickSound"
+\tclickSound.SoundId = "rbxassetid://6895079853"
+\tclickSound.Volume = 0.35
+\tclickSound.Parent = gui
+end
 if playerName and playerName:IsA("TextLabel") and player then
 \tplayerName.Text = "Welcome back, " .. player.DisplayName
 end
@@ -866,6 +875,7 @@ local function wireButton(button)
 \t\tTweenService:Create(button, TweenInfo.new(0.11, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = normalSize + UDim2.fromOffset(10, 4) }):Play()
 \tend)
 \tbutton.MouseButton1Click:Connect(function()
+\t\tif clickSound then clickSound:Play() end
 \t\tprint("[BloxSmith MainMenu] clicked", button.Name)
 \t\tif button.Name == "PlayButton" then gui.Enabled = false end
 \tend)
@@ -1366,6 +1376,14 @@ local gui = script.Parent
 local panel = gui:FindFirstChild("MainPanel", true) or gui:FindFirstChild("RootFrame", true)
 local remote = ReplicatedStorage:FindFirstChild("${screenGuiName}Request")
 local selectedButton = nil
+local clickSound = gui:FindFirstChild("UIClickSound")
+if not clickSound then
+\tclickSound = Instance.new("Sound")
+\tclickSound.Name = "UIClickSound"
+\tclickSound.SoundId = "rbxassetid://6895079853"
+\tclickSound.Volume = 0.35
+\tclickSound.Parent = gui
+end
 
 local function tween(object, time, props)
 \tTweenService:Create(object, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
@@ -1394,6 +1412,7 @@ local function wireButton(button)
 \t\ttween(button, 0.1, { Size = normalSize + UDim2.fromOffset(8, 3) })
 \tend)
 \tbutton.MouseButton1Click:Connect(function()
+\t\tif clickSound then clickSound:Play() end
 \t\tif button.Name == "CloseButton" then
 \t\t\tgui.Enabled = false
 \t\t\treturn
