@@ -18,10 +18,31 @@ const DEFAULT_COMET_VIDEO_TASKS_URL = "https://api.cometapi.com/v1/videos";
 const DEFAULT_COMET_VIDEO_MODEL = "sora-2-pro";
 const REFERENCE_IMAGE_BUCKET = "generated-images";
 
+export const COMET_VIDEO_MODEL_OPTIONS = [
+  {
+    id: "sora-2-pro",
+    label: "Sora 2 Pro",
+    description: "Premium cinematic text/image-to-video.",
+  },
+  {
+    id: "veo3.1",
+    label: "Veo 3.1",
+    description: "Google-style cinematic generation through Comet.",
+  },
+  {
+    id: "grok-imagine-video",
+    label: "Grok Imagine Video",
+    description: "Creative xAI-style video generation through Comet.",
+  },
+] as const;
+
+export type CometVideoModelId = (typeof COMET_VIDEO_MODEL_OPTIONS)[number]["id"];
+export const DEFAULT_COMET_VIDEO_MODEL_EXPORT = DEFAULT_COMET_VIDEO_MODEL as CometVideoModelId;
+
 // Video is gated TWO ways: a hard 1-per-week cap AND a heavy credit cost.
 // Sora/Comet video bills per generated second, and a long clip is expensive, so this is
 // priced as a premium one-off rather than a casual generator.
-const VIDEO_CREDIT_COST = 150;
+const VIDEO_CREDIT_COST = 100;
 
 // Weekly limit: at most this many videos per user per rolling window.
 // Owners/admins/mods bypass. Enforced server-side from video_generations.
@@ -38,9 +59,14 @@ const DurationEnum = z.union([
   z.literal(15),
 ]);
 const ResolutionEnum = z.enum(["720p", "1080p"]);
+const VideoModelEnum = z.enum(["sora-2-pro", "veo3.1", "grok-imagine-video"] satisfies [
+  CometVideoModelId,
+  ...CometVideoModelId[],
+]);
 
 const StartSchema = z.object({
   prompt: z.string().min(3).max(1500),
+  model: VideoModelEnum.default(DEFAULT_COMET_VIDEO_MODEL_EXPORT),
   durationS: DurationEnum.default(6),
   resolution: ResolutionEnum.default("1080p"),
   // Optional image to animate (image-to-video). Data URL, capped in size.
@@ -155,10 +181,14 @@ function getCometVideoTasksUrl(taskId?: string) {
   return taskId ? `${base}/${encodeURIComponent(taskId)}` : base;
 }
 
-function getCometVideoModel() {
-  return (
-    process.env.COMET_VIDEO_MODEL || process.env.COMET_SEEDANCE_MODEL || DEFAULT_COMET_VIDEO_MODEL
-  );
+function isCometVideoModel(value: string): value is CometVideoModelId {
+  return COMET_VIDEO_MODEL_OPTIONS.some((option) => option.id === value);
+}
+
+function getCometVideoModel(selected?: CometVideoModelId) {
+  if (selected) return selected;
+  const configured = process.env.COMET_VIDEO_MODEL || process.env.COMET_SEEDANCE_MODEL;
+  return configured && isCometVideoModel(configured) ? configured : DEFAULT_COMET_VIDEO_MODEL;
 }
 
 function getCometVideoContentUrl(taskId: string) {
@@ -260,7 +290,7 @@ function soraSize(resolution: z.infer<typeof ResolutionEnum>) {
 function createSoraVideoForm(data: z.infer<typeof StartSchema>) {
   const form = new FormData();
   form.append("prompt", data.prompt);
-  form.append("model", getCometVideoModel());
+  form.append("model", getCometVideoModel(data.model));
   form.append("seconds", String(data.durationS));
   form.append("size", soraSize(data.resolution));
 

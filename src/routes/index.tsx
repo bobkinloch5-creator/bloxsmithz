@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Header, Footer } from "@/components/layout";
 import heroBg from "@/assets/roblox-hero.png";
@@ -796,13 +795,23 @@ function Landing() {
               BloxSmith
             </div>
             <div className="bg-surface-elevated p-3 sm:p-4 font-semibold">Generic AI</div>
-            {comparison.map(([feature, blox, generic]) => (
-              <Fragment key={feature}>
-                <div className="bg-background/80 p-3 sm:p-4 font-medium">{feature}</div>
-                <div className="bg-background/80 p-3 sm:p-4 text-muted-foreground">{blox}</div>
-                <div className="bg-background/80 p-3 sm:p-4 text-muted-foreground">{generic}</div>
-              </Fragment>
-            ))}
+            {comparison.flatMap(([feature, blox, generic]) => [
+              <div key={`${feature}-feature`} className="bg-background/80 p-3 sm:p-4 font-medium">
+                {feature}
+              </div>,
+              <div
+                key={`${feature}-bloxsmith`}
+                className="bg-background/80 p-3 sm:p-4 text-muted-foreground"
+              >
+                {blox}
+              </div>,
+              <div
+                key={`${feature}-generic`}
+                className="bg-background/80 p-3 sm:p-4 text-muted-foreground"
+              >
+                {generic}
+              </div>,
+            ])}
           </div>
         </div>
       </section>

@@ -20,10 +20,20 @@ import {
   getPlaytestRun,
   verifyPlaytestRun,
   rollbackPlaytestRun,
+  PLAYTEST_SCAN_COST,
+  PLAYTEST_FIX_COST,
+  PLAYTEST_VERIFY_COST,
 } from "@/lib/playtest.functions";
 
 type Severity = "error" | "warning" | "info";
-type Finding = { id: string; severity: Severity; kind: string; title: string; detail: string; target: string };
+type Finding = {
+  id: string;
+  severity: Severity;
+  kind: string;
+  title: string;
+  detail: string;
+  target: string;
+};
 type PlanStep = { id: string; title: string; detail: string; target: string; actionType: string };
 type Run = {
   id: string;
@@ -46,11 +56,7 @@ const EXAMPLES = [
 ];
 
 function sevDot(s: Severity) {
-  return s === "error"
-    ? "bg-destructive"
-    : s === "warning"
-      ? "bg-amber-400"
-      : "bg-sky-400";
+  return s === "error" ? "bg-destructive" : s === "warning" ? "bg-amber-400" : "bg-sky-400";
 }
 
 export function PlaytestPanel({
@@ -77,7 +83,12 @@ export function PlaytestPanel({
   const [busy, setBusy] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => () => { if (pollTimer.current) clearInterval(pollTimer.current); }, []);
+  useEffect(
+    () => () => {
+      if (pollTimer.current) clearInterval(pollTimer.current);
+    },
+    [],
+  );
 
   const startScan = useCallback(async () => {
     if (busy) return;
@@ -113,11 +124,19 @@ export function PlaytestPanel({
           if (res.progress.total > 0 && res.progress.applied >= res.progress.total) {
             if (pollTimer.current) clearInterval(pollTimer.current);
             setPhase("verifying");
-            setStatusLine("Changes applied in Studio. Re-scanning to confirm…");
-            const v: any = await verify({ data: { runId } });
-            setRun(v.run);
-            setPhase("done");
-            setStatusLine(v.run.summary || "Done.");
+            setStatusLine(
+              `Changes applied in Studio. Re-scanning to confirm (${PLAYTEST_VERIFY_COST} credit)…`,
+            );
+            try {
+              const v: any = await verify({ data: { runId } });
+              setRun(v.run);
+              setPhase("done");
+              setStatusLine(v.run.summary || "Done.");
+            } catch (e: any) {
+              setPhase("done");
+              setStatusLine(e?.message || "Verification failed.");
+              toast.error(e?.message || "Verification failed.");
+            }
           }
         } catch {
           /* keep polling */
@@ -211,8 +230,12 @@ export function PlaytestPanel({
           {(phase === "idle" || phase === "scanning") && (
             <>
               <p className="text-xs text-muted-foreground">
-                Tell BloxSmith what to fix in plain words. It scans your game, finds problems,
-                shows a plan, and only changes things after you approve.
+                Tell BloxSmith what to fix in plain words. It scans your game, finds problems, shows
+                a plan, and only changes things after you approve.
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Scan {PLAYTEST_SCAN_COST} credit · apply {PLAYTEST_FIX_COST} credits · verify{" "}
+                {PLAYTEST_VERIFY_COST} credit
               </p>
               <textarea
                 value={request}
@@ -242,9 +265,14 @@ export function PlaytestPanel({
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 transition disabled:opacity-60"
               >
                 {phase === "scanning" ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Scanning your game…</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Scanning your game…
+                  </>
                 ) : (
-                  <><ScanSearch className="h-4 w-4" /> Playtest with AI</>
+                  <>
+                    <ScanSearch className="h-4 w-4" /> Playtest with AI ({PLAYTEST_SCAN_COST}{" "}
+                    credit)
+                  </>
                 )}
               </button>
             </>
@@ -267,12 +295,17 @@ export function PlaytestPanel({
                 <AlertTriangle className="h-3.5 w-3.5" /> What I found
               </div>
               {run.findings.map((f) => (
-                <div key={f.id} className="rounded-lg border border-border/40 bg-background/30 px-3 py-2">
+                <div
+                  key={f.id}
+                  className="rounded-lg border border-border/40 bg-background/30 px-3 py-2"
+                >
                   <div className="flex items-center gap-2">
                     <span className={`h-2 w-2 shrink-0 rounded-full ${sevDot(f.severity)}`} />
                     <span className="text-xs font-medium text-foreground">{f.title}</span>
                   </div>
-                  <p className="mt-1 pl-4 text-[11px] leading-relaxed text-muted-foreground">{f.detail}</p>
+                  <p className="mt-1 pl-4 text-[11px] leading-relaxed text-muted-foreground">
+                    {f.detail}
+                  </p>
                   <p className="mt-0.5 pl-4 text-[10px] text-muted-foreground/70">→ {f.target}</p>
                 </div>
               ))}
@@ -313,7 +346,7 @@ export function PlaytestPanel({
                   disabled={busy || approved.size === 0}
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition disabled:opacity-50"
                 >
-                  <Wrench className="h-4 w-4" /> Apply Fix ({approved.size})
+                  <Wrench className="h-4 w-4" /> Apply Fix ({PLAYTEST_FIX_COST} credits)
                 </button>
                 <button
                   type="button"
@@ -331,7 +364,9 @@ export function PlaytestPanel({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>Applying in Studio</span>
-                <span className="tabular-nums">{progress.applied}/{progress.total}</span>
+                <span className="tabular-nums">
+                  {progress.applied}/{progress.total}
+                </span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-background/50">
                 <div
@@ -340,7 +375,9 @@ export function PlaytestPanel({
                 />
               </div>
               {progress.failed > 0 && (
-                <p className="text-[11px] text-destructive">{progress.failed} action(s) reported an error.</p>
+                <p className="text-[11px] text-destructive">
+                  {progress.failed} action(s) reported an error.
+                </p>
               )}
             </div>
           )}
@@ -363,24 +400,33 @@ export function PlaytestPanel({
                 <span className="text-xs font-medium">{run.summary}</span>
               </div>
 
-              {run.verification && !run.verification.resolved && run.verification.remaining?.length > 0 && (
-                <div className="space-y-1">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Still needs attention
-                  </div>
-                  {run.verification.remaining.map((f) => (
-                    <div key={f.id} className="rounded-lg border border-border/40 bg-background/30 px-3 py-2 text-[11px] text-muted-foreground">
-                      {f.title} <span className="text-muted-foreground/60">→ {f.target}</span>
+              {run.verification &&
+                !run.verification.resolved &&
+                run.verification.remaining?.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Still needs attention
                     </div>
-                  ))}
-                </div>
-              )}
+                    {run.verification.remaining.map((f) => (
+                      <div
+                        key={f.id}
+                        className="rounded-lg border border-border/40 bg-background/30 px-3 py-2 text-[11px] text-muted-foreground"
+                      >
+                        {f.title} <span className="text-muted-foreground/60">→ {f.target}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
               <div className="flex gap-2">
                 {!run.verification?.resolved && (
                   <button
                     type="button"
-                    onClick={() => { setPhase("idle"); setRun(null); setRequest(""); }}
+                    onClick={() => {
+                      setPhase("idle");
+                      setRun(null);
+                      setRequest("");
+                    }}
                     className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
                   >
                     <Sparkles className="h-4 w-4" /> Fix the next problem
@@ -397,7 +443,11 @@ export function PlaytestPanel({
               </div>
               <button
                 type="button"
-                onClick={() => { setPhase("idle"); setRun(null); setRequest(""); }}
+                onClick={() => {
+                  setPhase("idle");
+                  setRun(null);
+                  setRequest("");
+                }}
                 className="w-full rounded-lg border border-border/40 px-3 py-1.5 text-xs text-muted-foreground hover:bg-surface/60"
               >
                 New playtest
@@ -408,9 +458,10 @@ export function PlaytestPanel({
 
         {/* Footer note — safety + how-to */}
         <div className="border-t border-border/40 px-4 py-2 text-[10px] leading-relaxed text-muted-foreground/70">
-          Playtest AI only works inside your own Roblox Studio project through the official BloxSmith
-          plugin. Press Play (F5) in Studio to run the scene after fixes — the plugin can't start
-          Play for you. Changes are reversible with Undo or Ctrl+Z.
+          Playtest AI only works inside your own Roblox Studio project through the official
+          BloxSmith plugin. Press Play (F5) in Studio to run the scene after fixes — the plugin
+          can't start Play for you. Credits are deducted for scan, apply, and verify. Changes are
+          reversible with Undo or Ctrl+Z.
         </div>
       </div>
     </div>

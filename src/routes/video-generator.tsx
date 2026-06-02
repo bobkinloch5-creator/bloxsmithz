@@ -7,8 +7,12 @@ import {
   startVideoGeneration,
   checkVideoGeneration,
   getVideoRateLimit,
+  COMET_VIDEO_MODEL_OPTIONS,
+  DEFAULT_COMET_VIDEO_MODEL_EXPORT,
+  VIDEO_CREDIT_COST_EXPORT,
   type VideoJob,
   type VideoRateLimit,
+  type CometVideoModelId,
 } from "@/lib/video-studio.functions";
 import {
   Film,
@@ -43,7 +47,7 @@ export const Route = createFileRoute("/video-generator")({
 
 const DURATIONS: Array<4 | 6 | 8 | 10 | 12 | 15> = [4, 6, 8, 10, 12, 15];
 const RESOLUTIONS = ["720p", "1080p"] as const;
-const VIDEO_COST = 150;
+const VIDEO_COST = VIDEO_CREDIT_COST_EXPORT;
 
 // Roblox-flavored movie-style presets. Each fills the prompt with a strong,
 // genre-appropriate starting point the user can tweak.
@@ -105,6 +109,7 @@ function VideoGeneratorPage() {
   const getLimit = getVideoRateLimit;
 
   const [prompt, setPrompt] = useState("");
+  const [videoModel, setVideoModel] = useState<CometVideoModelId>(DEFAULT_COMET_VIDEO_MODEL_EXPORT);
   const [durationS, setDurationS] = useState<4 | 6 | 8 | 10 | 12 | 15>(6);
   const [resolution, setResolution] = useState<"720p" | "1080p">("1080p");
   const [job, setJob] = useState<VideoJob | null>(null);
@@ -179,6 +184,7 @@ function VideoGeneratorPage() {
       const result = (await start({
         data: {
           prompt,
+          model: videoModel,
           durationS,
           resolution,
           ...(refImage ? { referenceImageDataUrl: refImage } : {}),
@@ -313,7 +319,25 @@ function VideoGeneratorPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-[1.2fr_1fr_1fr]">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Video model</label>
+              <select
+                value={videoModel}
+                onChange={(e) => setVideoModel(e.target.value as CometVideoModelId)}
+                disabled={busy}
+                className="mt-1.5 h-[34px] w-full rounded-md border border-border bg-background/40 px-2 text-xs text-foreground focus:outline-none focus:border-primary/50 disabled:opacity-50"
+              >
+                {COMET_VIDEO_MODEL_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+                {COMET_VIDEO_MODEL_OPTIONS.find((option) => option.id === videoModel)?.description}
+              </p>
+            </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Length</label>
               <div className="mt-1.5 grid grid-cols-3 gap-1.5">

@@ -162,11 +162,16 @@ export function getModelProfile(
     id.includes("haiku");
   const isHuge =
     id.includes("gemini-3.1") ||
+    id.includes("gemini-3-pro") ||
     id.includes("gemini-2.5-pro") ||
     id.includes("claude-opus") ||
     id.includes("gpt-5-codex") ||
     /^gpt-5\.[1-5](?:$|-codex|-codex-max)/.test(id) ||
+    id.includes("397b") ||
+    id.includes("grok-4.20") ||
+    id.includes("reasoning") ||
     id.includes("70b") ||
+    id.includes("kimi-k2") ||
     id.includes("sonnet");
   const isGemini = provider === "google" || id.includes("gemini");
   const isOpenAI = provider === "openai" || id.includes("gpt-");

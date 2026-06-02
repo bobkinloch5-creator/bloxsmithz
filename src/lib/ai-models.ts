@@ -22,12 +22,17 @@ export const SITE_PROVIDER_MODELS: Record<SiteProviderId, string[]> = {
     "claude-opus-4-7-thinking",
   ],
   comet: [
-    // Only models confirmed working on this CometAPI account (June 2026
-    // diagnostic). The others (gpt-5-4-mini/nano, minimax-m2-7, qwen3-7-max,
-    // grok-4-3, deepseek-v4, gemini-3-5-flash) returned "no available channel
-    // for group default" — that's a CometAPI plan/balance limit, NOT a wrong
-    // slug. Re-add them here once they're enabled on the CometAPI account.
+    // CometAPI account catalog. If any model reports "no available channel for
+    // group default", that is a CometAPI account/channel limit rather than a
+    // local slug mismatch.
     "deepseek-v4-flash",
+    "grok-4.20-0309-reasoning",
+    "kimi-k2.6",
+    "glm-5.1",
+    "gemini-3.1-flash-lite-preview",
+    "qwen3.5-397b-a17b",
+    "deepseek-v3.2",
+    "gemini-3-pro-preview",
     "claude-sonnet-4-6",
     "claude-opus-4-7",
     "claude-opus-4-8",
@@ -44,6 +49,20 @@ export const SITE_MODEL_DESCRIPTIONS: Record<string, string> = {
     "Cheapest BloxSmith AI model for quick chat, tiny Roblox edits, short bug fixes, prompt cleanup, and simple UI copy. Best when users need fast help without burning many credits.",
   "deepseek-v4-flash":
     "Budget coding workhorse for Roblox/Luau with web/tools enabled. Strong for RemoteEvents, leaderstats, shops, tycoon loops, compact ModuleScripts, and checking current Roblox docs.",
+  "grok-4.20-0309-reasoning":
+    "Comet reasoning model for creative Roblox planning, difficult debugging, gameplay systems, and idea-heavy builds where deeper thinking helps before code is written.",
+  "kimi-k2.6":
+    "Comet long-context coding model for reading larger Roblox project context, planning multi-script edits, and keeping implementation output organized.",
+  "glm-5.1":
+    "Comet general coding model for everyday Roblox scripts, UI logic, economy fixes, and clean structured build responses.",
+  "gemini-3.1-flash-lite-preview":
+    "Fast low-cost Comet Gemini preview route for quick Roblox answers, short script fixes, prompt cleanup, and lightweight planning.",
+  "qwen3.5-397b-a17b":
+    "Large Comet Qwen route for structured Luau generation, multi-file systems, data models, and precise code-heavy Roblox tasks.",
+  "deepseek-v3.2":
+    "Comet DeepSeek coding route for Roblox debugging, refactors, ModuleScripts, RemoteEvents, and implementation-heavy fixes.",
+  "gemini-3-pro-preview":
+    "Premium Comet Gemini preview route for large project context, deep Roblox architecture, multimodal-style reasoning, and harder build plans.",
   "minimax-m2.7":
     "Cheap long-context builder for bigger Roblox prompts. Good for reading more project context, planning several scripts at once, and keeping output fast.",
   "qwen3.6-plus":
@@ -114,6 +133,13 @@ export const MODEL_CREDIT_MULTIPLIERS: Record<string, number> = {
   // BloxSmith AI budget models — hyphenated keys match the real Comet slugs.
   "gpt-5-4-nano": 0.35,
   "deepseek-v4-flash": 0.5,
+  "grok-4.20-0309-reasoning": 4,
+  "kimi-k2.6": 2,
+  "glm-5.1": 2,
+  "gemini-3.1-flash-lite-preview": 0.75,
+  "qwen3.5-397b-a17b": 3,
+  "deepseek-v3.2": 2,
+  "gemini-3-pro-preview": 4,
   "minimax-m2-7": 0.65,
   "gpt-5-4-mini": 0.8,
   "gpt-5-4-pro": 6,
@@ -203,6 +229,48 @@ export const MODEL_TOOL_CAPABILITIES: Record<
     webSearch: true,
     thinking: false,
     label: "Web + Roblox docs",
+  },
+  "grok-4.20-0309-reasoning": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + reasoning",
+  },
+  "kimi-k2.6": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + long context",
+  },
+  "glm-5.1": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + coding",
+  },
+  "gemini-3.1-flash-lite-preview": {
+    tools: true,
+    webSearch: true,
+    thinking: false,
+    label: "Web + fast",
+  },
+  "qwen3.5-397b-a17b": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + structured",
+  },
+  "deepseek-v3.2": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + deep coding",
+  },
+  "gemini-3-pro-preview": {
+    tools: true,
+    webSearch: true,
+    thinking: true,
+    label: "Web + premium",
   },
   "minimax-m2.7": {
     tools: true,
@@ -462,6 +530,8 @@ export const NEOKENS_SAFE_FALLBACK_MODEL = "gemini-3-flash";
 // progressively heavier so builds always recover.
 export const COMET_SAFE_FALLBACK_MODELS = [
   "deepseek-v4-flash",
+  "gemini-3.1-flash-lite-preview",
+  "deepseek-v3.2",
   "claude-sonnet-4-6",
   "claude-opus-4-7",
 ] as const;
@@ -480,18 +550,26 @@ export const COMET_MODEL_MAP: Record<string, { comet: string; thinking?: boolean
   "gpt-5.5-all": { comet: "gpt-5.5-all" },
   // DeepSeek
   "deepseek-v4-flash": { comet: "deepseek-v4-flash" },
+  "deepseek-v3.2": { comet: "deepseek-v3.2", thinking: true },
   "deepseek-v4-pro": { comet: "deepseek-v4-pro" },
+  // Moonshot Kimi / Zhipu GLM
+  "kimi-k2.6": { comet: "kimi-k2.6" },
+  "glm-5.1": { comet: "glm-5.1" },
   // MiniMax
   "minimax-m2.7": { comet: "minimax-m2.7" },
   // Qwen / Aliyun
   "qwen3.6-plus": { comet: "qwen3.6-plus" },
+  "qwen3.5-397b-a17b": { comet: "qwen3.5-397b-a17b", thinking: true },
   "qwen3.7-max": { comet: "qwen3.7-max" },
   // Google Gemini
   "gemini-3-flash": { comet: "gemini-3-flash-preview" },
+  "gemini-3.1-flash-lite-preview": { comet: "gemini-3.1-flash-lite-preview" },
   "gemini-3.5-flash": { comet: "gemini-3.5-flash" },
   "gemini-3.1-pro": { comet: "gemini-3.1-pro-preview" },
+  "gemini-3-pro-preview": { comet: "gemini-3-pro-preview", thinking: true },
   // xAI Grok
   "grok-4.3": { comet: "grok-4.3" },
+  "grok-4.20-0309-reasoning": { comet: "grok-4.20-0309-reasoning", thinking: true },
   // Anthropic Claude (thinking variants enable extended thinking)
   "claude-haiku-4-5": { comet: "claude-haiku-4-5-20251001" },
   "claude-sonnet-4-6": { comet: "claude-sonnet-4-6" },

@@ -284,9 +284,32 @@ html.rpg body::after {
   h1 {
     letter-spacing: -0.04em;
   }
+  #main-content:focus {
+    outline: none;
+  }
 }
 
 @layer components {
+  .skip-link {
+    position: fixed;
+    left: 1rem;
+    top: 1rem;
+    z-index: 2147483647;
+    transform: translateY(-160%);
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+    padding: 0.6rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-glow);
+    transition: transform 160ms ease;
+  }
+  .skip-link:focus {
+    transform: translateY(0);
+    outline: 2px solid var(--color-ring);
+    outline-offset: 3px;
+  }
   .glass {
     background: linear-gradient(180deg, oklch(1 0 0 / 0.045), oklch(1 0 0 / 0.015));
     backdrop-filter: blur(22px) saturate(140%);

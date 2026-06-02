@@ -3,8 +3,9 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const PLAYTEST_SCAN_COST = 1;
-const PLAYTEST_FIX_COST = 2;
+export const PLAYTEST_SCAN_COST = 1;
+export const PLAYTEST_FIX_COST = 2;
+export const PLAYTEST_VERIFY_COST = 1;
 
 async function assertOwnsProject(userId: string, projectId: string) {
   const { data, error } = await supabaseAdmin
@@ -260,6 +261,15 @@ export const verifyPlaytestRun = createServerFn({ method: "POST" })
     if (runErr || !run) throw new Error("Playtest run not found.");
     if (run.user_id !== userId) throw new Error("Not your run.");
 
+    const { error: spendErr } = await supabase.rpc("spend_credits_atomic", {
+      _amount: PLAYTEST_VERIFY_COST,
+    });
+    if (spendErr) {
+      if (/insufficient/i.test(spendErr.message))
+        throw new Error("Not enough credits to verify the Playtest run.");
+      throw new Error(spendErr.message);
+    }
+
     const { runHeuristics } = await import("./playtest-diagnose.server");
     const [{ data: files }, { data: errs }] = await Promise.all([
       supabaseAdmin
@@ -290,6 +300,7 @@ export const verifyPlaytestRun = createServerFn({ method: "POST" })
         status: "done",
         verification: { resolved, remaining: stillBad },
         summary,
+        credits_spent: (run.credits_spent ?? 0) + PLAYTEST_VERIFY_COST,
         updated_at: new Date().toISOString(),
       })
       .eq("id", run.id)
