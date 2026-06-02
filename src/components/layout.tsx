@@ -511,7 +511,7 @@ export function Header() {
   );
 }
 
-function LiveHeaderClock({ className = "" }: { className?: string }) {
+function LiveHeaderClock({ className = "inline-flex" }: { className?: string }) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -532,7 +532,7 @@ function LiveHeaderClock({ className = "" }: { className?: string }) {
 
   return (
     <div
-      className={`${className} h-9 shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-surface/70 px-3 text-xs font-semibold text-foreground/90 shadow-sm tabular-nums`}
+      className={`${className} h-9 shrink-0 items-center gap-1.5 rounded-full border border-border/70 bg-surface/70 px-3 text-xs font-semibold text-foreground/90 shadow-sm tabular-nums`}
       title="Local 12-hour time"
       aria-label={`Local time ${time}`}
       suppressHydrationWarning
