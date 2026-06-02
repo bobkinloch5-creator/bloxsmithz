@@ -110,6 +110,10 @@ function VideoGeneratorPage() {
 
   const [prompt, setPrompt] = useState("");
   const [videoModel, setVideoModel] = useState<CometVideoModelId>(DEFAULT_COMET_VIDEO_MODEL_EXPORT);
+  const selectedVideoModel =
+    COMET_VIDEO_MODEL_OPTIONS.find((option) => option.id === videoModel) ??
+    COMET_VIDEO_MODEL_OPTIONS[0];
+  const videoCost = selectedVideoModel?.creditCost ?? VIDEO_COST;
   const [durationS, setDurationS] = useState<4 | 6 | 8 | 10 | 12 | 15>(6);
   const [resolution, setResolution] = useState<"720p" | "1080p">("1080p");
   const [job, setJob] = useState<VideoJob | null>(null);
@@ -131,10 +135,10 @@ function VideoGeneratorPage() {
 
   useEffect(() => {
     if (!user) return;
-    getLimit()
+    getLimit({ data: { model: videoModel } })
       .then((r) => setLimit(r as VideoRateLimit))
       .catch(() => {});
-  }, [getLimit, user]);
+  }, [getLimit, user, videoModel]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -191,7 +195,7 @@ function VideoGeneratorPage() {
         },
       })) as VideoJob;
       setJob(result);
-      getLimit()
+      getLimit({ data: { model: videoModel } })
         .then((r) => setLimit(r as VideoRateLimit))
         .catch(() => {});
       if (result.status === "completed" || result.status === "failed") {
@@ -208,7 +212,7 @@ function VideoGeneratorPage() {
       setError(msg);
       toast.error(msg);
       if (typeof err === "object" && err !== null && "rateLimited" in err) {
-        getLimit()
+        getLimit({ data: { model: videoModel } })
           .then((r) => setLimit(r as VideoRateLimit))
           .catch(() => {});
       }
@@ -262,7 +266,7 @@ function VideoGeneratorPage() {
             </div>
             <p className="text-sm text-muted-foreground">
               Cinematic Roblox trailers &amp; cutscenes ·{" "}
-              <span className="text-foreground font-medium">{VIDEO_COST} credits</span> · one per
+              <span className="text-foreground font-medium">{videoCost} credits</span> · one per
               week
             </p>
           </div>
@@ -330,12 +334,12 @@ function VideoGeneratorPage() {
               >
                 {COMET_VIDEO_MODEL_OPTIONS.map((option) => (
                   <option key={option.id} value={option.id}>
-                    {option.label}
+                    {option.label} · {option.creditCost} credits
                   </option>
                 ))}
               </select>
               <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                {COMET_VIDEO_MODEL_OPTIONS.find((option) => option.id === videoModel)?.description}
+                {selectedVideoModel.creditCost} credits · {selectedVideoModel.description}
               </p>
             </div>
             <div>
@@ -438,7 +442,7 @@ function VideoGeneratorPage() {
               </>
             ) : (
               <>
-                <Wand2 className="h-4 w-4" /> Generate video ({VIDEO_COST} credits)
+                <Wand2 className="h-4 w-4" /> Generate video ({videoCost} credits)
               </>
             )}
           </button>

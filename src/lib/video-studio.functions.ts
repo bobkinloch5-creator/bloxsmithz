@@ -22,27 +22,35 @@ export const COMET_VIDEO_MODEL_OPTIONS = [
   {
     id: "sora-2-pro",
     label: "Sora 2 Pro",
+    creditCost: 100,
     description: "Premium cinematic text/image-to-video.",
   },
   {
     id: "veo3.1",
     label: "Veo 3.1",
+    creditCost: 120,
     description: "Google-style cinematic generation through Comet.",
   },
   {
     id: "grok-imagine-video",
     label: "Grok Imagine Video",
+    creditCost: 90,
     description: "Creative xAI-style video generation through Comet.",
   },
 ] as const;
 
 export type CometVideoModelId = (typeof COMET_VIDEO_MODEL_OPTIONS)[number]["id"];
 export const DEFAULT_COMET_VIDEO_MODEL_EXPORT = DEFAULT_COMET_VIDEO_MODEL as CometVideoModelId;
+export const VIDEO_MODEL_CREDIT_COSTS: Record<CometVideoModelId, number> =
+  COMET_VIDEO_MODEL_OPTIONS.reduce(
+    (acc, option) => ({ ...acc, [option.id]: option.creditCost }),
+    {} as Record<CometVideoModelId, number>,
+  );
 
 // Video is gated TWO ways: a hard 1-per-week cap AND a heavy credit cost.
 // Sora/Comet video bills per generated second, and a long clip is expensive, so this is
 // priced as a premium one-off rather than a casual generator.
-const VIDEO_CREDIT_COST = 100;
+const DEFAULT_VIDEO_CREDIT_COST = VIDEO_MODEL_CREDIT_COSTS[DEFAULT_COMET_VIDEO_MODEL_EXPORT];
 
 // Weekly limit: at most this many videos per user per rolling window.
 // Owners/admins/mods bypass. Enforced server-side from video_generations.
@@ -78,6 +86,12 @@ const StartSchema = z.object({
 });
 
 const PollSchema = z.object({ taskId: z.string().min(1).max(200) });
+const RateLimitSchema = z
+  .object({
+    model: VideoModelEnum.default(DEFAULT_COMET_VIDEO_MODEL_EXPORT),
+  })
+  .optional()
+  .default({ model: DEFAULT_COMET_VIDEO_MODEL_EXPORT });
 
 export type VideoJobStatus = "queued" | "processing" | "completed" | "failed";
 export type VideoJob = {
@@ -189,6 +203,10 @@ function getCometVideoModel(selected?: CometVideoModelId) {
   if (selected) return selected;
   const configured = process.env.COMET_VIDEO_MODEL || process.env.COMET_SEEDANCE_MODEL;
   return configured && isCometVideoModel(configured) ? configured : DEFAULT_COMET_VIDEO_MODEL;
+}
+
+function getVideoCreditCost(model: CometVideoModelId) {
+  return VIDEO_MODEL_CREDIT_COSTS[model] ?? DEFAULT_VIDEO_CREDIT_COST;
 }
 
 function getCometVideoContentUrl(taskId: string) {
@@ -363,7 +381,11 @@ async function fetchTask(taskId: string, userId: string): Promise<VideoJob> {
 }
 
 // Checks the rolling weekly window. Owners/admins/mods bypass.
-async function checkWeeklyLimit(userId: string, isOwner: boolean): Promise<VideoRateLimit> {
+async function checkWeeklyLimit(
+  userId: string,
+  isOwner: boolean,
+  creditCost: number,
+): Promise<VideoRateLimit> {
   if (isOwner) return { allowed: true, nextAvailableAt: null, creditCost: 0 };
 
   const since = new Date(Date.now() - RATE_LIMIT_DAYS * 86400_000).toISOString();
@@ -376,19 +398,19 @@ async function checkWeeklyLimit(userId: string, isOwner: boolean): Promise<Video
   // If the table is missing, fail OPEN on the limit (don't block) — the
   // credit charge still applies, so generation isn't free.
   if (error) {
-    return { allowed: true, nextAvailableAt: null, creditCost: VIDEO_CREDIT_COST };
+    return { allowed: true, nextAvailableAt: null, creditCost };
   }
 
   const rows = data ?? [];
   const used = rows.length;
   if (used < RATE_LIMIT_COUNT) {
-    return { allowed: true, nextAvailableAt: null, creditCost: VIDEO_CREDIT_COST };
+    return { allowed: true, nextAvailableAt: null, creditCost };
   }
   const earliest = rows[rows.length - 1].created_at;
   const nextAvailableAt = new Date(
     new Date(earliest).getTime() + RATE_LIMIT_DAYS * 86400_000,
   ).toISOString();
-  return { allowed: false, nextAvailableAt, creditCost: VIDEO_CREDIT_COST };
+  return { allowed: false, nextAvailableAt, creditCost };
 }
 
 async function recordGeneration(userId: string, taskId: string, prompt: string, credits: number) {
@@ -409,10 +431,11 @@ async function recordGeneration(userId: string, taskId: string, prompt: string, 
  */
 export const getVideoRateLimit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<VideoRateLimit> => {
+  .inputValidator((input: unknown) => RateLimitSchema.parse(input))
+  .handler(async ({ data, context }): Promise<VideoRateLimit> => {
     const { supabase, userId } = context as AuthedContext;
     const isOwner = await isGeneratorOwner(userId, supabase);
-    return checkWeeklyLimit(userId, isOwner);
+    return checkWeeklyLimit(userId, isOwner, getVideoCreditCost(data.model));
   });
 
 export const startVideoGeneration = createServerFn({ method: "POST" })
@@ -431,9 +454,10 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
     }
 
     const isOwner = await isGeneratorOwner(userId, supabase);
+    const creditCost = getVideoCreditCost(data.model);
 
     // Gate 1: hard weekly limit. Even paying users get only 1 per week.
-    const limit = await checkWeeklyLimit(userId, isOwner);
+    const limit = await checkWeeklyLimit(userId, isOwner, creditCost);
     if (!limit.allowed) {
       const when = limit.nextAvailableAt
         ? new Date(limit.nextAvailableAt).toLocaleString()
@@ -445,7 +469,7 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
     }
 
     // Gate 2: credits (heavy). Checked up front, charged after a successful submit.
-    await ensureCreditsAvailable({ userId, amount: VIDEO_CREDIT_COST, isOwner });
+    await ensureCreditsAvailable({ userId, amount: creditCost, isOwner });
 
     // Submit the task.
     const url = getCometVideoTasksUrl();
@@ -473,7 +497,7 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
       if (immediate.videoUrl) {
         await spendCreditsAfterSuccess({
           supabase,
-          amount: VIDEO_CREDIT_COST,
+          amount: creditCost,
           isOwner,
           userId,
           reason: "video generation",
@@ -483,7 +507,7 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
           userId,
           immediate.taskId || "immediate",
           data.prompt,
-          isOwner ? 0 : VIDEO_CREDIT_COST,
+          isOwner ? 0 : creditCost,
         );
         return immediate;
       }
@@ -493,13 +517,13 @@ export const startVideoGeneration = createServerFn({ method: "POST" })
     // Charge once the task is accepted, then record it for the weekly counter.
     await spendCreditsAfterSuccess({
       supabase,
-      amount: VIDEO_CREDIT_COST,
+      amount: creditCost,
       isOwner,
       userId,
       reason: "video generation",
       insufficientMessage: "Not enough credits for video generation.",
     });
-    await recordGeneration(userId, taskId, data.prompt, isOwner ? 0 : VIDEO_CREDIT_COST);
+    await recordGeneration(userId, taskId, data.prompt, isOwner ? 0 : creditCost);
 
     return { taskId, status: "queued" };
   });
@@ -512,5 +536,5 @@ export const checkVideoGeneration = createServerFn({ method: "POST" })
     return fetchTask(data.taskId, userId);
   });
 
-export const VIDEO_CREDIT_COST_EXPORT = VIDEO_CREDIT_COST;
+export const VIDEO_CREDIT_COST_EXPORT = DEFAULT_VIDEO_CREDIT_COST;
 export const VIDEO_WEEKLY_LIMIT = RATE_LIMIT_COUNT;
