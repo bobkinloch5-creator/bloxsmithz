@@ -20,6 +20,8 @@ export type AiModeId =
   | "clothing"
   | "finish";
 
+export type MapGenerationStrategy = "toolbox" | "custom";
+
 export type AiModeDef = {
   id: AiModeId;
   label: string;
@@ -28,6 +30,33 @@ export type AiModeDef = {
   /** Appended to the system prompt when this mode is active. */
   addendum: string;
 };
+
+export function buildMapGenerationDirective(strategy: string | null | undefined): string {
+  if (strategy === "toolbox") {
+    return `### MAP GENERATION STRATEGY: TOOLBOX MAP MODE
+The user selected Toolbox Map Mode. For map/world/environment requests, build from high-quality Roblox Toolbox / Creator Store assets first.
+- Search for the best matching complete map kit or map pieces with \`roblox_toolbox_asset_plan\` and/or focused \`roblox_asset_search\` calls before emitting final JSON.
+- Only use safe, free, public, clean assets. Prefer popular/trusted/verified creators when available, but do not invent asset IDs.
+- Queue \`insert_toolbox_asset\` actions with scanScripts:true, removeUnsafeScripts:true, removeScriptsFromDecorativeAssets:true, freeOnly:true, publicOnly:true, requiresApprovalIfScriptsFound:true.
+- Never insert spam models, virus/backdoor scripts, obfuscated scripts, loadstring, require(assetId), hidden HttpService calls, or random low-quality assets.
+- Place map assets under organized folders like Workspace/Map/ToolboxMap, Workspace/Map/Roads, Workspace/Map/Buildings, Workspace/Map/Props, Workspace/NPCs, Workspace/Interactables, and SoundService/Ambience.
+- If a single complete map is not trustworthy, assemble a professional hybrid from multiple clean map pieces: terrain, roads, buildings, props, lighting, spawns, and ambient sound.
+- Explain what asset groups were selected, where they were placed, and note that toolbox models are scanned before insertion.`;
+  }
+
+  if (strategy === "custom") {
+    return `### MAP GENERATION STRATEGY: AI CUSTOM MAP MODE
+The user selected AI Custom Map Mode. For map/world/environment requests, build an original map from scratch using Roblox terrain, anchored Parts, Models, lighting, spawns, and scripts.
+- Do NOT rely on one random Toolbox map. Use procedural terrain/parts for the main layout; toolbox assets are allowed only for small optional props/audio if they are safe and scanned.
+- Every map must be polished, playable, properly scaled, anchored, mobile/desktop friendly, visible in Roblox Studio edit mode, and organized into folders.
+- Required baseline for serious maps: Workspace/Map with named subfolders, SpawnLocations, roads/paths or traversal routes, landmarks, props, lighting/post-FX, collision-safe scale, and clear player navigation.
+- For open-world maps include roads, sidewalks, buildings, shops, houses/apartments, parking lots, bridges or overpasses, beaches/water when themed, mountains/forests when useful, NPC areas, mission areas, vehicle spawn zones, player spawns, and good lighting.
+- Support many map types: open-world cities, islands, roleplay towns, racing maps, police maps, military bases, obbies, simulators, tycoons, fantasy maps, horror maps, and adventure maps.
+- Never output an empty baseplate, loose random parts, tycoon plots for non-tycoon prompts, or a map that only works at runtime.`;
+  }
+
+  return "";
+}
 
 export const AI_MODES: AiModeDef[] = [
   {
@@ -106,11 +135,13 @@ Produce premium, mobile-friendly Roblox UI.
     emoji: "🗺️",
     hint: "Terrain, biomes, environments",
     addendum: `### MAP BUILDER MODE
-Build environments, NOT scripts. Use Terrain for ground, Toolbox for set-dressing.
-- Ground/landscape ALWAYS uses terrainFill or terrainGenerate (Grass/Sand/Snow/Water/Rock). Never spawn hundreds of thin parts for grass.
-- Insert 10+ Toolbox decorative assets in varied positions (trees, rocks, props, buildings) via insert_toolbox_asset.
-- Set the matching Lighting (ClockTime, Atmosphere, FogColor) for the biome's mood.
-- Add 1–2 ambient sounds (wind, birds, water) via the sound action.
+Build polished environments, not random low-quality maps.
+- Honor the selected map strategy when present: Toolbox Map Mode searches and inserts safe free clean map assets; AI Custom Map Mode builds an original map from terrain/parts.
+- Ground/landscape ALWAYS uses terrainFill or terrainGenerate (Grass/Sand/Snow/Water/Rock) or large anchored map surfaces. Never spawn hundreds of thin parts for grass.
+- Make maps complete and playable: clear player spawn, paths/roads, landmarks, props, lighting, scale, and organized folders.
+- For open-world maps include roads, sidewalks, buildings, shops, houses/apartments, parking lots, bridges, beaches or water when themed, NPC/mission areas, vehicle spawns, and player spawns.
+- Set matching Lighting (ClockTime, Atmosphere, FogColor, Bloom/ColorCorrection) for the biome's mood.
+- Add 1–2 ambient sounds when appropriate via the sound action.
 - Skip leaderstats/datastores/remotes unless the user asked for gameplay.`,
   },
   {

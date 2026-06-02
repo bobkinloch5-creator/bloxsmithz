@@ -9,6 +9,7 @@ const InputSchema = z.object({
   mode: z.enum(["chat", "generate"]).default("generate"),
   preview: z.boolean().default(true),
   thinking: z.boolean().default(false),
+  mapStrategy: z.enum(["toolbox", "custom"]).default("toolbox"),
   imageDataUrl: z
     .string()
     .regex(/^data:image\/(png|jpeg|jpg|webp|gif);base64,/, "Must be a data:image base64 URL")
@@ -263,7 +264,7 @@ end
   }
 
   // Map / world / tycoon / city → build a REAL procedural layout, not a folder.
-  if (/\b(map|world|city|town|island|tycoon|lobby|arena|plot|base|kingdom|village)\b/.test(p)) {
+  if (/\b(map|world|city|town|island|tycoon|lobby|arena|plot|base|kingdom|village|open[-\s]?world|gta|grand theft|crime|wanted|vehicles?|cars?|garage|missions?|full game|game)\b/.test(p)) {
     return getProceduralMapFallback(p);
   }
 
@@ -732,77 +733,64 @@ end
   };
 }
 
-// A genuine procedural map/tycoon: ground, spawn, central hub, player plots,
-// and connecting paths. Used when the model fails on a map/world/tycoon prompt
-// so the user gets a real, usable build instead of an empty folder.
+// A genuine procedural map fallback. Non-tycoon requests now get an open-world
+// layout instead of the old flat four-plot ring from the screenshot. Tycoon
+// plot pads are still available, but only for explicit tycoon prompts.
 function getProceduralMapFallback(p: string): {
   message: string;
   files: GenFile[];
   actions: GenAction[];
 } {
   const isCity =
-    /\b(open[-\s]?world|city|downtown|miami|vice city|beach|streets?|police|wanted|garage|apartment|roleplay|rp)\b/.test(
+    /\b(open[-\s]?world|city|downtown|miami|vice city|beach|streets?|police|wanted|garage|apartment|roleplay|rp|gta|grand theft|crime|criminal|cars?|vehicles?|missions?|jobs?)\b/.test(
       p,
-    ) && /\b(map|game|world|city|streets?|missions?|jobs?)\b/.test(p);
+    ) && /\b(map|game|world|city|streets?|missions?|jobs?|open[-\s]?world|gta|grand theft)\b/.test(p);
   if (isCity) return getProceduralCityFallback(p);
 
-  const isTycoon = /\btycoon\b/.test(p);
-  const plotCount = isTycoon ? 6 : 4;
+  // IMPORTANT: the old fallback used four generic "Plot" pads for every map request.
+  // That made non-tycoon/open-world prompts look like a flat tycoon starter, which is
+  // exactly the broken screenshot users kept seeing. Plot pads now ONLY appear when
+  // the prompt is explicitly tycoon-related. Every other map gets a real open-world
+  // starter layout with districts, roads, landmarks, nature, spawns, and missions.
+  const isTycoon = /\b(tycoon|dropper|conveyor|rebirth|purchase\s*pads?|claim\s*plots?|plot\s*claiming|owner\s*plot)\b/.test(
+    p,
+  );
+  if (!isTycoon) return getOpenWorldMapFallback(p);
+
+  const plotCount = 6;
   const actions: GenAction[] = [];
 
   const v3 = (x: number, y: number, z: number) => ({ __t: "Vector3", x, y, z });
   const color = (r: number, g: number, b: number) => ({ __t: "Color3", r, g, b });
   const mat = (m: string) => ({ __t: "Enum", enum: "Material", value: m });
 
-  // Folders
-  actions.push({
-    type: "create",
-    className: "Folder",
-    name: "Map",
-    parent: "Workspace",
-    properties: {},
-  });
-  actions.push({
-    type: "create",
-    className: "Folder",
-    name: "Plots",
-    parent: "Workspace/Map",
-    properties: {},
-  });
-  actions.push({
-    type: "create",
-    className: "Folder",
-    name: "Paths",
-    parent: "Workspace/Map",
-    properties: {},
-  });
+  for (const [name, parent] of [
+    ["Map", "Workspace"],
+    ["TycoonPlots", "Workspace/Map"],
+    ["Paths", "Workspace/Map"],
+    ["Decor", "Workspace/Map"],
+  ] as const) {
+    actions.push({ type: "create", className: "Folder", name, parent, properties: {} });
+  }
 
-  // Big ground
+  actions.push({
+    type: "terrainFill",
+    shape: "Block",
+    cframe: { __t: "CFrame", x: 0, y: -4, z: 0 },
+    size: v3(620, 8, 620),
+    material: mat("Grass"),
+  });
+  actions.push({ type: "set", path: "Workspace.Terrain", properties: { Decoration: true } });
+
   actions.push({
     type: "create",
     className: "Part",
-    name: "Ground",
-    parent: "Workspace/Map",
-    properties: {
-      Size: v3(512, 2, 512),
-      Position: v3(0, -1, 0),
-      Anchored: true,
-      Material: mat("Grass"),
-      Color: color(70, 110, 60),
-      TopSurface: { __t: "Enum", enum: "SurfaceType", value: "Smooth" },
-    },
-  });
-
-  // Central hub (round-ish platform + pillar)
-  actions.push({
-    type: "create",
-    className: "Part",
-    name: "CentralHub",
+    name: "PremiumTycoonHub",
     parent: "Workspace/Map",
     properties: {
       Shape: { __t: "Enum", enum: "PartType", value: "Cylinder" },
-      Size: v3(4, 60, 60),
-      Position: v3(0, 1, 0),
+      Size: v3(4, 72, 72),
+      Position: v3(0, 2, 0),
       Anchored: true,
       Material: mat("Concrete"),
       Color: color(120, 125, 135),
@@ -812,54 +800,45 @@ function getProceduralMapFallback(p: string): {
       {
         className: "PointLight",
         name: "HubLight",
-        properties: { Brightness: 2, Range: 40, Color: color(255, 240, 200) },
+        properties: { Brightness: 2.5, Range: 55, Color: color(255, 235, 190) },
       },
     ],
   });
   actions.push({
     type: "create",
-    className: "Part",
-    name: "HubPillar",
+    className: "SpawnLocation",
+    name: "TycoonSpawn",
     parent: "Workspace/Map",
     properties: {
-      Size: v3(8, 24, 8),
-      Position: v3(0, 14, 0),
+      Size: v3(14, 1, 14),
+      Position: v3(0, 5, 0),
       Anchored: true,
       Material: mat("Neon"),
-      Color: color(90, 170, 255),
-    },
-  });
-
-  // Spawn on the hub
-  actions.push({
-    type: "create",
-    className: "SpawnLocation",
-    name: "Spawn",
-    parent: "Workspace/Map",
-    properties: {
-      Size: v3(12, 1, 12),
-      Position: v3(0, 2.5, 0),
-      Anchored: true,
-      Material: mat("Metal"),
       Color: color(90, 170, 255),
       Neutral: true,
     },
   });
 
-  // Player plots in a ring + paths leading to the hub
-  const radius = 140;
+  const radius = 160;
   for (let i = 0; i < plotCount; i++) {
     const angle = (i / plotCount) * Math.PI * 2;
     const px = Math.round(Math.cos(angle) * radius);
     const pz = Math.round(Math.sin(angle) * radius);
     actions.push({
       type: "create",
+      className: "Folder",
+      name: `TycoonPlot${i + 1}`,
+      parent: "Workspace/Map/TycoonPlots",
+      properties: {},
+    });
+    actions.push({
+      type: "create",
       className: "Part",
-      name: `Plot${i + 1}`,
-      parent: "Workspace/Map/Plots",
+      name: "ClaimBase",
+      parent: `Workspace/Map/TycoonPlots/TycoonPlot${i + 1}`,
       properties: {
-        Size: v3(80, 1, 80),
-        Position: v3(px, 0.5, pz),
+        Size: v3(92, 1, 92),
+        Position: v3(px, 0.6, pz),
         Anchored: true,
         Material: mat("WoodPlanks"),
         Color: color(150, 120, 90),
@@ -869,8 +848,8 @@ function getProceduralMapFallback(p: string): {
           className: "BillboardGui",
           name: "Label",
           properties: {
-            Size: { __t: "UDim2", xs: 0, xo: 200, ys: 0, yo: 50 },
-            StudsOffset: v3(0, 8, 0),
+            Size: { __t: "UDim2", xs: 0, xo: 240, ys: 0, yo: 54 },
+            StudsOffset: v3(0, 9, 0),
             AlwaysOnTop: true,
           },
           children: [
@@ -880,7 +859,7 @@ function getProceduralMapFallback(p: string): {
               properties: {
                 Size: { __t: "UDim2", xs: 1, xo: 0, ys: 1, yo: 0 },
                 BackgroundTransparency: 1,
-                Text: `Plot ${i + 1}`,
+                Text: `Tycoon Plot ${i + 1}`,
                 TextScaled: true,
                 Font: { __t: "Enum", enum: "Font", value: "GothamBold" },
                 TextColor3: color(255, 255, 255),
@@ -890,41 +869,353 @@ function getProceduralMapFallback(p: string): {
         },
       ],
     });
-    // Path from plot toward hub
     actions.push({
       type: "create",
       className: "Part",
-      name: `Path${i + 1}`,
+      name: `PathToTycoon${i + 1}`,
       parent: "Workspace/Map/Paths",
       properties: {
-        Size: v3(Math.max(8, radius - 50), 0.4, 10),
-        Position: v3(Math.round(px / 2), 0.3, Math.round(pz / 2)),
+        Size: v3(Math.max(8, radius - 48), 0.45, 12),
+        Position: v3(Math.round(px / 2), 0.45, Math.round(pz / 2)),
         Anchored: true,
         Material: mat("Slate"),
-        Color: color(90, 90, 95),
+        Color: color(82, 82, 88),
         Orientation: v3(0, Math.round((-angle * 180) / Math.PI), 0),
       },
     });
   }
 
-  // Lighting for a clean daytime look
   actions.push({
     type: "lighting",
     properties: {
       ClockTime: 14,
-      Brightness: 2,
-      Ambient: color(70, 70, 80),
-      OutdoorAmbient: color(120, 120, 130),
+      Brightness: 2.3,
+      Ambient: color(75, 75, 85),
+      OutdoorAmbient: color(125, 125, 135),
     },
   });
-
-  actions.push({ type: "select", path: "Workspace.Map.CentralHub" });
+  actions.push({ type: "select", path: "Workspace.Map.TycoonPlots" });
 
   return {
-    message: isTycoon
-      ? `Queued a classic tycoon map — a central hub with a spawn, ${plotCount} player plots in a ring, and stone paths connecting each plot to the center. Push to Studio, then tell me what to add to each plot (droppers, buttons, walls) and I'll build the tycoon logic.`
-      : `Queued a starter map — large ground, a central hub with spawn, ${plotCount} zones, and connecting paths. Push to Studio, then tell me what to put in each zone.`,
+    message:
+      `Queued a clean tycoon-only map with ${plotCount} claim plots, a premium central hub, spawn, terrain, and organized folders. Plot pads are now only used for tycoon prompts.`,
     files: [],
+    actions,
+  };
+}
+
+function getOpenWorldMapFallback(p: string): {
+  message: string;
+  files: GenFile[];
+  actions: GenAction[];
+} {
+  const actions: GenAction[] = [];
+  const v3 = (x: number, y: number, z: number) => ({ __t: "Vector3", x, y, z });
+  const color = (r: number, g: number, b: number) => ({ __t: "Color3", r, g, b });
+  const mat = (m: string) => ({ __t: "Enum", enum: "Material", value: m });
+
+  for (const [name, parent] of [
+    ["Map", "Workspace"],
+    ["OpenWorld", "Workspace/Map"],
+    ["TerrainZones", "Workspace/Map/OpenWorld"],
+    ["Roads", "Workspace/Map/OpenWorld"],
+    ["Sidewalks", "Workspace/Map/OpenWorld"],
+    ["Buildings", "Workspace/Map/OpenWorld"],
+    ["Homes", "Workspace/Map/OpenWorld"],
+    ["Nature", "Workspace/Map/OpenWorld"],
+    ["Landmarks", "Workspace/Map/OpenWorld"],
+    ["Vehicles", "Workspace/Map/OpenWorld"],
+    ["MissionMarkers", "Workspace/Map/OpenWorld"],
+    ["Spawns", "Workspace/Map/OpenWorld"],
+    ["Props", "Workspace/Map/OpenWorld"],
+  ] as const) {
+    actions.push({ type: "create", className: "Folder", name, parent, properties: {} });
+  }
+
+  const part = (
+    parent: string,
+    name: string,
+    size: [number, number, number],
+    position: [number, number, number],
+    material: string,
+    rgb: readonly [number, number, number],
+    extra: Record<string, any> = {},
+    children: any[] = [],
+  ) =>
+    actions.push({
+      type: "create",
+      className: "Part",
+      name,
+      parent,
+      properties: {
+        Size: v3(size[0], size[1], size[2]),
+        Position: v3(position[0], position[1], position[2]),
+        Anchored: true,
+        Material: mat(material),
+        Color: color(rgb[0], rgb[1], rgb[2]),
+        ...extra,
+      },
+      ...(children.length ? { children } : {}),
+    });
+
+  actions.push({
+    type: "terrainFill",
+    shape: "Block",
+    cframe: { __t: "CFrame", x: 0, y: -5, z: 0 },
+    size: v3(900, 10, 900),
+    material: mat("Grass"),
+  });
+  actions.push({
+    type: "terrainFill",
+    shape: "Block",
+    cframe: { __t: "CFrame", x: 0, y: -2, z: 365 },
+    size: v3(900, 8, 190),
+    material: mat("Sand"),
+  });
+  actions.push({
+    type: "terrainFill",
+    shape: "Block",
+    cframe: { __t: "CFrame", x: 0, y: -3, z: 470 },
+    size: v3(900, 10, 170),
+    material: mat("Water"),
+  });
+  actions.push({ type: "set", path: "Workspace.Terrain", properties: { Decoration: true } });
+
+  // District foundations so the player sees useful, intentional zones immediately.
+  part("Workspace/Map/OpenWorld/TerrainZones", "DowntownFoundation", [360, 1, 280], [0, 0.1, -110], "Concrete", [82, 86, 92]);
+  part("Workspace/Map/OpenWorld/TerrainZones", "SuburbFoundation", [300, 1, 220], [-285, 0.15, 115], "Grass", [75, 125, 70]);
+  part("Workspace/Map/OpenWorld/TerrainZones", "IndustrialFoundation", [260, 1, 210], [300, 0.15, 105], "Slate", [76, 78, 84]);
+  part("Workspace/Map/OpenWorld/TerrainZones", "BeachBoardwalk", [760, 1, 22], [0, 1.2, 278], "WoodPlanks", [170, 125, 82]);
+
+  for (const x of [-260, -130, 0, 130, 260]) {
+    part("Workspace/Map/OpenWorld/Roads", `NorthSouthRoad_${x}`, [24, 0.55, 700], [x, 1.0, -35], "Asphalt", [25, 27, 30]);
+    part("Workspace/Map/OpenWorld/Sidewalks", `Sidewalk_L_${x}`, [5, 0.65, 690], [x - 18, 1.2, -35], "Concrete", [125, 125, 128]);
+    part("Workspace/Map/OpenWorld/Sidewalks", `Sidewalk_R_${x}`, [5, 0.65, 690], [x + 18, 1.2, -35], "Concrete", [125, 125, 128]);
+  }
+  for (const z of [-285, -175, -65, 45, 155, 265]) {
+    part("Workspace/Map/OpenWorld/Roads", `EastWestRoad_${z}`, [760, 0.55, 24], [0, 1.05, z], "Asphalt", [25, 27, 30]);
+    part("Workspace/Map/OpenWorld/Sidewalks", `Sidewalk_N_${z}`, [750, 0.65, 5], [0, 1.2, z - 18], "Concrete", [125, 125, 128]);
+    part("Workspace/Map/OpenWorld/Sidewalks", `Sidewalk_S_${z}`, [750, 0.65, 5], [0, 1.2, z + 18], "Concrete", [125, 125, 128]);
+  }
+
+  // Major landmarks and buildings.
+  const buildings = [
+    ["CityHall", -70, -210, 62, 72, 52, [220, 210, 180]],
+    ["NeonBank", 70, -210, 54, 95, 48, [50, 90, 155]],
+    ["MetroTower", -185, -125, 58, 130, 54, [70, 125, 190]],
+    ["LuxuryHotel", 185, -125, 62, 118, 56, [225, 125, 150]],
+    ["ShoppingMall", -70, -15, 110, 44, 70, [240, 155, 85]],
+    ["PoliceStation", 100, -15, 76, 46, 64, [55, 85, 145]],
+    ["Hospital", -205, 85, 72, 55, 62, [230, 235, 240]],
+    ["CentralGarage", 170, 85, 92, 34, 72, [95, 95, 105]],
+    ["BeachApartments", -95, 205, 66, 74, 52, [255, 210, 130]],
+    ["Arcade", 90, 205, 52, 38, 48, [140, 70, 190]],
+  ] as const;
+
+  for (const [name, x, z, width, height, depth, rgb] of buildings) {
+    part("Workspace/Map/OpenWorld/Buildings", name, [width, height, depth], [x, height / 2 + 1, z], "SmoothPlastic", rgb);
+    part("Workspace/Map/OpenWorld/Buildings", `${name}_RoofTrim`, [width + 4, 2, depth + 4], [x, height + 2.5, z], "Neon", [90, 170, 255]);
+    part("Workspace/Map/OpenWorld/Buildings", `${name}_FrontWindows`, [width * 0.72, height * 0.55, 0.8], [x, height * 0.58, z - depth / 2 - 0.6], "Glass", [130, 210, 255], { Transparency: 0.35 });
+  }
+
+  for (const [name, x, z, rgb] of [
+    ["BeachPier", 0, 355, [155, 105, 65]],
+    ["MountainLookout", -335, -305, [90, 100, 94]],
+    ["RadioTower", 335, -305, [120, 120, 130]],
+    ["MissionPlaza", 0, -25, [115, 118, 128]],
+  ] as const) {
+    const size: [number, number, number] = name === "RadioTower" ? [16, 90, 16] : name === "BeachPier" ? [36, 2, 130] : [72, 8, 72];
+    const pos: [number, number, number] = name === "RadioTower" ? [x, 46, z] : [x, 3, z];
+    part("Workspace/Map/OpenWorld/Landmarks", name, size, pos, name === "RadioTower" ? "Metal" : "WoodPlanks", rgb);
+  }
+
+  // Suburbs with real house shapes, not empty squares.
+  const homePositions = [
+    [-355, 35],
+    [-285, 35],
+    [-215, 35],
+    [-355, 125],
+    [-285, 125],
+    [-215, 125],
+    [-355, 210],
+    [-285, 210],
+  ] as const;
+  homePositions.forEach(([x, z], i) => {
+    const baseColor: readonly [number, number, number] = i % 2 === 0 ? [210, 165, 120] : [145, 190, 220];
+    part("Workspace/Map/OpenWorld/Homes", `SuburbanHome_${i + 1}`, [42, 24, 36], [x, 13, z], "WoodPlanks", baseColor);
+    part("Workspace/Map/OpenWorld/Homes", `SuburbanHome_${i + 1}_Roof`, [48, 8, 42], [x, 31, z], "Slate", [75, 70, 72]);
+    part("Workspace/Map/OpenWorld/Homes", `SuburbanHome_${i + 1}_Door`, [8, 12, 1], [x, 7, z - 18.6], "Wood", [95, 55, 35]);
+  });
+
+  // Trees, palms, and rocks to make the world feel alive.
+  const treePositions = [
+    [-390, -330], [-345, -285], [-290, -330], [-245, -270], [-380, -210], [-310, -205],
+    [-390, 300], [-310, 310], [-230, 305], [220, 310], [300, 315], [380, 300],
+    [315, 30], [365, 85], [315, 165], [370, 215], [-130, 295], [130, 295],
+  ] as const;
+  treePositions.forEach(([x, z], i) => {
+    const isPalm = z > 260;
+    part("Workspace/Map/OpenWorld/Nature", `${isPalm ? "Palm" : "Tree"}_${i + 1}_Trunk`, [4, isPalm ? 22 : 14, 4], [x, isPalm ? 12 : 8, z], "Wood", [105, 70, 38], {
+      Shape: { __t: "Enum", enum: "PartType", value: "Cylinder" },
+    });
+    part("Workspace/Map/OpenWorld/Nature", `${isPalm ? "Palm" : "Tree"}_${i + 1}_Leaves`, [isPalm ? 26 : 18, isPalm ? 8 : 18, isPalm ? 26 : 18], [x, isPalm ? 25 : 18, z], "Grass", [35, 125, 55], {
+      Shape: { __t: "Enum", enum: "PartType", value: "Ball" },
+    });
+  });
+
+  for (const [name, x, z, rgb] of [
+    ["PoliceCruiser", 120, 25, [35, 60, 125]],
+    ["SportCar", 185, 120, [255, 65, 105]],
+    ["Taxi", -90, -75, [255, 210, 45]],
+    ["DeliveryVan", -220, 145, [245, 245, 245]],
+    ["BeachBuggy", 30, 250, [255, 135, 70]],
+  ] as const) {
+    part("Workspace/Map/OpenWorld/Vehicles", name, [12, 4, 20], [x, 4, z], "Metal", rgb);
+    part("Workspace/Map/OpenWorld/Vehicles", `${name}_Cab`, [8, 4, 8], [x, 8, z - 2], "Glass", [120, 210, 255], { Transparency: 0.25 });
+  }
+
+  const markers = [
+    ["DeliveryMission", -230, 170, "Delivery Job"],
+    ["PoliceMission", 100, 25, "Police Job"],
+    ["BeachRaceStart", 30, 255, "Beach Race"],
+    ["GarageSpawn", 185, 120, "Garage"],
+    ["DowntownMission", 0, -25, "City Mission"],
+  ] as const;
+  for (const [name, x, z, label] of markers) {
+    part(
+      "Workspace/Map/OpenWorld/MissionMarkers",
+      name,
+      [10, 1, 10],
+      [x, 3, z],
+      "Neon",
+      [255, 210, 65],
+      {},
+      [
+        {
+          className: "ProximityPrompt",
+          name: "Prompt",
+          properties: { ActionText: "Start", ObjectText: label, HoldDuration: 0.25 },
+        },
+        {
+          className: "BillboardGui",
+          name: "Label",
+          properties: { Size: { __t: "UDim2", xs: 0, xo: 180, ys: 0, yo: 44 }, StudsOffset: v3(0, 8, 0), AlwaysOnTop: true },
+          children: [
+            {
+              className: "TextLabel",
+              name: "Text",
+              properties: {
+                Size: { __t: "UDim2", xs: 1, xo: 0, ys: 1, yo: 0 },
+                BackgroundTransparency: 1,
+                Text: label,
+                TextScaled: true,
+                Font: { __t: "Enum", enum: "Font", value: "GothamBold" },
+                TextColor3: color(255, 255, 255),
+              },
+            },
+          ],
+        },
+      ],
+    );
+  }
+
+  actions.push({
+    type: "create",
+    className: "SpawnLocation",
+    name: "OpenWorldSpawn",
+    parent: "Workspace/Map/OpenWorld/Spawns",
+    properties: {
+      Size: v3(14, 1, 14),
+      Position: v3(0, 4, -25),
+      Anchored: true,
+      Neutral: true,
+      Material: mat("Neon"),
+      Color: color(90, 170, 255),
+    },
+  });
+  actions.push({
+    type: "lighting",
+    properties: {
+      ClockTime: /\b(horror|night|dark)\b/.test(p) ? 21 : 17.8,
+      Brightness: 2.4,
+      Ambient: color(88, 80, 105),
+      OutdoorAmbient: color(255, 158, 105),
+      FogEnd: 1000,
+      ShadowSoftness: 0.35,
+    },
+  });
+  actions.push({
+    type: "create",
+    className: "Atmosphere",
+    name: "OpenWorldAtmosphere",
+    parent: "Lighting",
+    properties: { Density: 0.28, Offset: 0.15, Color: color(255, 210, 180), Decay: color(90, 110, 145) },
+  });
+  actions.push({
+    type: "create",
+    className: "BloomEffect",
+    name: "OpenWorldBloom",
+    parent: "Lighting",
+    properties: { Intensity: 0.35, Size: 36, Threshold: 1.1 },
+  });
+  actions.push({ type: "select", path: "Workspace.Map.OpenWorld" });
+
+  return {
+    message:
+      "Queued a real open-world map fallback instead of plot pads: downtown roads, sidewalks, buildings, suburbs, beach, ocean, boardwalk, forest/nature, landmarks, vehicles, mission markers, spawn, terrain, and sunset lighting. This appears in Studio edit mode under Workspace/Map/OpenWorld.",
+    files: [
+      {
+        path: "ServerScriptService/Systems/OpenWorldMissionCore.server.lua",
+        file_type: "Script",
+        service_location: "ServerScriptService/Systems",
+        content: `local Players = game:GetService("Players")
+
+Players.PlayerAdded:Connect(function(player)
+	local stats = Instance.new("Folder")
+	stats.Name = "leaderstats"
+	stats.Parent = player
+
+	local cash = Instance.new("IntValue")
+	cash.Name = "Cash"
+	cash.Value = 500
+	cash.Parent = stats
+
+	local wanted = Instance.new("IntValue")
+	wanted.Name = "Wanted"
+	wanted.Value = 0
+	wanted.Parent = stats
+
+	local job = Instance.new("StringValue")
+	job.Name = "Job"
+	job.Value = "Visitor"
+	job.Parent = stats
+end)
+
+local missionFolder = workspace:WaitForChild("Map"):WaitForChild("OpenWorld"):WaitForChild("MissionMarkers")
+for _, marker in ipairs(missionFolder:GetChildren()) do
+	if marker:IsA("BasePart") then
+		local prompt = marker:FindFirstChildOfClass("ProximityPrompt") or Instance.new("ProximityPrompt")
+		prompt.ActionText = "Start"
+		prompt.ObjectText = marker.Name
+		prompt.HoldDuration = 0.25
+		prompt.Parent = marker
+		prompt.Triggered:Connect(function(player)
+			local stats = player:FindFirstChild("leaderstats")
+			if not stats then return end
+			local cash = stats:FindFirstChild("Cash")
+			local wanted = stats:FindFirstChild("Wanted")
+			local job = stats:FindFirstChild("Job")
+			if cash and cash:IsA("IntValue") then cash.Value += 100 end
+			if job and job:IsA("StringValue") then job.Value = marker.Name end
+			if wanted and wanted:IsA("IntValue") and marker.Name:lower():find("police") then
+				wanted.Value = math.clamp(wanted.Value + 1, 0, 5)
+			end
+		end)
+	end
+end
+`,
+      },
+    ],
     actions,
   };
 }
@@ -1122,7 +1413,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { projectId, prompt, mode, preview, imageDataUrl, thinking } = data;
+    const { projectId, prompt, mode, preview, imageDataUrl, thinking, mapStrategy } = data;
     await assertProjectOwner(supabase, projectId, userId);
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -1159,6 +1450,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
       await import("./ai-memory.server");
     const { buildSmartContextBlock, isSmartFullPromptRequest } =
       await import("./ai-smartest-builder-core");
+    const { buildMapGenerationDirective } = await import("./ai-modes");
 
     const { buildBloxSmithTools } = await import("./ai-tools.server");
 
@@ -1170,9 +1462,16 @@ export const generateWithAI = createServerFn({ method: "POST" })
     const wantsReplica = isBuildingReplicaPrompt(prompt);
     const isVisionBuild = !!imageDataUrl && mode === "generate";
     const smartFull = isSmartFullPromptRequest(prompt, mode);
+    const mapRequest =
+      mode === "generate" &&
+      /\b(map|maps|world|city|town|island|road|roads|street|streets|terrain|environment|obby|simulator|tycoon|racing|police|military|base|horror|adventure|roleplay|rp|open[-\s]?world|gta|grand theft|crime|wanted|vehicles?|cars?|garage|missions?)\b/i.test(
+        prompt,
+      );
+    const mapDirective = buildMapGenerationDirective(mapStrategy);
     const isComplex =
       mode === "generate" &&
       (smartFull ||
+        mapRequest ||
         promptLen > 400 ||
         complexKeywords.test(prompt) ||
         wantsReplica ||
@@ -1355,7 +1654,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
       ? `\n\nREFERENCE BUILDING REPLICA MODE:\n- A reference image may be attached. Analyze the visible architecture before emitting actions: silhouette, floor count, roof shape, facade colors, materials, windows, door placement, trim, stairs, balconies, pillars, signs, lights, and landscaping.\n- Return a complete Roblox-scale Model under Workspace/Map/Buildings/<DescriptiveName>, not a single block and not an empty folder.\n- Minimum action quality: create Workspace/Map and Workspace/Map/Buildings, one Model, ground/spawn/path, 20+ anchored visible Part/WedgePart/MeshPart details, glass windows, door, trim, roof, and a select action on the Model.\n- Prefer procedural parts for the reference structure so it resembles the image; only use toolbox assets for supporting props/landscaping.\n- If some image details are unclear, infer a polished matching building and say what you inferred in the message.\n`
       : "";
     try {
-      fullPrompt = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${studioErrorBlock ? `${studioErrorBlock}\n\n` : ""}${liveBlock}\n\n${smartBlock}\n\nFULL PROJECT FILE MAP (${(allFiles ?? []).length} files - every file your project has, by location):\n${projectMap || "  (no files yet)"}\n\nRelevant project files (with content preview):\n${filesBlock || "(none indexed)"}\n\nUser request:\n${prompt}\n\nRules:\n- You have FULL AWARENESS of the project above. Reference real files by path. NEVER duplicate something that already exists - MODIFY it.\n- Interpret short, typo-heavy, or broad requests by using the SMART BUILD ROUTER above. Preserve the latest user request exactly, then infer practical Roblox defaults.
+      fullPrompt = `${memoryBlock ? `${memoryBlock}\n\n` : ""}${studioErrorBlock ? `${studioErrorBlock}\n\n` : ""}${liveBlock}\n\n${smartBlock}${mapRequest && mapDirective ? `\n\n${mapDirective}` : ""}\n\nFULL PROJECT FILE MAP (${(allFiles ?? []).length} files - every file your project has, by location):\n${projectMap || "  (no files yet)"}\n\nRelevant project files (with content preview):\n${filesBlock || "(none indexed)"}\n\nUser request:\n${prompt}\n\nRules:\n- You have FULL AWARENESS of the project above. Reference real files by path. NEVER duplicate something that already exists - MODIFY it.\n- Interpret short, typo-heavy, or broad requests by using the SMART BUILD ROUTER above. Preserve the latest user request exactly, then infer practical Roblox defaults.
 - Use PROJECT MEMORY for durable preferences, naming, genre, and recent context. If memory conflicts with live files or the user's latest request, obey the latest request and live project state.
 - Organize new files into clean subfolders by feature (e.g. ServerScriptService/Combat/HitService, ReplicatedStorage/Modules/Config, StarterPlayerScripts/UI/Hud). Do NOT dump everything at the root of a service.\n- Place server Scripts in ServerScriptService, LocalScripts in StarterPlayerScripts or StarterGui, GUIs in StarterGui, RemoteEvents/RemoteFunctions in ReplicatedStorage/Remotes, ModuleScripts in ReplicatedStorage/Modules (shared) or ServerStorage/Modules (server-only), Tools in StarterPack, physical/world objects in Workspace.\n- For ground/landscape requests (grass, sand, snow, water, hills, islands), use real Roblox Terrain via the \`terrainFill\` action. NEVER spawn hundreds of thin Parts.\n- Do NOT claim success - phrase as "Queued for Studio...".\n- If the request is a casual question (no code changes), reply naturally in 'message' with empty 'files' and 'actions'.\n- Use tools (web_search, roblox_asset_*, fetch_url) ONLY when you genuinely need fresh info - every tool call slows you down.\n\nReturn the JSON object as specified.`;
       fullPrompt += replicaInstruction;
@@ -1389,7 +1688,7 @@ export const generateWithAI = createServerFn({ method: "POST" })
         generateText,
         {
           model,
-          system: activeSystemPrompt,
+          system: activeSystemPrompt + (mapRequest && mapDirective ? `\n\n${mapDirective}` : ""),
           ...(imageDataUrl && profile.supportsVision
             ? {
                 messages: [
@@ -1507,7 +1806,8 @@ export const generateWithAI = createServerFn({ method: "POST" })
               generateText,
               {
                 model: fallbackProvider(fallbackPlan.model),
-                system: SLIM_SYSTEM_PROMPT,
+                system:
+                  SLIM_SYSTEM_PROMPT + (mapRequest && mapDirective ? `\n\n${mapDirective}` : ""),
                 ...(imageDataUrl
                   ? {
                       messages: [

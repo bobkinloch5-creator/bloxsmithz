@@ -5,6 +5,7 @@ import { AiSourceSettings } from "@/components/AiSourceSettings";
 import { ModelPicker } from "@/components/ModelPicker";
 import { useAiBusySounds } from "@/hooks/useSounds";
 import { SITE_PROVIDER_LABELS, type SiteProviderId } from "@/lib/ai-models";
+import type { MapGenerationStrategy } from "@/lib/ai-modes";
 
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useRef, useState } from "react";
@@ -118,6 +119,26 @@ type AiMemory = {
   last_seen_at: string;
 };
 type Msg = { id: string; role: "user" | "assistant"; content: string; actions?: any };
+
+const MAP_STRATEGY_OPTIONS: Array<{
+  id: MapGenerationStrategy;
+  label: string;
+  shortLabel: string;
+  title: string;
+}> = [
+  {
+    id: "toolbox",
+    label: "Toolbox Map",
+    shortLabel: "Toolbox",
+    title: "Use safe free Roblox Toolbox map assets first",
+  },
+  {
+    id: "custom",
+    label: "AI Custom Map",
+    shortLabel: "Custom",
+    title: "Build an original map from terrain, parts, lighting, and scripts",
+  },
+];
 
 function ProjectEditor() {
   const { projectId } = Route.useParams();
@@ -412,6 +433,14 @@ function ProjectEditor() {
   const GENERATE_COST = 3;
   const outOfCredits = !isOwner && credits !== null && credits < GENERATE_COST;
   const [aiMode, setAiMode] = useState<string>("build");
+  const [mapStrategy, setMapStrategy] = useState<MapGenerationStrategy>(() => {
+    if (typeof window === "undefined") return "toolbox";
+    return localStorage.getItem("bs_map_strategy") === "custom" ? "custom" : "toolbox";
+  });
+  const selectMapStrategy = (next: MapGenerationStrategy) => {
+    setMapStrategy(next);
+    localStorage.setItem("bs_map_strategy", next);
+  };
   const runAI = useServerFn(generateWithAI);
   const runFixErrors = useServerFn(fixErrorsWithAI);
   const runAutopilot = useServerFn(autopilotBuild);
@@ -767,8 +796,7 @@ function ProjectEditor() {
         // back-to-back) so a double-write greeting only renders once.
         const deduped = loaded.filter(
           (m, i) =>
-            i === 0 ||
-            !(m.role === loaded[i - 1].role && m.content === loaded[i - 1].content),
+            i === 0 || !(m.role === loaded[i - 1].role && m.content === loaded[i - 1].content),
         );
         setMessages(deduped);
       }
@@ -1245,6 +1273,7 @@ function ProjectEditor() {
           mode: "generate",
           preview: true,
           thinking: opts?.forceThinking ?? thinking,
+          mapStrategy,
           ...(imgs.length && /^data:image\//.test(imgs[0]) ? { imageDataUrl: imgs[0] } : {}),
         },
       })) as {
@@ -2424,9 +2453,7 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                 <span className="flex items-center gap-1.5 font-semibold text-foreground">
                   <Gamepad2 className="h-3 w-3 text-primary" /> Playtest
                 </span>
-                <span className="mt-0.5 block truncate text-muted-foreground">
-                  deep QA
-                </span>
+                <span className="mt-0.5 block truncate text-muted-foreground">deep QA</span>
               </button>
               <button
                 onClick={() => toggleAutoExecute(!autoExecute)}
@@ -2872,6 +2899,38 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                     again at {aiUsageResetLabel}.
                   </div>
                 )}
+                {!chatMode && (
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 bg-surface/35 px-2.5 py-2">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Map mode
+                      </div>
+                      <div className="text-[11px] leading-snug text-muted-foreground/80">
+                        {mapStrategy === "toolbox"
+                          ? "Find safe free Toolbox maps first"
+                          : "Build original maps from terrain and parts"}
+                      </div>
+                    </div>
+                    <div className="inline-flex rounded-lg border border-border/60 bg-background/45 p-0.5">
+                      {MAP_STRATEGY_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => selectMapStrategy(option.id)}
+                          title={option.title}
+                          className={`h-7 rounded-md px-2.5 text-[11px] font-semibold transition ${
+                            mapStrategy === option.id
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                          }`}
+                        >
+                          <span className="hidden sm:inline">{option.label}</span>
+                          <span className="sm:hidden">{option.shortLabel}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -3221,7 +3280,11 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                     disabled={memoryBusy || memoryDraft.trim().length < 3}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
                   >
-                    {memoryBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookOpen className="h-3.5 w-3.5" />}
+                    {memoryBusy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <BookOpen className="h-3.5 w-3.5" />
+                    )}
                     Save memory
                   </button>
                 </div>
