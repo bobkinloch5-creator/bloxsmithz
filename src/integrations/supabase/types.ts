@@ -653,6 +653,7 @@ export type Database = {
           flagged: boolean
           flagged_reason: string | null
           id: string
+          is_announcement: boolean
           pinned_at: string | null
           pinned_by: string | null
           reply_to_id: string | null
@@ -670,6 +671,7 @@ export type Database = {
           flagged?: boolean
           flagged_reason?: string | null
           id?: string
+          is_announcement?: boolean
           pinned_at?: string | null
           pinned_by?: string | null
           reply_to_id?: string | null
@@ -687,6 +689,7 @@ export type Database = {
           flagged?: boolean
           flagged_reason?: string | null
           id?: string
+          is_announcement?: boolean
           pinned_at?: string | null
           pinned_by?: string | null
           reply_to_id?: string | null
@@ -1162,6 +1165,68 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      playtest_runs: {
+        Row: {
+          applied_actions: Json
+          created_at: string
+          credits_spent: number
+          error_message: string | null
+          findings: Json
+          id: string
+          plan: Json
+          project_id: string
+          request: string
+          rollback_snapshot: Json
+          status: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+          verification: Json
+        }
+        Insert: {
+          applied_actions?: Json
+          created_at?: string
+          credits_spent?: number
+          error_message?: string | null
+          findings?: Json
+          id?: string
+          plan?: Json
+          project_id: string
+          request?: string
+          rollback_snapshot?: Json
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+          verification?: Json
+        }
+        Update: {
+          applied_actions?: Json
+          created_at?: string
+          credits_spent?: number
+          error_message?: string | null
+          findings?: Json
+          id?: string
+          plan?: Json
+          project_id?: string
+          request?: string
+          rollback_snapshot?: Json
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+          verification?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playtest_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plugin_actions: {
         Row: {
@@ -2565,6 +2630,10 @@ export type Database = {
       check_and_record_ai_usage: { Args: never; Returns: Json }
       claim_daily_credits: { Args: never; Returns: Json }
       claim_discord_credits: { Args: never; Returns: Json }
+      complete_onboarding: {
+        Args: { _reward?: number; _step?: number }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
