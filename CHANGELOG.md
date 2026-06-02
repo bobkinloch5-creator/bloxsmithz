@@ -2,6 +2,17 @@
 
 ## Latest Updates
 
+### AI Models, Video Pricing & Playtest Credits
+
+- Added new BloxSmith AI / Comet model choices: `grok-4.20-0309-reasoning`, `kimi-k2.6`, `glm-5.1`, `gemini-3.1-flash-lite-preview`, `qwen3.5-397b-a17b`, `deepseek-v3.2`, and `gemini-3-pro-preview`.
+- Added Comet model mappings, descriptions, credit multipliers, tool labels, and reasoning/profile hints so the new text models show correctly in the picker and route through the provider layer.
+- Added a video model dropdown for `sora-2-pro`, `veo3.1`, and `grok-imagine-video`.
+- Replaced flat video pricing with per-model video pricing: Sora 2 Pro costs 100 credits, Veo 3.1 costs 120 credits, and Grok Imagine Video costs 90 credits.
+- Updated video rate-limit previews and server-side billing so the selected video model's cost is the cost checked, deducted, and recorded.
+- Added Playtest verification billing so AI Playtest now deducts credits for scan, apply, and verify steps.
+- Updated the Playtest panel to show scan/apply/verify prices before users run the workflow.
+- Added `docs/CREDIT_PRICING.md` with active AI model credit multipliers, calculated action costs, video model prices, Playtest costs, and legacy model aliases.
+
 ### AI Video Generator (CometAPI / Seedance)
 
 - Added a dedicated AI Video Generator that turns text prompts into cinematic Roblox trailers and cutscenes via the CometAPI Seedance backend.
@@ -10,7 +21,7 @@
 - Added an in-page video player and a one-click Download button for finished clips.
 - Added optional image-to-video: upload a still image to animate instead of pure text-to-video.
 - Added length options from 4 to 15 seconds and 720p / 1080p quality.
-- Gated video generation to 1 per user per week (clearly labelled in the UI with a countdown to the next unlock) and priced it at 150 credits, with owners/staff bypassing both limits.
+- Gated video generation to 1 per user per week (clearly labelled in the UI with a countdown to the next unlock) and added per-model pricing, with owners/staff bypassing both limits.
 - Surfaced the Video Generator in the Browse dropdown and the mobile navigation.
 
 ### Navigation & Header Layout
