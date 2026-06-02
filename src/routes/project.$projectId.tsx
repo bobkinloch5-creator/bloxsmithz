@@ -412,6 +412,15 @@ function ProjectEditor() {
   };
   const removeAttachment = (i: number) =>
     setAttachments((prev) => prev.filter((_, idx) => idx !== i));
+  const startScreenshotToGameTool = () => {
+    setPrompt(
+      "Use my attached game screenshot as a reference and build a playable Roblox-style starter game inspired by it. Analyze the genre, camera angle, map layout, colors, UI/HUD, lighting, props, characters/enemies, and likely core loop. Recreate the feel in a Roblox-safe way without copying protected logos or exact characters. Add a real Workspace map, spawn point, basic gameplay scripts, starter UI, lighting, and a short checklist for what to test in Play mode.",
+    );
+    setThinking(true);
+    setPlanMode(false);
+    toggleChatMode(false);
+    fileInputRef.current?.click();
+  };
   const [aiBusy, setAiBusy] = useState(false);
   const [aiBusyStartedAt, setAiBusyStartedAt] = useState<number | null>(null);
   const [aiBusyElapsed, setAiBusyElapsed] = useState(0);
@@ -2870,6 +2879,7 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                       "Build a simple shop GUI",
                       "Make a loading screen",
                       "1:1 building replica",
+                      "Screenshot to Game",
                     ].map((tpl) => (
                       <button
                         key={tpl}
@@ -2882,6 +2892,8 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                             );
                             setThinking(true);
                             fileInputRef.current?.click();
+                          } else if (tpl === "Screenshot to Game") {
+                            startScreenshotToGameTool();
                           } else {
                             setPrompt(tpl);
                           }
@@ -3047,6 +3059,20 @@ After the actions, write a SHORT message: what you set up, then "Press Play (F5)
                     >
                       <ImagePlus className="h-4 w-4" />
                       <span className="text-[11px] font-medium">Image</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startScreenshotToGameTool}
+                      title={
+                        attachments.length >= MAX_ATTACHMENTS
+                          ? `Max ${MAX_ATTACHMENTS} images`
+                          : "Upload a game screenshot and have AI build a playable Roblox starter from it"
+                      }
+                      disabled={aiUsageBlocked || attachments.length >= MAX_ATTACHMENTS}
+                      className="inline-flex h-8 items-center gap-1 rounded-lg border border-emerald-400/35 bg-emerald-500/10 px-2 text-emerald-300 transition hover:bg-emerald-500/15 disabled:opacity-40"
+                    >
+                      <Gamepad2 className="h-4 w-4" />
+                      <span className="text-[11px] font-medium">Screenshot to Game</span>
                     </button>
                     <button
                       type="button"

@@ -4,6 +4,8 @@
 
 ### AI Models, Video Pricing & Playtest Credits
 
+- Added a Screenshot to Game tool in the project AI composer: upload a game screenshot and BloxSmith preloads a vision-build prompt to create a Roblox-safe playable starter inspired by the image.
+- Expanded AI vision instructions so screenshot-to-game requests analyze the visible genre, map layout, lighting, UI/HUD, props, mechanics, and build real Studio actions instead of only describing the picture.
 - Added new BloxSmith AI / Comet model choices: `grok-4.20-0309-reasoning`, `kimi-k2.6`, `glm-5.1`, `gemini-3.1-flash-lite-preview`, `qwen3.5-397b-a17b`, `deepseek-v3.2`, and `gemini-3-pro-preview`.
 - Added Comet model mappings, descriptions, credit multipliers, tool labels, and reasoning/profile hints so the new text models show correctly in the picker and route through the provider layer.
 - Added a video model dropdown for `sora-2-pro`, `veo3.1`, and `grok-imagine-video`.
