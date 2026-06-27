@@ -1,13 +1,10 @@
 import { createStart, createMiddleware } from "@tanstack/react-start";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
-import { renderErrorPage } from "./lib/error-page";
 
-const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
+import { renderErrorPage } from "./lib/error-page";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+
+const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
-    const url = new URL(request.url);
-    if (url.pathname.startsWith("/lovable/") || url.pathname === "/email/unsubscribe") {
-      return await next();
-    }
     return await next();
   } catch (error) {
     if (error != null && typeof error === "object" && "statusCode" in error) {
@@ -22,6 +19,6 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
 });
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [errorMiddleware],
   functionMiddleware: [attachSupabaseAuth],
+  requestMiddleware: [errorMiddleware],
 }));

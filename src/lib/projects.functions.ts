@@ -1,99 +1,61 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { templateFiles } from "./templates";
+
+export const listProjects = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("projects")
+      .select("id, name, description, game_type, plugin_connected, build_count, updated_at, created_at")
+      .order("updated_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z
-      .object({
-        name: z.string().min(1).max(120),
-        game_type: z.string().min(1).max(60),
-        template: z.string().min(1).max(60),
-        description: z.string().max(500).optional(),
-      })
-      .parse(input),
+    z.object({
+      name: z.string().min(1).max(80),
+      description: z.string().max(500).optional().default(""),
+      game_type: z.string().max(40).optional().default("custom"),
+    }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: project, error } = await supabaseAdmin
+    const { data: row, error } = await context.supabase
       .from("projects")
       .insert({
-        user_id: userId,
-        owner_id: userId,
+        user_id: context.userId,
         name: data.name,
+        description: data.description,
         game_type: data.game_type,
-        description: data.description ?? null,
-        status: "draft",
       })
       .select()
       .single();
-    if (error || !project) throw new Error(error?.message ?? "Failed to create project");
-
-    const files = templateFiles(data.template);
-    if (files.length > 0) {
-      // Use the user-scoped client so RLS on project_files still applies.
-      await supabase.from("project_files").insert(
-        files.map((f) => ({
-          project_id: project.id,
-          path: f.path,
-          file_type: f.file_type,
-          service_location: f.service_location,
-          content: f.content,
-        })),
-      );
-    }
-    return { id: project.id };
-  });
-
-function randomToken(len = 40) {
-  const bytes = new Uint8Array(len);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-async function sha256(text: string) {
-  const buf = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export const generatePluginToken = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const token = "bs_" + randomToken(32);
-    const hash = await sha256(token);
-    const { error } = await supabase
-      .from("plugin_tokens")
-      .upsert(
-        { user_id: userId, token_hash: hash, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" },
-      );
     if (error) throw new Error(error.message);
-    return { token };
+    return row;
   });
 
-export const inviteCollaborator = createServerFn({ method: "POST" })
+export const getProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        projectId: z.string().uuid(),
-        email: z.string().email(),
-        role: z.enum(["editor", "viewer"]).default("editor"),
-      })
-      .parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    void data;
-    void context;
-    throw new Error("Project sharing is disabled. Projects are private to their owner.");
+    const { data: row, error } = await context.supabase
+      .from("projects")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Project not found");
+    return row;
+  });
+
+export const deleteProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("projects").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

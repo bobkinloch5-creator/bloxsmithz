@@ -1,57 +1,85 @@
-# BloxSmith "Lemonade-grade" Polish Pass
 
-A focused major overhaul across four tracks. I'll ship it in sequenced batches so the preview stays working between each one.
+## Root cause of the "everything goes to Owner Admin" bug
 
-## 1. UI/UX polish — Roblox Studio vibe
+In `src/routes/_authenticated/dashboard.tsx`, the sidebar nav array literally points six items at `/admin`:
 
-Goal: feels like a playful pro tool, not a generic SaaS.
+```
+{ key: "chat",  to: "/admin" },  // AI Chat
+{ key: "ideas", to: "/admin" },  // Game Ideas
+{ key: "ui",    to: "/admin" },  // UI Generator
+{ key: "co",    to: "/admin" },  // Collaborators
+{ key: "mcp",   to: "/admin" },  // MCP / Tools
+{ key: "hist",  to: "/admin" },  // History
+```
 
-- New design tokens in `src/styles.css`: punchier primary (Roblox-red-ish OKLCH), high-contrast surfaces, neon accent for AI states, deeper shadow + glow tokens, bigger radii on cards (`--radius: 1rem`), block-builder grid background utility.
-- Bold display font for headings (Sora already loaded — bump weight + tracking), playful badges + chips.
-- Landing page (`src/routes/index.tsx`): new hero with animated grid + floating "blocks", clearer 3-step "Describe → Build → Sync" section, template showcase carousel, social proof + CTA. SEO meta refreshed.
-- Dashboard + project workspace: tighter header, color-coded status pills (Building / Synced / Error), nicer empty states, sticky bottom prompt bar polish.
-- Buttons: add a `studio` variant (gradient + soft shadow + tap squish).
+There is no auto-redirect logic — every tab is hardcoded to `/admin`. Fix = point each link at its real route and create those routes.
 
-## 2. AI build quality
+Owner Admin link also needs to be gated behind `profile.is_admin` so normal users never see it.
 
-Goal: every prompt ships a real, playable vertical slice.
+---
 
-- Tighten system prompt in `src/lib/ai-smartest-builder-core.ts`:
-  - Stronger "no empty folders / no placeholders / no procedural unless asked" enforcement with explicit refusal templates.
-  - Required output contract per genre (spawn, core loop, UI, persistence, at least one map area).
-  - Self-check pass: model must list what it shipped and verify each item is non-placeholder before responding "done".
-- Server-side validator in `src/lib/sync-validation.ts` (already exists): extend to flag empty Folders, scripts under N chars, scripts with only comments, duplicate-named junk parts. Block sync + show fix-up panel.
-- Show the validation summary in `SyncValidationDrawer` with one-click "Ask AI to fix" that re-prompts with the failure list.
+## Plan (executed across multiple turns, in this order)
 
-## 3. Performance & speed
+### Turn 1 — Routing bug + page shells (highest priority, fixes "nothing works")
 
-- Audit `src/routes/__root.tsx` and split: lazy-load `RobloxModelExplainer`, `PresenceHeartbeat`, `MfaSessionGuard`, `ClickRipple` behind idle callback (GlobalChat already lazy).
-- Preload LCP hero image via per-route `head().links` on `index.tsx`.
-- Convert any oversized PNG hero/showcase assets to WebP imports.
-- Add `defaultPreloadStaleTime` tune + ensure project workspace route uses `ensureQueryData` (not effect-based fetch) — quick audit + fix on the top 3 routes.
-- Replace any remaining `h-screen` with `h-dvh` for mobile.
+1. **Create new authenticated route files**, each with a real header, description, content cards, empty states, and the shared Roblox background:
+   - `_authenticated/chat.tsx` → AI Chat hub (model picker + recent threads + "Open in project" CTA, since chat is per-project)
+   - `_authenticated/ideas.tsx` → Game Ideas board (cards from existing IDEAS list + "Start project")
+   - `_authenticated/ui-generator.tsx` → UI Generator (prompt box + style picker + result grid, calls `generateText` server fn)
+   - `_authenticated/collaborators.tsx` → Collaborators (per-project invite list, empty state explaining beta)
+   - `_authenticated/mcp.tsx` → MCP / Tools (cards: Studio Plugin, Cursor, Codex, GitHub, Local Agent, Custom MCP w/ status)
+   - `_authenticated/history.tsx` → History (lists rows from `build_history` table for the user)
+   - `_authenticated/admin.models.tsx` → AI Models (owner-only, lists `MODELS` from `src/lib/models.ts` with real status)
+   - `_authenticated/admin.model-test.tsx` → Model Test (owner-only, runs real test prompts)
 
-## 4. Reliability & bugs
+2. **Update sidebar nav** in `dashboard.tsx` (and the in-project sidebar in `project.$projectId.tsx`) to point at the new routes. Gate `Owner Admin` link by `profile.is_admin`.
 
-- Fix the noisy console: `Unknown message type: RESET_BLANK_CHECK` warning — add a no-op handler in the postMessage listener.
-- Add error boundaries on `project.$projectId.tsx`, `generate-3d.tsx`, `ui-generator.tsx` with a retry that calls `router.invalidate()` + `reset()`.
-- Toast standardisation: every server-fn catch surfaces a `toast.error` with the actual message, not a generic one.
-- Roblox publish: friendlier 401/403/404 hints already exist — extend to surface in the Publish dialog instead of throwing raw.
-- Credits: confirm `spend_credits_atomic` fallback path doesn't double-charge (read-through of `generator-credits.server.ts`).
+3. **Remove the "default redirect to /admin"** — confirm `_authenticated/route.tsx` and login flow only redirect to `/dashboard`, never `/admin` automatically. (Current `route.tsx` is clean; verify auth.tsx + index redirect target.)
 
-## Technical details
+### Turn 2 — Global Roblox-themed background + shared page chrome
 
-- All color changes go through `src/styles.css` tokens — no hardcoded colors in components.
-- New `studio` button variant added to `src/components/ui/button.tsx` via `cva`.
-- Lazy-loading uses `React.lazy` + `requestIdleCallback` fallback already in `__root.tsx`.
-- No DB migrations needed.
-- No new dependencies expected (Sora + Manrope already loaded, OKLCH supported).
+1. Add a single `<RobloxBackdrop />` component in `src/components/RobloxBackdrop.tsx`: dark gradient + blue glow blobs + SVG grid + floating cube SVGs + soft vignette, theme-aware via CSS vars already in `styles.css`.
+2. Add a `<PageShell title, description, actions, accent>` wrapper used by every new page so they all share header + breathing room + right-panel slot.
+3. Mount `<RobloxBackdrop />` once in `_authenticated/route.tsx` as a fixed `-z-10` layer so it covers Projects, Settings, Plugin, Admin, all new pages. Also mount on the public landing/auth pages via `__root.tsx` (behind their existing content).
+4. Per-page accent tint passed into `<RobloxBackdrop accent="chat|ideas|ui|admin|...">`.
 
-## Sequencing (so preview never breaks)
+### Turn 3 — AI Chat reliability + real error messages + fallback
 
-1. Design tokens + button variant + landing hero (visible win, isolated).
-2. Dashboard + workspace polish + lazy-load root chrome.
-3. AI prompt hardening + sync validator extension.
-4. Reliability sweep (error boundaries, toast, console warning, publish hints).
+Edit `src/routes/api/chat.ts`:
+1. Replace the "Something went wrong" catch with structured JSON errors that surface the actual reason: missing `LOVABLE_API_KEY`, invalid model id, missing projectId, missing messages, 402 credits exhausted, 429 rate-limited, 5xx upstream. Each returns a clear `error.message` the UI can render.
+2. Wrap the `streamText` call so a failed primary model auto-retries once with `FALLBACK_MODEL_ID` from `src/lib/models.ts`. Tag the assistant message with which model actually responded.
+3. **Do not deduct credits on failure** — move the credit decrement to `persistFinish` only on successful completion (it currently can run before stream errors surface).
+4. Update the chat client in `project.$projectId.tsx` to read the structured error and toast the real reason instead of a generic message.
 
-I'll report after each batch so you can steer.
+### Turn 4 — Owner Admin dashboard expansion + Model Test runner
+
+1. Expand `_authenticated/admin.tsx` into a real dashboard: total users, signups today, recent users table, recent projects table, plugin online count, AI model status grid, quick actions. All data from existing `getAdminOverview` server fn — extend it as needed.
+2. `_authenticated/admin.model-test.tsx` calls a new owner-only `runModelTest` server fn that:
+   - Iterates selected models (or all), sends a fixed Roblox-relevant prompt to each via `streamText` + `generateText`, captures response time + error + pass/fail.
+   - Stores last-tested timestamp + status per model in a new `model_test_results` table (migration with proper GRANTs + RLS scoped to admins via `has_role`).
+3. Page UI: "Test one", "Test all", "Retest failed", "Disable", "Set default", "Set fallback" buttons. Shows real status per model; models with `status="Failed"` are filtered out of the user-facing picker.
+
+### Turn 5 — Polish + cleanup
+
+1. Remove all "Coming Soon" badges from working pages.
+2. Theme audit: confirm Default / Grey / Light themes all swap backgrounds, cards, sidebars, buttons, text (already wired in `styles.css` — verify on new pages).
+3. Add `head()` per-route metadata (title + description) for every new page.
+4. Verify build + nav by clicking through each tab in the preview.
+
+---
+
+## Technical notes
+
+- New tables: `model_test_results (id, model_id, status, error_message, latency_ms, tested_at, tested_by)` with `GRANT SELECT, INSERT ON ... TO authenticated`, RLS allowing admins (`has_role(auth.uid(), 'admin')`) read + insert, plus service_role full.
+- No new secrets needed — `LOVABLE_API_KEY` already provisioned.
+- No new packages.
+- All AI calls remain in TanStack server functions / `src/routes/api/chat.ts` — keys never leave the server.
+- Files I will NOT touch: `src/integrations/supabase/*` autogen files, `src/routeTree.gen.ts`.
+
+---
+
+## Scope NOT in this plan (call out before approving)
+
+- I won't redesign the **landing page**, **auth page**, **terms/privacy**, **support**, **docs** screens beyond adding the shared Roblox background. Full redesign of those is a separate large effort — say the word and I'll add a turn 6 for it.
+- I won't build real Cursor / Codex / GitHub MCP integrations — the MCP page will show connection cards with accurate "not connected" status, not fake green checkmarks.
+- The **UI Generator** in turn 1 generates structured UI JSON via the AI gateway but does not push to Studio yet (Studio plugin push is separate work).

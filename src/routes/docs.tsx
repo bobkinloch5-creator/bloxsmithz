@@ -1,82 +1,61 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Header, Footer } from "@/components/layout";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { LegalShell } from "./terms";
 
 export const Route = createFileRoute("/docs")({
-  component: Docs,
   head: () => ({
     meta: [
-      { title: "Docs & Guides — Build Roblox Games with AI | BloxSmith" },
-      {
-        name: "description",
-        content:
-          "Read BloxSmith guides, API documentations, and Roblox Studio plugin setup guides to build Roblox games using AI.",
-      },
-      {
-        name: "keywords",
-        content:
-          "Roblox AI docs, BloxSmith documentation, Roblox coding guide, Luau scripting tutorial, Roblox Studio plugin setup",
-      },
-      { property: "og:title", content: "Docs & Guides — Build Roblox Games with AI | BloxSmith" },
-      {
-        property: "og:description",
-        content:
-          "Read BloxSmith guides, API documentations, and Roblox Studio plugin setup guides to build Roblox games using AI.",
-      },
-      { property: "og:url", content: "https://bloxsmith.pro/docs" },
+      { title: "Docs — BloxSmith" },
+      { name: "description", content: "Learn how to use BloxSmith: connect the Roblox Studio plugin, build with AI, and send actions to Studio." },
+      { property: "og:title", content: "BloxSmith Docs" },
+      { property: "og:description", content: "Plugin setup, AI chat, and project workflow." },
+          { property: "og:url", content: "https://bloxsmith.pro/docs" },
     ],
     links: [{ rel: "canonical", href: "https://bloxsmith.pro/docs" }],
   }),
-});
+  component: () => (
+    <LegalShell title="Docs" updated="June 25, 2026">
+      <p>Welcome to BloxSmith. This guide walks you through the basics: signing in, creating a project, and connecting the Roblox Studio plugin.</p>
 
-function Docs() {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 mx-auto max-w-3xl px-4 sm:px-6 py-12 prose prose-invert">
-        <h1 className="text-4xl font-bold">BloxSmith Documentation</h1>
-        <h2 className="mt-8 text-2xl font-semibold">Getting started</h2>
-        <ol className="mt-3 space-y-2 text-muted-foreground">
-          <li>1. Sign up and grab your 150 starter credits.</li>
-          <li>
-            2. Click <strong>New Roblox Game</strong> on your dashboard.
-          </li>
-          <li>3. Describe your game to the AI chat builder.</li>
-          <li>4. Approve generated files in the editor.</li>
-          <li>
-            5. Install the{" "}
-            <a
-              href="https://create.roblox.com/store/asset/88358540564597"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-glow hover:underline"
-            >
-              BloxSmith AI plugin
-            </a>{" "}
-            from the Creator Store and sync.
-          </li>
-        </ol>
-        <h2 className="mt-8 text-2xl font-semibold">How credits work</h2>
-        <p className="text-muted-foreground">
-          Each generation costs credits (1 for small scripts, 3–5 for systems, 10+ for full game
-          templates). Failed generations are never charged. Free accounts get get +10 free credits
-          every day.
-        </p>
-        <h2 className="mt-8 text-2xl font-semibold">Plugin installation</h2>
-        <p className="text-muted-foreground">
-          See the{" "}
-          <a href="/plugin" className="text-primary-glow hover:underline">
-            Plugin Setup
-          </a>{" "}
-          page for step-by-step instructions. The easiest way is to grab the plugin directly from
-          the Roblox Creator Store.
-        </p>
-        <h2 className="mt-8 text-2xl font-semibold">Fixing Roblox Studio errors</h2>
-        <p className="text-muted-foreground">
-          When the plugin sends an error, BloxSmith locates the file, explains the problem, and
-          proposes a diff you can approve.
-        </p>
-      </main>
-      <Footer />
-    </div>
-  );
-}
+      <h2>1. Create your account</h2>
+      <p>Sign in with Google, Apple, or email on the <Link to="/auth" className="text-blue-400 hover:underline">sign-in page</Link>. A profile is created automatically.</p>
+
+      <h2>2. Create a project</h2>
+      <p>From the dashboard, click <em>New Project</em>. Give it a name and a game type (obby, tycoon, simulator, RPG, etc.). Each project keeps its own chat history, generated scripts, and plugin queue.</p>
+
+      <h2>3. Install the Roblox Studio plugin</h2>
+      <ol className="mt-3 list-decimal space-y-1 pl-5">
+        <li>Open the <Link to="/plugin" className="text-blue-400 hover:underline">Plugin page</Link> while signed in.</li>
+        <li>Download <code>BloxSmithPlugin.lua</code>.</li>
+        <li>In Roblox Studio: <em>Plugins → Plugins Folder</em> and drop the file inside.</li>
+        <li>Restart Studio. The BloxSmith panel will appear in the Plugins tab.</li>
+        <li>Paste the plugin token shown on the Plugin page and click <em>Connect</em>.</li>
+      </ol>
+
+      <h2>4. Build with AI</h2>
+      <p>Open your project and type what you want to build. Pick an AI model from the model picker. The AI plans, generates Luau scripts and UI, and queues actions for the plugin.</p>
+
+      <h2>5. Send to Studio</h2>
+      <p>When the plugin is connected, queued actions sync to Studio automatically. The plugin reports success or failure back to the project so you can see what landed.</p>
+
+      <h2>Roblox services BloxSmith targets</h2>
+      <ul>
+        <li><code>Workspace</code> — map objects and models</li>
+        <li><code>ServerScriptService</code> — server scripts</li>
+        <li><code>StarterGui</code> — UI</li>
+        <li><code>StarterPlayerScripts</code> — local scripts</li>
+        <li><code>ReplicatedStorage</code> — RemoteEvents, modules, shared assets</li>
+        <li><code>ServerStorage</code> — server-only assets</li>
+        <li><code>StarterPack</code> — tools</li>
+      </ul>
+
+      <h2>Troubleshooting</h2>
+      <ul>
+        <li><strong>Plugin shows Offline:</strong> open Studio, make sure the panel is visible, paste the latest token from the Plugin page.</li>
+        <li><strong>Action failed:</strong> click the action in your project to see the error reported by the plugin.</li>
+        <li><strong>AI error:</strong> try a different model from the picker.</li>
+      </ul>
+
+      <p className="mt-6">Still stuck? Visit <Link to="/support" className="text-blue-400 hover:underline">Support</Link>.</p>
+    </LegalShell>
+  ),
+});

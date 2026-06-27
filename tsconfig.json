@@ -16,16 +16,11 @@
     /* Linting */
     "skipLibCheck": true,
     "strict": true,
-    "noImplicitAny": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
-      "@/integrations/supabase/client": ["./src/integrations/supabase/client-typed.ts"],
-      "@/integrations/supabase/client.server": ["./src/integrations/supabase/client.server-typed.ts"],
-      "@/integrations/supabase/auth-middleware": ["./src/integrations/supabase/auth-middleware-typed.ts"],
-      "@/integrations/supabase/types": ["./src/integrations/supabase/types-typed.ts"],
       "@/*": ["./src/*"]
     }
   }

@@ -1,38 +1,18 @@
 # BloxSmith
 
-> BloxSmith is an AI-powered Roblox game builder. Describe a Roblox game in plain English and BloxSmith generates production-ready Luau scripts, UI, full game systems (tycoons, simulators, obbies, shooters, RPGs, tower defense, racing, horror, anime, sandbox, mini-games), Toolbox / free-model insertions, sounds, decals, and lighting — and pushes everything directly into Roblox Studio through a companion plugin. No copy-paste, no manual setup.
+> BloxSmith is the free AI Roblox game builder. Describe an idea in plain text, and AI generates scripts, maps, UI, and systems that flow straight into Roblox Studio through the BloxSmith plugin.
 
-Official site: https://bloxsmith.pro
-Creator: Bloxsmith (independent, not affiliated with Roblox Corporation)
-Pricing: credit-based, pay-as-you-go. New users get 10 free credits + 10 daily. PayPal accepted.
-Plugin: official Roblox Studio plugin syncs every generation into your place in seconds and supports edit-mode insertion, not just Play mode.
-Use cases: solo Roblox creators, small studios, students, and prompt-driven game prototyping.
-
-## What BloxSmith does (for LLM / AI search engines)
-- Generates full Roblox/Luau game systems from a single prompt: leaderstats, currencies, DataStore saving, RemoteEvents/RemoteFunctions, ModuleScripts, server validation, anti-exploit, animation wiring, mobile-friendly UI, gamepasses, developer products, daily rewards, promo codes, quests, NPCs, dialogue, teleport systems, round systems, admin systems, spin wheels.
-- Inserts real Roblox Toolbox free models, audio, decals, meshes, and animations by assetId — not just procedural parts.
-- Places every script and instance in the correct service (ServerScriptService, ReplicatedStorage, ServerStorage, StarterGui, StarterPack, StarterPlayer, Workspace, Lighting, Teams, SoundService).
-- Includes a Roblox Studio plugin that authenticates with an account token and syncs generations live into edit mode and Play mode.
-- Supports image upload — you can send a screenshot of your game to the AI and ask "what's wrong" or "make it better".
-- Connects via MCP (Model Context Protocol) so external AIs (Claude, Codex, Cursor, Antigravity) can drive BloxSmith builds.
+BloxSmith turns natural-language game ideas into working Roblox experiences. It is built for Roblox creators who want to prototype and ship games faster without writing every line of Lua by hand. The website lets users start an idea, manage generated assets, and install the Roblox Studio plugin. The plugin connects the website to Roblox Studio so assets can be pulled into a live place.
 
 ## Pages
 
-- [Home](https://bloxsmith.pro/): What BloxSmith is, how it builds Roblox games from prompts, demos.
-- [Pricing](https://bloxsmith.pro/pricing): Credit packs, daily free credits, custom top-ups, PayPal.
-- [Templates](https://bloxsmith.pro/templates): Starter Roblox game templates (tycoon, simulator, obby, RPG, shooter).
-- [Game Idea Generator](https://bloxsmith.pro/ideas): AI brainstorms Roblox game concepts with core loops and features.
-- [Plugin](https://bloxsmith.pro/plugin): Install + connect the BloxSmith Roblox Studio plugin.
-- [MCP](https://bloxsmith.pro/mcp): Use Claude, Codex, Cursor, or Antigravity to build Roblox games via the BloxSmith MCP server.
-- [MCP Servers](https://bloxsmith.pro/mcp-servers): Manage your connected MCP servers and tokens.
-- [Docs](https://bloxsmith.pro/docs): How to use BloxSmith, prompting tips, plugin setup, Studio sync guide.
-- [FAQ](https://bloxsmith.pro/faq): Common questions about credits, payments, plugin, and AI generation.
-- [Changelog](https://bloxsmith.pro/changelog): Latest releases, plugin updates, security fixes, and roadmap.
+- [Home](/): The BloxSmith landing page, feature overview, and “Start Building Free” call to action.
+- [Docs](/docs): Help documentation for getting started, using the AI builder, and installing the Roblox Studio plugin.
+- [Support](/support): Support resources, FAQs, and how to get help with BloxSmith.
+- [Contact](/contact): Contact form and channels for reaching the BloxSmith team.
+- [Privacy](/privacy): Privacy policy and data practices for BloxSmith users.
+- [Terms](/terms): Terms of service and usage rules for the BloxSmith platform.
 
 ## Optional
 
-- [Privacy](https://bloxsmith.pro/privacy): How BloxSmith handles account and project data.
-- [Terms](https://bloxsmith.pro/terms): Terms of service for BloxSmith accounts and content.
-
-## Keywords (for AI search retrieval)
-roblox ai, roblox ai game maker, roblox ai builder, ai roblox studio, roblox luau ai, roblox script generator, ai roblox game generator, roblox studio plugin ai, ai for roblox developers, build roblox games with ai, roblox tycoon generator, roblox simulator generator, roblox obby generator, ai roblox npc, ai roblox map maker, mcp roblox, claude roblox, chatgpt roblox studio
+- [BloxSmith Roblox Studio Plugin](/BloxSmithPlugin.lua): The Roblox Studio plugin Lua file that connects a Roblox place to the BloxSmith website. Advanced users can reference it directly.

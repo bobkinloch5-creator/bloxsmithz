@@ -1,0 +1,734 @@
+import { Link } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getProject } from "@/lib/projects.functions";
+import { getMyProfile } from "@/lib/profile.functions";
+import {
+  getModelStatus,
+  startModelGeneration,
+  pollModelGeneration,
+  animateModel,
+  retextureModel,
+  deleteModelGeneration,
+  ANIMATION_PRESETS,
+} from "@/lib/models3d.functions";
+import { PageShell } from "@/components/PageShell";
+import { Box, Loader2, Sparkles, Image as ImageIcon, Type, Timer, Download, ExternalLink, AlertCircle, CheckCircle2, PlayCircle, Palette, Maximize2, RefreshCw, Trash2, X } from "lucide-react";
+
+function useModelViewerScript() {
+  useEffect(() => {
+    if (document.querySelector('script[data-mv="1"]')) return;
+    const s = document.createElement("script");
+    s.type = "module";
+    s.src = "https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js";
+    s.setAttribute("data-mv", "1");
+    document.head.appendChild(s);
+  }, []);
+}
+
+function formatRemaining(ms: number) {
+  if (ms <= 0) return "Ready";
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+const EXPORT_FORMATS: { key: string; label: string; ext: string }[] = [
+  { key: "glb", label: "GLB", ext: "glb" },
+  { key: "fbx", label: "FBX", ext: "fbx" },
+  { key: "obj", label: "OBJ", ext: "obj" },
+  { key: "usdz", label: "USDZ", ext: "usdz" },
+  { key: "stl", label: "STL", ext: "stl" },
+  { key: "blend", label: "BLEND", ext: "blend" },
+  { key: "mtl", label: "MTL", ext: "mtl" },
+];
+
+
+
+const STYLE_PRESETS: { key: string; label: string; modifier: string }[] = [
+  { key: "roblox", label: "Roblox-style", modifier: "stylized blocky Roblox-style low-poly game asset, flat shading, clean topology" },
+  { key: "lowpoly", label: "Low-poly", modifier: "low-poly geometric, faceted surfaces, minimal triangles, stylized game-ready" },
+  { key: "cartoon", label: "Cartoon", modifier: "cartoon, exaggerated proportions, bold colors, hand-painted textures" },
+  { key: "cute", label: "Cute / Chibi", modifier: "cute chibi style, soft rounded shapes, pastel colors, oversized head" },
+  { key: "realistic", label: "Realistic", modifier: "photorealistic, PBR materials, fine surface detail, studio lighting" },
+  { key: "fantasy", label: "Fantasy", modifier: "high-fantasy ornate, glowing runes, intricate filigree, magical aura" },
+  { key: "medieval", label: "Medieval", modifier: "medieval craftsmanship, worn metal and stone, leather straps, rustic" },
+  { key: "scifi", label: "Sci-Fi", modifier: "sci-fi futuristic, brushed metal panels, glowing accents, hi-tech greebles" },
+  { key: "modern", label: "Modern", modifier: "modern minimalist, clean surfaces, matte finish, neutral palette" },
+  { key: "horror", label: "Horror", modifier: "horror, decayed, blood-stained, eerie, desaturated, distressed surfaces" },
+  { key: "simulator", label: "Simulator", modifier: "bright candy-colored simulator game asset, smooth surfaces, oversized appeal" },
+  { key: "rpg", label: "RPG", modifier: "RPG hero-grade prop, ornate detail, rich materials, level-3-rarity look" },
+];
+
+async function forceDownload(url: string, filename: string) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
+function safeName(m: any, ext: string) {
+  const base = (m.prompt || m.mode || "model").toString().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40) || "model";
+  return `${base}-${String(m.id).slice(0, 6)}.${ext}`;
+}
+
+function titleCase(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function modelTitle(m: any) {
+  const prompt = String(m.prompt || "").trim();
+  const cleaned = prompt
+    .replace(/^Refined\s*[—-]\s*/i, "")
+    .replace(/^Retexture:\s*/i, "")
+    .split(",")[0]
+    .replace(/\b(low[- ]poly|geometric|faceted|minimal triangles|stylized|game[- ]ready|roblox[- ]style|pbr|realistic)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const fallback = m.mode === "image" ? "Image to 3D Model"
+    : m.mode === "animation" ? `${m.animation_name || "Animated"} Model`
+    : "3D Model";
+  const base = cleaned || fallback;
+  if (m.mode === "refine") return `Refined ${titleCase(base)}`;
+  if (m.mode === "texture") return `Retextured ${titleCase(base)}`;
+  if (m.mode === "animation") return titleCase(base);
+  return titleCase(base);
+}
+
+function bestPreviewUrl(m: any, urls: Record<string, string>) {
+  const direct = String(m.model_url || "");
+  if (urls.glb) return urls.glb;
+  if (urls.gltf) return urls.gltf;
+  if (/\.(glb|gltf)(\?|#|$)/i.test(direct)) return direct;
+  return "";
+}
+
+function previewFileLabel(m: any, urls: Record<string, string>) {
+  if (urls.glb || /\.glb(\?|#|$)/i.test(String(m.model_url || ""))) return "GLB";
+  if (urls.gltf || /\.gltf(\?|#|$)/i.test(String(m.model_url || ""))) return "glTF";
+  const first = Object.keys(urls)[0] || String(m.source_format || "").toUpperCase() || "model file";
+  return first.toUpperCase();
+}
+
+function friendlyErrorMessage(error: unknown) {
+  const raw = error instanceof Error ? error.message : String(error || "Something went wrong.");
+  try {
+    const parsed = JSON.parse(raw);
+    const first = Array.isArray(parsed) ? parsed[0] : null;
+    if (first?.path?.includes?.("modelUrl") && first?.validation === "url") {
+      return "Invalid model URL. Paste a full http:// or https:// link to a GLB, FBX, glTF, RBXM, or RBXMX file. Local Windows paths cannot preview in the browser.";
+    }
+    if (first?.message) return String(first.message);
+  } catch {
+    // Keep the original message.
+  }
+  return raw;
+}
+
+export function ModelsView({ projectId }: { projectId?: string }) {
+  useModelViewerScript();
+  const qc = useQueryClient();
+  const projectFn = useServerFn(getProject);
+  const profileFn = useServerFn(getMyProfile);
+  const statusFn = useServerFn(getModelStatus);
+  const startFn = useServerFn(startModelGeneration);
+  const pollFn = useServerFn(pollModelGeneration);
+
+  const { data: project } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => projectFn({ data: { id: projectId! } }),
+    enabled: !!projectId,
+  });
+  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: () => profileFn() });
+  const queryKey = ["models3d", projectId ?? "all"] as const;
+  const { data: status, refetch: refetchStatus } = useQuery({
+    queryKey,
+    queryFn: () => statusFn({ data: projectId ? { projectId } : {} }),
+    refetchInterval: 15_000,
+  });
+
+  const [mode, setMode] = useState<"text" | "image">("text");
+  const [prompt, setPrompt] = useState("");
+  const [negativePrompt, setNegativePrompt] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [artStyle, setArtStyle] = useState<"realistic" | "sculpture">("realistic");
+  const [stylePreset, setStylePreset] = useState<string>("");
+  const [topology, setTopology] = useState<"triangle" | "quad">("triangle");
+  const [poly, setPoly] = useState(30000);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const liveRemaining = useMemo(() => {
+    if (!status?.nextAvailableAt) return 0;
+    return Math.max(0, new Date(status.nextAvailableAt).getTime() - now);
+  }, [status?.nextAvailableAt, now]);
+
+  useEffect(() => {
+    if (!status?.models) return;
+    const refreshable = status.models.filter((m: any) => {
+      if (m.status !== "SUCCEEDED" && m.status !== "FAILED") return true;
+      if (m.status !== "SUCCEEDED" || !m.task_id) return false;
+      const urls = (m.model_urls || {}) as Record<string, string>;
+      return !bestPreviewUrl(m, urls);
+    });
+    if (refreshable.length === 0) return;
+    const id = setInterval(async () => {
+      await Promise.all(refreshable.map((m: any) => pollFn({ data: { generationId: m.id } }).catch(() => null)));
+      qc.invalidateQueries({ queryKey });
+    }, 5000);
+    return () => clearInterval(id);
+  }, [status?.models, pollFn, qc, projectId]);
+
+  async function handleFile(file: File) {
+    if (file.size > 6 * 1024 * 1024) { setErr("Image must be under 6 MB."); return; }
+    const reader = new FileReader();
+    reader.onload = () => setImageUrl(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  }
+
+  async function onGenerate() {
+    setErr(null);
+    setBusy(true);
+    try {
+      const basePrompt = prompt.trim();
+      const styledPrompt = stylePreset && basePrompt
+        ? `${basePrompt}, ${STYLE_PRESETS.find(s => s.key === stylePreset)?.modifier ?? ""}`
+        : basePrompt;
+      await startFn({ data: {
+        projectId, mode,
+        prompt: styledPrompt || undefined,
+        negativePrompt: negativePrompt.trim() || undefined,
+        imageUrl: imageUrl || undefined,
+        artStyle, topology, targetPolycount: poly, autoRefine: true,
+      } });
+      setPrompt(""); setNegativePrompt(""); setImageUrl("");
+      await refetchStatus();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to start generation.");
+    } finally { setBusy(false); }
+  }
+
+  const canGenerate = !!status?.canGenerate && !busy;
+
+  return (
+    <PageShell
+      title="3D Models"
+      description={projectId
+        ? (project ? `Generate 3D models for "${project.name}". One free model every 24 hours.` : "Generate 3D models for your Roblox project.")
+        : "Generate 3D models for any of your Roblox projects. One free model every 24 hours."}
+      accent="chat"
+      activeKey="models"
+      isAdmin={!!profile?.is_admin}
+      actions={projectId ? (
+        <Link to="/project/$projectId" params={{ projectId }} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white hover:bg-white/[0.08]">
+          ← Back to project
+        </Link>
+      ) : undefined}
+    >
+
+      {/* Cooldown banner */}
+      <section className="rounded-2xl border border-white/10 bg-gradient-to-br from-violet-500/10 via-transparent to-blue-500/10 p-5 backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-violet-500/15 text-violet-300">
+              <Timer className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-violet-300">Generation limit</div>
+              <div className="text-sm text-muted-foreground">1 brand-new model every 24 hours. Animations and re-textures are free.</div>
+            </div>
+          </div>
+          <div className={`rounded-xl px-4 py-3 text-center font-mono text-lg font-bold ${canGenerate ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>
+            {canGenerate ? "Ready to generate" : `Next in ${formatRemaining(liveRemaining)}`}
+          </div>
+        </div>
+      </section>
+
+      {/* Generator */}
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm space-y-4">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setMode("text")} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${mode === "text" ? "bg-violet-500/20 text-violet-200 border border-violet-400/40" : "bg-white/[0.04] text-muted-foreground border border-white/10"}`}>
+            <Type className="h-3.5 w-3.5" /> Text → 3D
+          </button>
+          <button onClick={() => setMode("image")} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${mode === "image" ? "bg-blue-500/20 text-blue-200 border border-blue-400/40" : "bg-white/[0.04] text-muted-foreground border border-white/10"}`}>
+            <ImageIcon className="h-3.5 w-3.5" /> Image → 3D
+          </button>
+        </div>
+
+        {mode === "text" ? (
+          <div className="space-y-3">
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="A low-poly stylized treasure chest with gold trim" className="w-full min-h-[100px] resize-y rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-violet-400/60" maxLength={600} />
+            <div>
+              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Style preset (optional — appended to prompt)</div>
+              <div className="flex flex-wrap gap-1.5">
+                <button onClick={() => setStylePreset("")} className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${stylePreset === "" ? "bg-violet-500/25 text-violet-200 border border-violet-400/40" : "bg-white/5 text-muted-foreground border border-white/10 hover:bg-white/10"}`}>No preset</button>
+                {STYLE_PRESETS.map((s) => (
+                  <button key={s.key} onClick={() => setStylePreset(s.key)} title={s.modifier} className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${stylePreset === s.key ? "bg-violet-500/25 text-violet-200 border border-violet-400/40" : "bg-white/5 text-muted-foreground border border-white/10 hover:bg-white/10"}`}>{s.label}</button>
+                ))}
+              </div>
+            </div>
+            <input value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} placeholder="Negative prompt (optional) — e.g. low quality, blurry" className="w-full rounded-xl border border-white/10 bg-black/30 p-2.5 text-xs text-white placeholder:text-muted-foreground outline-none focus:border-violet-400/60" maxLength={300} />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <input value={imageUrl.startsWith("data:") ? "" : imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste a public image URL (https://…)" className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white placeholder:text-muted-foreground outline-none focus:border-blue-400/60" />
+            <div className="flex items-center gap-2">
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              <button onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white hover:bg-white/[0.08]">
+                <ImageIcon className="h-3.5 w-3.5" /> Upload image (≤6 MB)
+              </button>
+              {imageUrl && (<span className="text-xs text-emerald-300 inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Image ready</span>)}
+            </div>
+            {imageUrl && (<img src={imageUrl} alt="preview" className="max-h-40 rounded-lg border border-white/10" />)}
+          </div>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {mode === "text" && (
+            <div>
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Art style</div>
+              <div className="flex gap-1.5">
+                {(["realistic", "sculpture"] as const).map((s) => (
+                  <button key={s} onClick={() => setArtStyle(s)} className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold capitalize ${artStyle === s ? "bg-white/[0.12] text-white" : "bg-white/[0.04] text-muted-foreground"}`}>{s}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div>
+            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Topology</div>
+            <div className="flex gap-1.5">
+              {(["triangle", "quad"] as const).map((t) => (
+                <button key={t} onClick={() => setTopology(t)} className={`flex-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold capitalize ${topology === t ? "bg-white/[0.12] text-white" : "bg-white/[0.04] text-muted-foreground"}`}>{t}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Target polycount: {poly.toLocaleString()}</div>
+            <input type="range" min={5000} max={100000} step={5000} value={poly} onChange={(e) => setPoly(Number(e.target.value))} className="w-full" />
+          </div>
+        </div>
+
+        {err && (
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200 inline-flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" /> {err}
+          </div>
+        )}
+
+        <button disabled={!canGenerate} onClick={onGenerate} className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-blue-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {busy ? "Starting…" : canGenerate ? "Generate 3D model" : `Wait ${formatRemaining(liveRemaining)}`}
+        </button>
+        <p className="text-[11px] text-muted-foreground">Auto-refine is on — once the preview finishes, BloxSmith automatically queues a high-detail refined version with full PBR textures.</p>
+      </section>
+
+      {/* Gallery */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+          {projectId ? "Your models in this project" : "All your 3D models"}
+        </h2>
+        {!status?.models?.length ? (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center text-sm text-muted-foreground">
+            <Box className="mx-auto mb-2 h-8 w-8 opacity-50" />
+            No 3D models yet — generate your first one above.
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {status.models.map((m: any) => (
+              <ModelCard key={m.id} m={m} projectId={projectId} onChange={() => qc.invalidateQueries({ queryKey })} />
+            ))}
+          </div>
+        )}
+      </section>
+    </PageShell>
+  );
+}
+
+function ModelCard({ m, projectId, onChange }: { m: any; projectId?: string; onChange: () => void }) {
+  const animateFn = useServerFn(animateModel);
+  const retextureFn = useServerFn(retextureModel);
+  const pollFn = useServerFn(pollModelGeneration);
+  const deleteFn = useServerFn(deleteModelGeneration);
+  const [animBusy, setAnimBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [refreshBusy, setRefreshBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [actionErr, setActionErr] = useState<string | null>(null);
+  const [picking, setPicking] = useState<null | "anim" | "texture">(null);
+  const [texPrompt, setTexPrompt] = useState("");
+  const [texBusy, setTexBusy] = useState(false);
+
+  const urls: Record<string, string> = m.model_urls || {};
+  const previewUrl = bestPreviewUrl(m, urls);
+  const title = modelTitle(m);
+  const complete = m.status === "SUCCEEDED";
+  const hasModelFile = !!m.model_url || Object.keys(urls).length > 0;
+  const done = complete;
+  const canPreview = complete && !!previewUrl;
+  const failed = m.status === "FAILED";
+  const primaryFileUrl = previewUrl || urls.glb || urls.gltf || urls.fbx || urls.obj || Object.values(urls)[0] || m.model_url || "";
+  const isAnimation = m.mode === "animation";
+  const isTexture = m.mode === "texture";
+  const isRefine = m.mode === "refine";
+  const viewerRef = useRef<HTMLElement | null>(null);
+  const previewShellRef = useRef<HTMLDivElement | null>(null);
+  const [viewerLoaded, setViewerLoaded] = useState(false);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const [viewerProgress, setViewerProgress] = useState(0);
+
+  useEffect(() => {
+    setViewerLoaded(false);
+    setViewerError(null);
+    setViewerProgress(0);
+  }, [previewUrl]);
+
+  useEffect(() => {
+    if (!canPreview || !previewUrl) return;
+    const el = viewerRef.current as (HTMLElement & {
+      loaded?: boolean;
+      dismissPoster?: () => void;
+      requestUpdate?: () => void;
+    }) | null;
+    if (!el) return;
+
+    let cancelled = false;
+    const markLoaded = () => {
+      if (cancelled) return;
+      setViewerLoaded(true);
+      setViewerProgress(1);
+      setViewerError(null);
+    };
+    const markError = (event: Event) => {
+      if (cancelled) return;
+      const detail = (event as CustomEvent<any>)?.detail;
+      const message = detail?.sourceError?.message || detail?.message || "The preview file could not be loaded by the 3D viewer.";
+      setViewerError(String(message));
+      setViewerLoaded(false);
+    };
+    const markProgress = (event: Event) => {
+      const detail = (event as CustomEvent<any>)?.detail;
+      const progress = Number(detail?.totalProgress ?? 0);
+      if (Number.isFinite(progress)) setViewerProgress(Math.max(0, Math.min(1, progress)));
+      if (progress >= 0.98) markLoaded();
+    };
+
+    el.addEventListener("load", markLoaded);
+    el.addEventListener("model-visibility", markLoaded);
+    el.addEventListener("poster-dismissed", markLoaded);
+    el.addEventListener("progress", markProgress);
+    el.addEventListener("error", markError);
+
+    el.dismissPoster?.();
+    el.requestUpdate?.();
+    requestAnimationFrame(() => {
+      if (!cancelled && el.loaded) markLoaded();
+    });
+    const recovery = window.setTimeout(() => {
+      if (!cancelled && !viewerError) {
+        // Some browsers render the WebGL canvas but miss custom-element load events.
+        // Remove the blocking overlay so the already-visible model stays usable.
+        markLoaded();
+      }
+    }, 9000);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(recovery);
+      el.removeEventListener("load", markLoaded);
+      el.removeEventListener("model-visibility", markLoaded);
+      el.removeEventListener("poster-dismissed", markLoaded);
+      el.removeEventListener("progress", markProgress);
+      el.removeEventListener("error", markError);
+    };
+  }, [canPreview, previewUrl, viewerError]);
+
+  async function goFullscreen() {
+    const el = (viewerRef.current || previewShellRef.current) as (HTMLElement & { requestFullscreen?: () => Promise<void> }) | null;
+    if (!el) return;
+    try { await el.requestFullscreen?.(); } catch { /* ignore */ }
+  }
+  async function runAnimate(anim: string) {
+    setAnimBusy(true); setActionErr(null);
+    try {
+      await animateFn({ data: { projectId, sourceId: m.id, animation: anim as any } });
+      setPicking(null); onChange();
+    } catch (e) {
+      setActionErr(e instanceof Error ? e.message : "Failed to start animation.");
+    } finally { setAnimBusy(false); }
+  }
+
+  async function runRetexture() {
+    if (texPrompt.trim().length < 3) { setActionErr("Describe the texture (3+ chars)."); return; }
+    setTexBusy(true); setActionErr(null);
+    try {
+      await retextureFn({ data: { projectId, sourceId: m.id, texturePrompt: texPrompt.trim(), artStyle: "realistic" } });
+      setPicking(null); setTexPrompt(""); onChange();
+    } catch (e) {
+      setActionErr(e instanceof Error ? e.message : "Failed to start re-texture.");
+    } finally { setTexBusy(false); }
+  }
+
+
+
+  async function refreshPreviewFile() {
+    setRefreshBusy(true); setActionErr(null);
+    try {
+      await pollFn({ data: { generationId: m.id } });
+      onChange();
+    } catch (e) {
+      setActionErr(e instanceof Error ? e.message : "Could not refresh the 3D preview file yet.");
+    } finally { setRefreshBusy(false); }
+  }
+
+  async function deleteModel() {
+    setDeleteBusy(true); setActionErr(null);
+    try {
+      await deleteFn({ data: { generationId: m.id, deleteRelated: true } });
+      setConfirmDelete(false);
+      onChange();
+    } catch (e) {
+      setActionErr(e instanceof Error ? e.message : "Could not delete this model.");
+    } finally { setDeleteBusy(false); }
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+      <div ref={previewShellRef} className="aspect-square bg-black/40 relative overflow-hidden">
+        <div className="absolute left-3 right-14 top-3 z-20 rounded-xl border border-white/10 bg-black/55 px-3 py-2 backdrop-blur">
+          <div className="truncate text-sm font-extrabold text-white" title={title}>{title}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold text-white/65">
+            <span>{m.mode === "image" ? "Image → 3D" : m.mode === "text" ? "Text → 3D" : titleCase(String(m.mode || "model").replace(/_/g, " "))}</span>
+            <span>·</span>
+            <span>{done ? `Preview: ${canPreview ? previewFileLabel(m, urls) : "not available"}` : failed ? "Failed" : "Model still processing"}</span>
+          </div>
+        </div>
+        {canPreview ? (
+          // @ts-expect-error - web component
+          <model-viewer
+            ref={viewerRef}
+            key={previewUrl}
+            src={previewUrl}
+            poster={m.thumbnail_url || undefined}
+            reveal="auto"
+            loading="eager"
+            camera-controls
+            auto-rotate={!isAnimation}
+            autoplay={isAnimation}
+            touch-action="pan-y"
+            interaction-prompt="auto"
+            interaction-prompt-style="wiggle"
+            shadow-intensity="1.45"
+            shadow-softness="0.65"
+            exposure="1.12"
+            environment-image="neutral"
+            tone-mapping="aces"
+            bounds="tight"
+            camera-orbit="45deg 65deg auto"
+            field-of-view="30deg"
+            min-camera-orbit="auto auto 5%"
+            max-camera-orbit="auto auto 500%"
+            style={{ width: "100%", height: "100%", minHeight: "280px", background: "radial-gradient(circle at 50% 55%, rgba(99,102,241,.18), transparent 45%)", transform: "translateZ(0)", willChange: "transform", contain: "layout paint size" }}
+          />
+        ) : m.thumbnail_url ? (
+          <>
+            <img src={m.thumbnail_url} alt="" className="w-full h-full object-cover opacity-45 blur-[1px]" />
+            <div className="absolute inset-0 grid place-items-center p-4">
+              <div className="max-w-xs rounded-xl border border-amber-300/25 bg-black/70 p-4 text-center text-xs text-amber-100 shadow-xl backdrop-blur">
+                <div className="font-extrabold text-white">Thumbnail only</div>
+                <div className="mt-1 text-amber-100/85">The real GLB/glTF preview file is not saved on this model yet. Refresh it, then the card will show the interactive 3D viewer.</div>
+                {m.task_id && (
+                  <button onClick={refreshPreviewFile} disabled={refreshBusy} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-amber-400/20 px-3 py-1.5 text-[11px] font-bold text-amber-50 hover:bg-amber-400/30 disabled:opacity-50">
+                    {refreshBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Refresh 3D file
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 grid place-items-center text-muted-foreground">
+            {failed ? <AlertCircle className="h-8 w-8 text-rose-400" /> : <Loader2 className="h-8 w-8 animate-spin" />}
+          </div>
+        )}
+        {canPreview && !viewerLoaded && !viewerError && (
+          <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-black/25 backdrop-blur-[1px]">
+            <div className="rounded-xl border border-white/10 bg-black/65 px-4 py-3 text-center text-xs font-semibold text-white shadow-xl">
+              <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-violet-200" />
+              Preparing 3D preview…
+              <div className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-gradient-to-r from-violet-300 to-cyan-300 transition-all" style={{ width: `${Math.max(12, Math.round(viewerProgress * 100))}%` }} />
+              </div>
+            </div>
+          </div>
+        )}
+        {viewerError && (
+          <div className="absolute inset-x-3 bottom-3 z-20 rounded-xl border border-rose-400/30 bg-rose-500/15 p-3 text-xs text-rose-100 backdrop-blur">
+            <div className="font-bold">Preview failed to load</div>
+            <div className="mt-1 opacity-85">{viewerError}</div>
+            <a href={primaryFileUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold underline">
+              <ExternalLink className="h-3 w-3" /> Open preview file
+            </a>
+          </div>
+        )}
+        {done && !canPreview && !failed && (
+          <div className="absolute inset-x-3 bottom-3 z-20 rounded-xl border border-amber-300/25 bg-amber-500/15 p-3 text-xs text-amber-100 backdrop-blur">
+            <div className="font-bold">Website preview needs GLB or glTF</div>
+            <div className="mt-1 opacity-85">This model has {previewFileLabel(m, urls)} available, but the browser preview supports GLB/glTF. Download or upload it to Roblox, or add a GLB URL.</div>
+            {m.task_id && (
+              <button onClick={refreshPreviewFile} disabled={refreshBusy} className="mt-2 inline-flex items-center gap-1 rounded-md bg-amber-400/20 px-2 py-1 text-[10px] font-bold text-amber-50 hover:bg-amber-400/30 disabled:opacity-50">
+                {refreshBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Refresh 3D file
+              </button>
+            )}
+          </div>
+        )}
+        {!done && !failed && (
+          <div className="absolute inset-x-3 bottom-14 z-20 rounded-xl border border-white/10 bg-black/55 p-3 text-xs text-white/80 backdrop-blur">
+            <div className="font-bold text-white">Model still processing</div>
+            <div className="mt-1">The generated file is not ready yet. BloxSmith will refresh and show the preview when the GLB is available.</div>
+          </div>
+        )}
+        {(isAnimation || isTexture || isRefine) && (
+          <span className={`absolute left-3 top-20 z-20 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur ${isAnimation ? "bg-fuchsia-500/30 text-fuchsia-100" : isTexture ? "bg-amber-500/30 text-amber-100" : "bg-cyan-500/30 text-cyan-100"}`}>
+            {isAnimation ? <><PlayCircle className="h-3 w-3" /> {m.animation_name ?? "animation"}</> : isTexture ? <><Palette className="h-3 w-3" /> retexture</> : <><Sparkles className="h-3 w-3" /> refined</>}
+          </span>
+        )}
+        {done && (
+          <div className="absolute top-2 right-2 flex gap-1">
+            <button onClick={goFullscreen} title="Fullscreen 3D preview" className="inline-flex items-center gap-1 rounded-md bg-black/60 hover:bg-black/80 backdrop-blur px-2 py-1 text-[10px] font-bold text-white">
+              <Maximize2 className="h-3 w-3" /> Fullscreen
+            </button>
+            <button onClick={() => setConfirmDelete(true)} title="Delete 3D model" className="grid h-7 w-7 place-items-center rounded-md bg-black/60 text-rose-200 backdrop-blur hover:bg-rose-500/25">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+        {!done && (
+          <button onClick={() => setConfirmDelete(true)} title="Delete 3D model" className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-md bg-black/60 text-rose-200 backdrop-blur hover:bg-rose-500/25">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {!done && !failed && (
+          <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2">
+            <div className="flex items-center justify-between text-[10px] font-semibold text-white">
+              <span>{m.status}</span><span>{m.progress ?? 0}%</span>
+            </div>
+            <div className="mt-1 h-1 rounded bg-white/10 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-violet-400 to-blue-400" style={{ width: `${m.progress ?? 0}%` }} />
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="p-3 space-y-2">
+        <div>
+          <div className="truncate text-sm font-bold text-white" title={title}>{title}</div>
+          <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2 min-h-[2.5em]">
+            {m.prompt || (m.mode === "image" ? "Image → 3D" : "Untitled")}
+          </div>
+        </div>
+        {failed && m.error && <div className="text-[11px] text-rose-300">{m.error}</div>}
+        {confirmDelete && (
+          <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-3 text-[11px] text-rose-100">
+            <div className="font-bold">Delete this 3D model?</div>
+            <div className="mt-1 text-rose-100/75">
+              This removes the BloxSmith model record plus related refined, animated, or re-textured versions. Roblox assets already uploaded to your Roblox account are not deleted.
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button onClick={deleteModel} disabled={deleteBusy} className="inline-flex items-center gap-1 rounded-md bg-rose-500/30 px-2 py-1 text-[10px] font-bold text-rose-100 hover:bg-rose-500/40 disabled:opacity-50">
+                {deleteBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
+              </button>
+              <button onClick={() => setConfirmDelete(false)} disabled={deleteBusy} className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-white hover:bg-white/[0.12] disabled:opacity-50">
+                <X className="h-3 w-3" /> Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {actionErr && <div className="text-[11px] text-rose-300">{actionErr}</div>}
+        {done && hasModelFile && (
+          <>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {EXPORT_FORMATS.filter(f => urls[f.key]).map(f => (
+                <button key={f.key} onClick={() => forceDownload(urls[f.key], safeName(m, f.ext))} className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] hover:bg-white/[0.12] px-2 py-1 text-[10px] font-bold text-white">
+                  <Download className="h-3 w-3" /> {f.label}
+                </button>
+              ))}
+              {Object.keys(urls).length === 0 && (
+                <button onClick={() => forceDownload(m.model_url, safeName(m, "glb"))} className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] hover:bg-white/[0.12] px-2 py-1 text-[10px] font-bold text-white">
+                  <Download className="h-3 w-3" /> GLB
+                </button>
+              )}
+              <button
+                onClick={async () => {
+                  const list = Object.keys(urls).length ? EXPORT_FORMATS.filter(f => urls[f.key]) : [{ key: "glb", label: "GLB", ext: "glb" }];
+                  for (const f of list) {
+                    const u = urls[f.key] || m.model_url;
+                    if (u) await forceDownload(u, safeName(m, f.ext));
+                  }
+                }}
+                className="inline-flex items-center gap-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 px-2 py-1 text-[10px] font-bold text-emerald-200"
+              >
+                <Download className="h-3 w-3" /> All formats
+              </button>
+              {primaryFileUrl && (
+                <a href={primaryFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] hover:bg-white/[0.12] px-2 py-1 text-[10px] font-bold text-white">
+                  <ExternalLink className="h-3 w-3" /> Open file
+                </a>
+              )}
+              {m.project_id && (
+                <Link to="/project/$projectId" params={{ projectId: m.project_id }} className="inline-flex items-center gap-1 rounded-md bg-violet-500/20 hover:bg-violet-500/30 px-2 py-1 text-[10px] font-bold text-violet-100">
+                  <ExternalLink className="h-3 w-3" /> Project
+                </Link>
+              )}
+            </div>
+
+            {!isAnimation && !isTexture && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <button onClick={() => setPicking(picking === "anim" ? null : "anim")} disabled={animBusy} className="inline-flex items-center gap-1 rounded-md bg-fuchsia-500/20 hover:bg-fuchsia-500/30 px-2 py-1 text-[10px] font-bold text-fuchsia-200 disabled:opacity-50">
+                  {animBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlayCircle className="h-3 w-3" />} Animate
+                </button>
+                <button onClick={() => setPicking(picking === "texture" ? null : "texture")} disabled={texBusy} className="inline-flex items-center gap-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 px-2 py-1 text-[10px] font-bold text-amber-200 disabled:opacity-50">
+                  {texBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Palette className="h-3 w-3" />} Re-texture
+                </button>
+              </div>
+            )}
+            {picking === "anim" && !animBusy && (
+              <div className="rounded-lg border border-white/10 bg-black/40 p-1.5 grid grid-cols-3 gap-1">
+                {ANIMATION_PRESETS.map((a) => (
+                  <button key={a} onClick={() => runAnimate(a)} className="rounded px-2 py-1 text-[10px] font-semibold text-white hover:bg-white/10 capitalize">{a}</button>
+                ))}
+              </div>
+            )}
+            {picking === "texture" && (
+              <div className="space-y-1.5">
+                <input value={texPrompt} onChange={(e) => setTexPrompt(e.target.value)} placeholder="e.g. ancient mossy stone, gold trim" className="w-full rounded-md border border-white/10 bg-black/40 px-2 py-1.5 text-[11px] text-white placeholder:text-muted-foreground" maxLength={300} />
+                <button onClick={runRetexture} disabled={texBusy} className="w-full inline-flex items-center justify-center gap-1 rounded-md bg-amber-500/30 hover:bg-amber-500/40 px-2 py-1.5 text-[10px] font-bold text-amber-100 disabled:opacity-50">
+                  {texBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Palette className="h-3 w-3" />} Apply texture
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
